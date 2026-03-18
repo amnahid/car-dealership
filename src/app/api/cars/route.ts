@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '@/lib/db';
+import Car from '@/models/Car';
+import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const brand = searchParams.get('brand');
+    const model = searchParams.get('model');
+    const year = searchParams.get('year');
+    const status = searchParams.get('status');
+
+    const query: Record<string, unknown> = {};
+    if (brand) query.brand = { $regex: brand, $options: 'i' };
+    if (model) query.model = { $regex: model, $options: 'i' };
+    if (year) query.year = parseInt(year);
+    if (status) query.status = status;
+
+    const total = await Car.countDocuments(query);
+    const cars = await Car.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate('createdBy', 'name email');
+
+    return NextResponse.json({
+      cars,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    console.error('Get cars error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await getAuthPayload(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    await connectDB();
+    const body = await request.json();
+    const car = await Car.create({ ...body, createdBy: auth.userId });
+
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: `Created car ${car.carId}`,
+      module: 'Cars',
+      targetId: car._id.toString(),
+      details: `${car.brand} ${car.model} (${car.year})`,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
+    return NextResponse.json({ car }, { status: 201 });
+  } catch (error) {
+    console.error('Create car error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
