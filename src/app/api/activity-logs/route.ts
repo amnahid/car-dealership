@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '@/lib/db';
+import ActivityLog from '@/models/ActivityLog';
+import { getAuthPayload } from '@/lib/apiAuth';
+
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await getAuthPayload(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!['Admin', 'Manager'].includes(auth.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+
+    const total = await ActivityLog.countDocuments();
+    const logs = await ActivityLog.find()
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate('user', 'name email');
+
+    return NextResponse.json({
+      logs,
+      pagination: { total, page, limit, pages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    console.error('Get activity logs error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
