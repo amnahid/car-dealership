@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-
-function getSecret() {
-  return new TextEncoder().encode(JWT_SECRET);
+function getSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+    return new TextEncoder().encode('fallback-secret-change-in-production');
+  }
+  return new TextEncoder().encode(secret);
 }
 
 export async function middleware(request: NextRequest) {

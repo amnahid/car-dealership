@@ -68,8 +68,9 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
         }
       })
       .catch(console.error);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultCarId]);
+  // initialData._id used as stable dependency for edit mode; defaultCarId for pre-selection
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultCarId, initialData?._id]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>

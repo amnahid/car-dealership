@@ -55,8 +55,9 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         year: initialData.year?.toString() || new Date().getFullYear().toString(),
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // initialData is only used to populate the form on mount/edit; intentionally omitting to avoid infinite loops
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData?._id]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>

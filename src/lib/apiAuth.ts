@@ -1,7 +1,16 @@
 import { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
+function getSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+    return new TextEncoder().encode('fallback-secret-change-in-production');
+  }
+  return new TextEncoder().encode(secret);
+}
 
 export interface AuthPayload {
   userId: string;
@@ -15,8 +24,7 @@ export async function getAuthPayload(request: NextRequest): Promise<AuthPayload 
   if (!token) return null;
 
   try {
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     return {
       userId: payload.userId as string,
       email: payload.email as string,
