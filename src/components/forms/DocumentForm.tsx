@@ -109,8 +109,10 @@ export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
   };
 
   const inputClass =
-    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
+    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
+  const fileInputClass =
+    'block w-full cursor-pointer rounded-md border border-dashed border-gray-300 bg-gray-50 p-2 text-sm text-gray-700 transition-colors focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -151,9 +153,20 @@ export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
       </div>
 
       <div>
-        <label className={labelClass}>Upload Document File</label>
-        <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileUpload} className="text-sm text-gray-500" />
-        {form.fileName && <p className="text-xs text-gray-500 mt-1">Selected: {form.fileName}</p>}
+        <label htmlFor="document-file" className={labelClass}>Upload Document File</label>
+        <input
+          id="document-file"
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png"
+          onChange={handleFileUpload}
+          className={fileInputClass}
+        />
+        <p className="mt-1 text-xs text-gray-500">Accepted formats: PDF, JPG, JPEG, PNG.</p>
+        {form.fileName && (
+          <p className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+            Selected file: {form.fileName}
+          </p>
+        )}
       </div>
 
       <div>

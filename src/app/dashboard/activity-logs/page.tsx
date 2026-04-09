@@ -41,9 +41,9 @@ export default function ActivityLogsPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Loading...</div>
+          <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">No activity logs found.</div>
+          <div className="p-8 text-center text-gray-500">No activity logs found.</div>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
@@ -61,7 +61,7 @@ export default function ActivityLogsPage() {
                     <span className="inline-flex rounded-full bg-indigo-100 text-indigo-800 px-2.5 py-0.5 text-xs font-medium">{log.module}</span>
                   </td>
                   <td className="px-4 py-3 font-medium">{log.userName}</td>
-                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">{log.ipAddress}</td>
+                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{log.ipAddress}</td>
                   <td className="px-4 py-3 text-gray-500">{new Date(log.createdAt).toLocaleString()}</td>
                 </tr>
               ))}

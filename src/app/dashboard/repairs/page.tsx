@@ -54,9 +54,9 @@ export default function RepairsPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Loading...</div>
+          <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : repairs.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">No repairs found.</div>
+          <div className="p-8 text-center text-gray-500">No repairs found.</div>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">

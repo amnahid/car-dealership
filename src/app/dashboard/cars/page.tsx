@@ -65,12 +65,12 @@ export default function CarsPage() {
           placeholder="Search by brand..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm w-64 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 w-64 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         >
           <option value="">All Statuses</option>
           {['In Stock', 'Under Repair', 'Reserved', 'Sold', 'Rented'].map((s) => (
@@ -81,9 +81,9 @@ export default function CarsPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Loading...</div>
+          <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : cars.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">No cars found.</div>
+          <div className="p-8 text-center text-gray-500">No cars found.</div>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">

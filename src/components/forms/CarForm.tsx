@@ -120,8 +120,10 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
   };
 
   const inputClass =
-    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
+    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
+  const fileInputClass =
+    'block w-full cursor-pointer rounded-md border border-dashed border-gray-300 bg-gray-50 p-2 text-sm text-gray-700 transition-colors focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -188,10 +190,20 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
       </div>
 
       <div>
-        <label className={labelClass}>Images</label>
-        <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="text-sm text-gray-500" />
+        <label htmlFor="car-images" className={labelClass}>Images</label>
+        <input
+          id="car-images"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleImageUpload}
+          className={fileInputClass}
+        />
+        <p className="mt-1 text-xs text-gray-500">Upload one or more images (JPG, PNG, WEBP).</p>
         {form.images.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-3">
+            <p className="mb-2 text-xs font-medium text-gray-600">{form.images.length} image{form.images.length > 1 ? 's' : ''} selected</p>
+            <div className="flex flex-wrap gap-2">
             {form.images.map((img, i) => (
               <div key={i} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -205,6 +217,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
                 </button>
               </div>
             ))}
+            </div>
           </div>
         )}
       </div>

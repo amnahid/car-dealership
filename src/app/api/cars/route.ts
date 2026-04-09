@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
+import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Car from '@/models/Car';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
@@ -34,6 +34,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get cars error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -60,6 +65,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ car }, { status: 201 });
   } catch (error) {
     console.error('Create car error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

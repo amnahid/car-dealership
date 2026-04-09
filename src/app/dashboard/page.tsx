@@ -105,7 +105,7 @@ export default async function DashboardPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h3>
         {stats.recentActivity.length === 0 ? (
-          <p className="text-gray-400 text-sm">No activity yet.</p>
+          <p className="text-gray-500 text-sm">No activity yet.</p>
         ) : (
           <ul className="divide-y divide-gray-100">
             {stats.recentActivity.map((log) => (
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
                 <span className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-indigo-400" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-800">{log.action}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5">
                     {log.userName} · {log.module} ·{' '}
                     {new Date(log.createdAt).toLocaleString()}
                   </p>

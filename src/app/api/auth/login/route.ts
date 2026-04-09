@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
+import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { comparePassword, signToken } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
@@ -59,6 +59,11 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Login error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

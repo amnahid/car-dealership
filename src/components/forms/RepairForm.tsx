@@ -134,8 +134,10 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
   };
 
   const inputClass =
-    'w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
+    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
+  const fileInputClass =
+    'block w-full cursor-pointer rounded-md border border-dashed border-gray-300 bg-gray-50 p-2 text-sm text-gray-700 transition-colors focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -191,12 +193,34 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>Before Images</label>
-          <input type="file" accept="image/*" multiple onChange={handleImageUpload('beforeImages')} className="text-sm text-gray-500" />
+          <label htmlFor="before-images" className={labelClass}>Before Images</label>
+          <input
+            id="before-images"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload('beforeImages')}
+            className={fileInputClass}
+          />
+          <p className="mt-1 text-xs text-gray-500">Add photos before repair work starts.</p>
+          {form.beforeImages.length > 0 && (
+            <p className="mt-2 text-xs font-medium text-gray-600">{form.beforeImages.length} image{form.beforeImages.length > 1 ? 's' : ''} selected</p>
+          )}
         </div>
         <div>
-          <label className={labelClass}>After Images</label>
-          <input type="file" accept="image/*" multiple onChange={handleImageUpload('afterImages')} className="text-sm text-gray-500" />
+          <label htmlFor="after-images" className={labelClass}>After Images</label>
+          <input
+            id="after-images"
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload('afterImages')}
+            className={fileInputClass}
+          />
+          <p className="mt-1 text-xs text-gray-500">Add photos after repair is completed.</p>
+          {form.afterImages.length > 0 && (
+            <p className="mt-2 text-xs font-medium text-gray-600">{form.afterImages.length} image{form.afterImages.length > 1 ? 's' : ''} selected</p>
+          )}
         </div>
       </div>
 

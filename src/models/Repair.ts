@@ -39,9 +39,8 @@ const RepairSchema = new Schema<IRepairDocument>(
 
 // Calculate totalCost before save
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-RepairSchema.pre('save', function (this: any, next: any) {
+RepairSchema.pre('save', function (this: any) {
   this.totalCost = (this.laborCost || 0) + (this.repairCost || 0);
-  next();
 });
 
 const Repair: Model<IRepairDocument> =

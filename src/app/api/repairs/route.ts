@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
+import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Repair from '@/models/Repair';
 import Car from '@/models/Car';
 import { getAuthPayload } from '@/lib/apiAuth';
@@ -36,6 +36,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get repairs error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -63,6 +68,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ repair }, { status: 201 });
   } catch (error) {
     console.error('Create repair error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

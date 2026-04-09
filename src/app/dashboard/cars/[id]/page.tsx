@@ -120,7 +120,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
           <Link href={`/dashboard/repairs/new?carId=${car._id}`} className="text-sm text-indigo-600 hover:underline">+ Add Repair</Link>
         </div>
         {repairs.length === 0 ? (
-          <p className="text-sm text-gray-400">No repairs recorded.</p>
+          <p className="text-sm text-gray-500">No repairs recorded.</p>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50"><tr>
@@ -148,7 +148,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
           <Link href={`/dashboard/documents/new?carId=${car._id}`} className="text-sm text-indigo-600 hover:underline">+ Add Document</Link>
         </div>
         {documents.length === 0 ? (
-          <p className="text-sm text-gray-400">No documents recorded.</p>
+          <p className="text-sm text-gray-500">No documents recorded.</p>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50"><tr>

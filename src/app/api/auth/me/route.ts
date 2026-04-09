@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
+import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 
@@ -19,6 +19,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ user });
   } catch (error) {
     console.error('Get me error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

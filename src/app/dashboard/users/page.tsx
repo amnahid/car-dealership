@@ -79,7 +79,7 @@ export default function UsersPage() {
     fetchUsers();
   };
 
-  const inputClass = 'w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
+  const inputClass = 'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
 
   return (
     <div className="space-y-5">
@@ -125,7 +125,7 @@ export default function UsersPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">Loading...</div>
+          <div className="p-8 text-center text-gray-500">Loading...</div>
         ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">

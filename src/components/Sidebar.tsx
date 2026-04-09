@@ -31,7 +31,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
   return (
     <aside className="flex flex-col w-64 min-h-screen bg-indigo-900 text-white">
       <div className="px-6 py-5 border-b border-indigo-800">
-        <h1 className="text-xl font-bold">🚗 AutoDealership</h1>
+        <h1 className="text-xl font-bold">🚗 NahidDealership</h1>
         <p className="text-xs text-indigo-300 mt-1">Management System</p>
       </div>
 
