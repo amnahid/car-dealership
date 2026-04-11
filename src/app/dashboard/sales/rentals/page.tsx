@@ -15,6 +15,9 @@ interface Rental {
   totalAmount: number;
   securityDeposit: number;
   status: 'Active' | 'Completed' | 'Cancelled';
+  notes?: string;
+  returnDate?: string;
+  actualReturnDate?: string;
 }
 
 export default function RentalsPage() {
@@ -26,6 +29,7 @@ export default function RentalsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [editingRental, setEditingRental] = useState<Rental | null>(null);
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string }[]>([]);
   const [customers, setCustomers] = useState<{ _id: string; fullName: string; phone: string }[]>([]);
 
@@ -67,6 +71,32 @@ export default function RentalsPage() {
   const handleSearch = (value: string) => {
     setSearch(value);
     setPage(1);
+  };
+
+  const handleEdit = (rental: Rental) => {
+    setEditingRental(rental);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel this rental?')) return;
+    try {
+      const res = await fetch(`/api/sales/rentals/${id}`, { method: 'DELETE' });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      fetchRentals();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleUpdateRental = async (id: string, data: any) => {
+    try {
+      const res = await fetch(`/api/sales/rentals/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); return; }
+      setEditingRental(null);
+      fetchRentals();
+    } catch (err) { console.error(err); }
   };
 
   const getStatusColor = (status: string) => {
@@ -137,7 +167,15 @@ export default function RentalsPage() {
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(rental.status) + '20', color: getStatusColor(rental.status) }}>{rental.status}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <Link href={`/dashboard/sales/rentals/${rental._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <Link href={`/dashboard/sales/rentals/${rental._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
+                        {rental.status !== 'Cancelled' && (
+                          <>
+                            <button onClick={() => handleEdit(rental)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Edit</button>
+                            <button onClick={() => handleDelete(rental._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -156,6 +194,7 @@ export default function RentalsPage() {
       )}
 
       {showModal && <RentalModal cars={cars} customers={customers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchRentals(); }} />}
+      {editingRental && <EditRentalModal rental={editingRental} onClose={() => setEditingRental(null)} onSave={handleUpdateRental} />}
     </div>
   );
 }
@@ -241,6 +280,61 @@ function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; custom
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Create Rental'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditRentalModal({ rental, onClose, onSave }: { rental: Rental; onClose: () => void; onSave: (id: string, data: any) => void }) {
+  const [form, setForm] = useState({
+    dailyRate: rental.dailyRate.toString(),
+    securityDeposit: rental.securityDeposit.toString(),
+    returnDate: rental.returnDate?.split('T')[0] || '',
+    actualReturnDate: rental.actualReturnDate?.split('T')[0] || '',
+    notes: rental.notes || '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave(rental._id, form);
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Edit Rental - {rental.rentalId}</h3>
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Daily Rate</label>
+              <input type="number" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Security Deposit</label>
+              <input type="number" value={form.securityDeposit} onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Return Date</label>
+              <input type="date" value={form.returnDate} onChange={(e) => setForm({ ...form, returnDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Actual Return Date</label>
+              <input type="date" value={form.actualReturnDate} onChange={(e) => setForm({ ...form, actualReturnDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes</label>
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', height: '80px', fontSize: '14px', borderRadius: '0', padding: '12px', border: '1px solid #ced4da' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Save Changes'}</button>
           </div>
         </form>
       </div>

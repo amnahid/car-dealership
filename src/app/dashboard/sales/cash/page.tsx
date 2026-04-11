@@ -15,6 +15,7 @@ interface Sale {
   agentName?: string;
   agentCommission?: number;
   saleDate: string;
+  notes?: string;
 }
 
 export default function CashSalesPage() {
@@ -25,6 +26,8 @@ export default function CashSalesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [showModal, setShowModal] = useState(false);
+  const [editingSale, setEditingSale] = useState<Sale | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number }[]>([]);
   const [customers, setCustomers] = useState<{ _id: string; fullName: string; phone: string }[]>([]);
 
@@ -65,6 +68,32 @@ export default function CashSalesPage() {
   const handleSearch = (value: string) => {
     setSearch(value);
     setPage(1);
+  };
+
+  const handleEdit = (sale: Sale) => {
+    setEditingSale(sale);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel this sale?')) return;
+    try {
+      const res = await fetch(`/api/sales/cash/${id}`, { method: 'DELETE' });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      fetchSales();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleUpdateSale = async (id: string, data: any) => {
+    try {
+      const res = await fetch(`/api/sales/cash/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); return; }
+      setEditingSale(null);
+      fetchSales();
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -125,7 +154,11 @@ export default function CashSalesPage() {
                     <td style={{ padding: '12px', fontWeight: 600 }}>${sale.finalPrice.toLocaleString()}</td>
                     <td style={{ padding: '12px', color: '#525f80' }}>{new Date(sale.saleDate).toLocaleDateString()}</td>
                     <td style={{ padding: '12px' }}>
-                      <Link href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <Link href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
+                        <button onClick={() => handleEdit(sale)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Edit</button>
+                        <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -144,6 +177,7 @@ export default function CashSalesPage() {
       )}
 
       {showModal && <CashSaleModal cars={cars} customers={customers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
+      {editingSale && <EditCashSaleModal sale={editingSale} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
     </div>
   );
 }
@@ -217,6 +251,62 @@ function CashSaleModal({ cars, customers, onClose, onSave }: { cars: any[]; cust
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Create Sale'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditCashSaleModal({ sale, onClose, onSave }: { sale: Sale; onClose: () => void; onSave: (id: string, data: any) => void }) {
+  const [form, setForm] = useState({
+    salePrice: sale.salePrice.toString(),
+    discountAmount: sale.discountAmount.toString(),
+    agentName: sale.agentName || '',
+    agentCommission: sale.agentCommission?.toString() || '',
+    saleDate: sale.saleDate.split('T')[0],
+    notes: sale.notes || '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave(sale._id, form);
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Edit Cash Sale - {sale.saleId}</h3>
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Sale Price</label>
+              <input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Discount</label>
+              <input type="number" value={form.discountAmount} onChange={(e) => setForm({ ...form, discountAmount: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Sale Date</label>
+              <input type="date" value={form.saleDate} onChange={(e) => setForm({ ...form, saleDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Agent Name</label>
+              <input value={form.agentName} onChange={(e) => setForm({ ...form, agentName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes</label>
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', height: '80px', fontSize: '14px', borderRadius: '0', padding: '12px', border: '1px solid #ced4da' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Save Changes'}</button>
           </div>
         </form>
       </div>
