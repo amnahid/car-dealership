@@ -1,0 +1,367 @@
+================================================================================
+  CAR DEALERSHIP & RENTAL MANAGEMENT SYSTEM
+  Software Requirements — Vibe Coding Reference
+  Broken into 3 Development Phases
+================================================================================
+
+--------------------------------------------------------------------------------
+SYSTEM OVERVIEW
+--------------------------------------------------------------------------------
+A comprehensive web-based platform to manage the entire lifecycle of vehicle
+inventory — covering car purchasing, repair tracking, stock management, vehicle
+documentation, sales (cash, installment, rental), customer management,
+automated notifications, and financial/employee management.
+
+Tech Stack Suggestions:
+  - Frontend : React.js (or Next.js)
+  - Backend  : Node.js + Express (or Laravel/Django)
+  - Database : PostgreSQL or MySQL
+  - Storage  : Cloud (AWS S3 / Cloudinary) for images & documents
+  - SMS/Email: Twilio (SMS), SendGrid (Email)
+  - Auth     : JWT-based role access control
+
+
+================================================================================
+  PHASE 1 — CORE FOUNDATION
+  (Inventory, Purchases, Repairs, Documentation, User Auth)
+================================================================================
+
+GOAL: Build the backbone of the system — get cars in, track their condition,
+manage documents, and control who can access what.
+
+--------------------------------------------------------------------------------
+1. USER AUTH & ROLE-BASED ACCESS CONTROL
+--------------------------------------------------------------------------------
+Roles:
+  - Admin         : Full access to all modules
+  - Manager       : Inventory, Sales, Rental management
+  - Accounts Officer : Financial management, Salary management
+  - Sales Agent   : Customer management, Sales records
+
+Features:
+  - Secure login system (email + password)
+  - JWT session management
+  - Role-based route/module protection
+  - Activity logs (who did what, when)
+  - Encrypted sensitive data storage
+
+--------------------------------------------------------------------------------
+2. CAR PURCHASE MANAGEMENT
+--------------------------------------------------------------------------------
+Purpose: Record every car entering the system from a supplier.
+
+Features:
+  - Add new car purchase entry
+  - Attach supplier details
+  - Record purchase price and purchase date
+  - Upload images of car condition at time of purchase
+  - Upload purchase documents (PDF/images)
+
+Data Fields:
+  - Car ID (auto-generated)
+  - Supplier name
+  - Supplier contact details
+  - Purchase price
+  - Purchase date
+  - Car details:
+      - Brand
+      - Model
+      - Year
+      - Engine number
+      - Chassis number
+  - Condition images (multiple uploads)
+  - Notes / remarks
+
+--------------------------------------------------------------------------------
+3. REPAIR & MAINTENANCE MANAGEMENT
+--------------------------------------------------------------------------------
+Purpose: Track all repairs done after purchasing a car.
+
+Features:
+  - Add repair records per car
+  - Add individual repair costs
+  - Upload before/after repair images
+  - Auto-calculate total repair cost per car
+
+Data Fields:
+  - Car ID (linked)
+  - Repair description
+  - Parts replaced
+  - Labor cost
+  - Repair cost
+  - Repair date
+  - After-repair images
+
+--------------------------------------------------------------------------------
+4. INVENTORY / STOCK MANAGEMENT
+--------------------------------------------------------------------------------
+Purpose: Maintain a live, searchable list of all cars and their current status.
+
+Features:
+  - Real-time car inventory list
+  - Car availability status tracking
+  - Upload car photos
+  - Search and filter cars (by brand, model, year, status, etc.)
+
+Car Status Types:
+  - In Stock
+  - Under Repair
+  - Reserved
+  - Sold
+  - Rented
+
+--------------------------------------------------------------------------------
+5. VEHICLE DOCUMENTATION MANAGEMENT
+--------------------------------------------------------------------------------
+Purpose: Track legal documents for each vehicle with expiry alerts.
+
+Document Types:
+  - Insurance
+  - Road Permit
+  - Registration Card
+
+Features:
+  - Add issue date and expiry date per document
+  - Upload document files
+  - Automatic alerts before expiration
+
+Alert Rules:
+  - Notify at 30 days before expiry
+  - Notify at 15 days before expiry
+  - Notify at 7 days before expiry
+  - Alert channels: Dashboard notification, Email, SMS
+
+
+================================================================================
+  PHASE 2 — SALES, RENTALS & CUSTOMER MANAGEMENT
+  (Cash Sales, Installments, Rentals, Customer Profiles, Messaging)
+================================================================================
+
+GOAL: Enable the business to sell and rent cars, manage customer records,
+and automate all communications.
+
+--------------------------------------------------------------------------------
+6. CAR SALES MANAGEMENT
+--------------------------------------------------------------------------------
+
+  6A. CASH PURCHASE
+  -----------------
+  Features:
+    - Record full cash payment sale
+    - Apply discount option
+    - Add agent commission
+    - Generate sales invoice
+
+  Data Fields:
+    - Car ID (linked)
+    - Sale price
+    - Cash discount amount
+    - Agent name
+    - Agent commission amount
+    - Sale date
+
+  ---
+
+  6B. INSTALLMENT SALE (Kisti)
+  ----------------------------
+  Features:
+    - Create installment plan for a car
+    - Auto-calculate monthly installment amount
+    - Generate full installment schedule (month-by-month)
+    - Apply late payment fine
+    - Send payment reminders automatically
+
+  Rules:
+    - Minimum down payment required (configurable %)
+    - Car delivery condition tied to payment percentage
+      (e.g., car released after 20% or 30% paid)
+    - Late payment triggers automatic fine
+
+  Example Calculation:
+    Car price      = 1,200,000 BDT
+    Period         = 24 months
+    Monthly amount = auto-calculated based on price + any interest/fee
+
+  Notifications (auto-trigger):
+    - Installment due reminder (before due date)
+    - Installment received confirmation
+    - Late payment notice (after due date passes)
+
+  ---
+
+  6C. RENTAL SYSTEM
+  -----------------
+  Features:
+    - Create rental contract per customer
+    - Customer identity verification
+    - Set rental duration (start/end date)
+    - Track rental cost
+    - Rental income logging
+
+  Customer Profile Data (for rentals):
+    - Full name
+    - Phone number
+    - Address
+    - National ID number
+    - Driving license number
+    - Photo upload
+    - Emergency contact
+
+  Rental Notifications:
+    - Rental confirmation message (on contract creation)
+    - Rental expiry reminder (before end date)
+
+--------------------------------------------------------------------------------
+7. CUSTOMER MANAGEMENT SYSTEM
+--------------------------------------------------------------------------------
+Purpose: Central hub for all customer records.
+
+Features:
+  - Create and manage customer accounts
+  - View full customer history
+  - Track all purchases and rentals per customer
+  - Document storage per customer
+
+Customer Record Contains:
+  - Purchase history
+  - Rental history
+  - Installment records
+  - Outstanding payments / dues
+
+--------------------------------------------------------------------------------
+8. AUTOMATED MESSAGING SYSTEM
+--------------------------------------------------------------------------------
+Purpose: Auto-send relevant messages to customers at key events.
+
+Message Types & Triggers:
+  - Sales      : Thank-you message after purchase
+  - Installment: Payment reminder (before due date)
+  - Installment: Payment confirmation (after payment received)
+  - Installment: Late payment notice (after due date)
+  - Rental     : Rental confirmation (on contract creation)
+  - Rental     : Return reminder (before rental end date)
+
+Delivery Channels:
+  - SMS (via gateway, e.g., Twilio or local BD SMS API)
+  - Email (via SendGrid or SMTP)
+  - WhatsApp (optional — via WhatsApp Business API)
+
+
+================================================================================
+  PHASE 3 — FINANCIALS, HR, DASHBOARD & REPORTING
+  (Accounting, Employee Management, Reports, Admin Dashboard)
+================================================================================
+
+GOAL: Give management full financial visibility, HR tools, and a power-packed
+dashboard with exportable reports.
+
+--------------------------------------------------------------------------------
+9. ACCOUNTING & FINANCIAL MANAGEMENT
+--------------------------------------------------------------------------------
+Purpose: Track all money in and out, calculate profit per car and overall.
+
+Expense Tracking:
+  - Car purchase cost
+  - Repair/maintenance cost
+  - Employee salaries
+  - Other operational expenses
+
+Income Tracking:
+  - Cash car sales
+  - Installment payments (per payment received)
+  - Rental income
+
+Reports Generated:
+  - Profit per car (income minus purchase + repair costs)
+  - Monthly profit/loss summary
+  - Sales report (date range filterable)
+  - Expense report (date range filterable)
+
+--------------------------------------------------------------------------------
+10. EMPLOYEE & SALARY MANAGEMENT
+--------------------------------------------------------------------------------
+Purpose: Manage staff records and salary payments.
+
+Features:
+  - Create/edit employee profiles
+  - Define salary structure per employee
+  - Record salary payments
+  - Track bonuses and commissions
+
+Data Fields:
+  - Employee name
+  - Role / designation
+  - Base salary amount
+  - Payment history (date, amount)
+  - Bonus / commission records
+
+--------------------------------------------------------------------------------
+11. DASHBOARD & REPORTING
+--------------------------------------------------------------------------------
+Purpose: One-screen overview of the entire business status.
+
+Dashboard KPIs (Live):
+  - Total cars currently in stock
+  - Total cars sold (this month / all time)
+  - Total cars currently rented
+  - Pending installments (overdue + upcoming)
+  - Upcoming document expiry alerts
+  - Total revenue (this month / all time)
+  - Total profit (this month / all time)
+
+Reports (Exportable — PDF/Excel):
+  - Car inventory report
+  - Sales report
+  - Rental report
+  - Installment report (with overdue flags)
+  - Profit and loss report
+
+--------------------------------------------------------------------------------
+12. SECURITY & DATA MANAGEMENT
+--------------------------------------------------------------------------------
+  - Secure login with hashed passwords
+  - Role-based access control enforced on all routes
+  - Automated database backup system
+  - Encrypted storage for sensitive fields (NID, license, financials)
+  - Full activity log (user, action, timestamp) for audit trail
+
+--------------------------------------------------------------------------------
+OPTIONAL FUTURE EXTENSIONS
+--------------------------------------------------------------------------------
+  - Mobile app (React Native / Flutter)
+  - SMS gateway integration (local BD provider or Twilio)
+  - WhatsApp Business API integration
+  - Cloud storage for all images and documents (AWS S3 / Cloudinary)
+
+
+================================================================================
+  PHASE SUMMARY CHEATSHEET
+================================================================================
+
+  PHASE 1 — Foundation
+  ---------------------
+  [ ] User Auth + Role Access Control
+  [ ] Car Purchase Management
+  [ ] Repair & Maintenance Management
+  [ ] Inventory / Stock Management
+  [ ] Vehicle Documentation + Expiry Alerts
+
+  PHASE 2 — Sales & Customers
+  ----------------------------
+  [ ] Cash Sales Module
+  [ ] Installment (Kisti) Sales Module
+  [ ] Rental System
+  [ ] Customer Management
+  [ ] Automated Messaging System (SMS/Email)
+
+  PHASE 3 — Finance & Operations
+  --------------------------------
+  [ ] Accounting & Financial Management
+  [ ] Employee & Salary Management
+  [ ] Admin Dashboard (live KPIs)
+  [ ] Full Reporting Suite (export)
+  [ ] Security hardening + Activity Logs
+
+================================================================================
+  END OF DOCUMENT
+================================================================================

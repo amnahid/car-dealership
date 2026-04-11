@@ -3,6 +3,9 @@ import { connectDB } from '@/lib/db';
 import Car from '@/models/Car';
 import VehicleDocument from '@/models/Document';
 import ActivityLog from '@/models/ActivityLog';
+import CashSale from '@/models/CashSale';
+import InstallmentSale from '@/models/InstallmentSale';
+import Rental from '@/models/Rental';
 import { getAuthPayload } from '@/lib/apiAuth';
 
 export async function GET(request: NextRequest) {
@@ -19,6 +22,14 @@ export async function GET(request: NextRequest) {
       carsSold,
       carsRented,
       carsReserved,
+      // Sales stats
+      totalCashSales,
+      totalInstallments,
+      activeRentals,
+      // Financial stats
+      cashRevenue,
+      installmentPaid,
+      rentalRevenue,
     ] = await Promise.all([
       Car.countDocuments(),
       Car.countDocuments({ status: 'In Stock' }),
@@ -26,6 +37,14 @@ export async function GET(request: NextRequest) {
       Car.countDocuments({ status: 'Sold' }),
       Car.countDocuments({ status: 'Rented' }),
       Car.countDocuments({ status: 'Reserved' }),
+      // Sales
+      CashSale.countDocuments(),
+      InstallmentSale.countDocuments({ status: 'Active' }),
+      Rental.countDocuments({ status: 'Active' }),
+      // Financial
+      CashSale.aggregate([{ $group: { _id: null, total: { $sum: '$finalPrice' } } }]),
+      InstallmentSale.aggregate([{ $group: { _id: null, total: { $sum: '$totalPaid' } } }]),
+      Rental.aggregate([{ $match: { status: 'Active' } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
     ]);
 
     const repairCostResult = await Car.aggregate([
@@ -44,6 +63,15 @@ export async function GET(request: NextRequest) {
       .limit(10)
       .populate('user', 'name');
 
+    // Calculate total revenue
+    const totalRevenue = (cashRevenue[0]?.total || 0) + (installmentPaid[0]?.total || 0) + (rentalRevenue[0]?.total || 0);
+
+    // Calculate pending installments
+    const pendingInstallments = await InstallmentSale.aggregate([
+      { $match: { status: 'Active' } },
+      { $group: { _id: null, total: { $sum: '$remainingAmount' } } },
+    ]);
+
     return NextResponse.json({
       totalCars,
       carsInStock,
@@ -54,6 +82,16 @@ export async function GET(request: NextRequest) {
       totalRepairCost,
       expiringDocuments,
       recentActivity,
+      // Sales
+      totalCashSales,
+      totalInstallments,
+      activeRentals,
+      // Financial
+      totalRevenue,
+      pendingInstallments: pendingInstallments[0]?.total || 0,
+      cashRevenue: cashRevenue[0]?.total || 0,
+      installmentPaid: installmentPaid[0]?.total || 0,
+      rentalRevenue: rentalRevenue[0]?.total || 0,
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);

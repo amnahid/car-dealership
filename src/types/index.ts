@@ -5,6 +5,7 @@ export interface IUser {
   name: string;
   email: string;
   password: string;
+  phone?: string;
   role: 'Admin' | 'Manager' | 'Accounts Officer' | 'Sales Agent';
   isActive: boolean;
   createdAt: Date;
@@ -86,3 +87,97 @@ export type UserRole = 'Admin' | 'Manager' | 'Accounts Officer' | 'Sales Agent';
 export type CarStatus = 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented';
 export type DocumentType = 'Insurance' | 'Road Permit' | 'Registration Card';
 export type RepairStatus = 'Pending' | 'In Progress' | 'Completed';
+export type SaleType = 'Cash' | 'Installment' | 'Rental';
+export type InstallmentPaymentStatus = 'Pending' | 'Paid' | 'Overdue' | 'Failed';
+export type RentalStatus = 'Active' | 'Completed' | 'Cancelled';
+
+export interface ICustomer {
+  _id: Types.ObjectId;
+  customerId: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  address: string;
+  nationalId?: string;
+  drivingLicense?: string;
+  profilePhoto?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  notes?: string;
+  createdBy: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ICashSale {
+  _id: Types.ObjectId;
+  saleId: string;
+  car: Types.ObjectId;
+  carId: string;
+  customer: Types.ObjectId;
+  customerName: string;
+  customerPhone: string;
+  salePrice: number;
+  discountAmount: number;
+  finalPrice: number;
+  agentName?: string;
+  agentCommission?: number;
+  saleDate: Date;
+  notes?: string;
+  createdBy: Types.ObjectId;
+  createdAt: Date;
+}
+
+export interface IInstallmentSale {
+  _id: Types.ObjectId;
+  saleId: string;
+  car: Types.ObjectId;
+  carId: string;
+  customer: Types.ObjectId;
+  customerName: string;
+  customerPhone: string;
+  totalPrice: number;
+  downPayment: number;
+  loanAmount: number;
+  monthlyPayment: number;
+  interestRate: number;
+  tenureMonths: number;
+  startDate: Date;
+  paymentSchedule: Array<{
+    installmentNumber: number;
+    dueDate: Date;
+    amount: number;
+    status: InstallmentPaymentStatus;
+    paidDate?: Date;
+    paidAmount?: number;
+  }>;
+  nextPaymentDate: Date;
+  nextPaymentAmount: number;
+  totalPaid: number;
+  remainingAmount: number;
+  status: 'Active' | 'Completed' | 'Defaulted';
+  notes?: string;
+  createdBy: Types.ObjectId;
+  createdAt: Date;
+}
+
+export interface IRental {
+  _id: Types.ObjectId;
+  rentalId: string;
+  car: Types.ObjectId;
+  carId: string;
+  customer: Types.ObjectId;
+  customerName: string;
+  customerPhone: string;
+  startDate: Date;
+  endDate: Date;
+  dailyRate: number;
+  totalAmount: number;
+  securityDeposit: number;
+  status: RentalStatus;
+  returnDate?: Date;
+  actualReturnDate?: Date;
+  notes?: string;
+  createdBy: Types.ObjectId;
+  createdAt: Date;
+}

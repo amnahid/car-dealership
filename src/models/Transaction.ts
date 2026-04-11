@@ -1,0 +1,55 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+
+export type TransactionType = 'Income' | 'Expense';
+export type TransactionCategory = 
+  | 'Car Purchase'
+  | 'Car Repair'
+  | 'Salary Payment'
+  | 'Office Expense'
+  | 'Cash Sale'
+  | 'Installment Payment'
+  | 'Rental Income'
+  | 'Other Income'
+  | 'Other Expense';
+
+export interface ITransactionDocument extends Document {
+  transactionId: string;
+  date: Date;
+  type: TransactionType;
+  category: TransactionCategory;
+  amount: number;
+  description: string;
+  referenceId?: string;
+  referenceType?: string;
+  createdBy: mongoose.Types.ObjectId;
+}
+
+const TransactionSchema = new Schema<ITransactionDocument>(
+  {
+    transactionId: { type: String, unique: true },
+    date: { type: Date, required: true },
+    type: { type: String, enum: ['Income', 'Expense'], required: true },
+    category: {
+      type: String,
+      enum: ['Car Purchase', 'Car Repair', 'Salary Payment', 'Office Expense', 'Cash Sale', 'Installment Payment', 'Rental Income', 'Other Income', 'Other Expense'],
+      required: true,
+    },
+    amount: { type: Number, required: true, min: 0 },
+    description: { type: String, required: true, trim: true },
+    referenceId: { type: String },
+    referenceType: { type: String },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true }
+);
+
+TransactionSchema.pre('save', async function (this: ITransactionDocument) {
+  if (!this.isNew || this.transactionId) return;
+  const count = await mongoose.model('Transaction').countDocuments();
+  this.transactionId = `TXN-${String(count + 1).padStart(6, '0')}`;
+});
+
+const Transaction: Model<ITransactionDocument> =
+  mongoose.models.Transaction || mongoose.model<ITransactionDocument>('Transaction', TransactionSchema);
+
+export default Transaction;

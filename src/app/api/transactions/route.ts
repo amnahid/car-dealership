@@ -1,0 +1,110 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectDB, DatabaseConnectionError } from '@/lib/db';
+import Transaction from '@/models/Transaction';
+import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '30');
+    const type = searchParams.get('type') || '';
+    const category = searchParams.get('category') || '';
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+
+    const query: Record<string, unknown> = {};
+
+    if (type) query.type = type;
+    if (category) query.category = category;
+    if (startDate || endDate) {
+      query.date = {};
+      if (startDate) (query.date as Record<string, Date>).$gte = new Date(startDate);
+      if (endDate) (query.date as Record<string, Date>).$lte = new Date(endDate);
+    }
+
+    const skip = (page - 1) * limit;
+    const [transactions, total] = await Promise.all([
+      Transaction.find(query).sort({ date: -1 }).skip(skip).limit(limit).lean(),
+      Transaction.countDocuments(query),
+    ]);
+
+    // Get summary stats
+    const stats = await Transaction.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: '$type',
+          total: { $sum: '$amount' },
+        },
+      },
+    ]);
+
+    const income = stats.find(s => s._id === 'Income')?.total || 0;
+    const expense = stats.find(s => s._id === 'Expense')?.total || 0;
+
+    return NextResponse.json({
+      transactions,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      summary: { income, expense, profit: income - expense },
+    });
+  } catch (error) {
+    console.error('Get transactions error:', error);
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    await connectDB();
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { date, type, category, amount, description, referenceId, referenceType } = body;
+
+    if (!date || !type || !category || !amount || !description) {
+      return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
+    }
+
+    const transaction = await Transaction.create({
+      date: new Date(date),
+      type,
+      category,
+      amount,
+      description,
+      referenceId,
+      referenceType,
+      createdBy: user.userId,
+    });
+
+    await logActivity({
+      userId: user.userId,
+      userName: user.name,
+      action: `Recorded ${type.toLowerCase()}: $${amount} - ${description}`,
+      module: 'Finance',
+      targetId: transaction._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
+    return NextResponse.json({ transaction }, { status: 201 });
+  } catch (error) {
+    console.error('Create transaction error:', error);
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

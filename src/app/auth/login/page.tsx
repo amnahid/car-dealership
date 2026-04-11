@@ -1,18 +1,91 @@
 import LoginForm from '@/components/forms/LoginForm';
 
 export default function LoginPage() {
+  const pageStyle: React.CSSProperties = {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
+  };
+
+  const overlayStyle: React.CSSProperties = {
+    content: '""',
+    position: 'absolute',
+    background: 'rgba(0, 0, 0, 0.03)',
+    width: '100%',
+    height: '100%',
+  };
+
+  const containerStyle: React.CSSProperties = {
+    background: '#ffffff',
+    boxShadow: '2px 3.464px 14.72px 1.28px rgba(16, 16, 16, 0.15)',
+    padding: '60px 40px',
+    width: '420px',
+    maxWidth: '100%',
+    position: 'relative',
+    zIndex: 1,
+    borderRadius: '8px',
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-600">🚗 NahidDealership</h1>
-          <p className="mt-2 text-gray-500 text-sm">Car Dealership & Rental Management System</p>
+    <div style={pageStyle}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.4)',
+        }}
+      />
+      <div style={containerStyle}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <h1
+            style={{
+              fontFamily: '"Sarabun", sans-serif',
+              fontSize: '28px',
+              fontWeight: 700,
+              color: '#28aaa9',
+              margin: 0,
+            }}
+          >
+            NahidDealership
+          </h1>
+          <p
+            style={{
+              fontFamily: '"Sarabun", sans-serif',
+              fontSize: '14px',
+              color: '#9ca8b3',
+              marginTop: '8px',
+            }}
+          >
+            Car Dealership & Rental Management System
+          </p>
         </div>
-        <div className="bg-white rounded-xl shadow-md p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Sign in to your account</h2>
+        <div style={{ marginBottom: '24px' }}>
+          <h2
+            style={{
+              fontFamily: '"Sarabun", sans-serif',
+              fontSize: '20px',
+              fontWeight: 600,
+              color: '#2b2d5d',
+              marginBottom: '24px',
+            }}
+          >
+            Sign in to your account
+          </h2>
           <LoginForm />
         </div>
-        <p className="mt-4 text-center text-xs text-gray-500">
+        <p
+          style={{
+            textAlign: 'center',
+            fontSize: '12px',
+            color: '#9ca8b3',
+            marginTop: '16px',
+          }}
+        >
           Default: admin@dealership.com / Admin@123
         </p>
       </div>

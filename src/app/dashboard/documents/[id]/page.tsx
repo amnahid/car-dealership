@@ -44,12 +44,12 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
 
       {daysLeft <= 30 && daysLeft >= 0 && (
         <div className={`rounded-md border p-3 ${daysLeft <= 7 ? 'bg-red-50 border-red-200 text-red-800' : daysLeft <= 15 ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-orange-50 border-orange-200 text-orange-800'}`}>
-          ⚠️ This document expires in <strong>{daysLeft} day{daysLeft !== 1 ? 's' : ''}</strong>.
+          <span style={{ display: 'inline-block', width: '14px', height: '14px', marginRight: '4px', borderRadius: '50%', background: '#f8b425', verticalAlign: 'middle' }}></span>This document expires in <strong>{daysLeft} day{daysLeft !== 1 ? 's' : ''}</strong>.
         </div>
       )}
       {daysLeft < 0 && (
         <div className="rounded-md border bg-red-50 border-red-200 text-red-800 p-3">
-          🚨 This document has <strong>expired</strong>.
+          <span style={{ display: 'inline-block', width: '14px', height: '14px', marginRight: '4px', borderRadius: '50%', background: '#ec4561', verticalAlign: 'middle' }}></span>This document has <strong>expired</strong>.
         </div>
       )}
 

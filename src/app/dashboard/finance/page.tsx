@@ -1,0 +1,253 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+
+interface Transaction {
+  _id: string;
+  transactionId: string;
+  date: string;
+  type: 'Income' | 'Expense';
+  category: string;
+  amount: number;
+  description: string;
+}
+
+export default function FinancePage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [summary, setSummary] = useState({ income: 0, expense: 0, profit: 0 });
+  const [showModal, setShowModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'transactions' | 'report'>('transactions');
+
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams({ page: page.toString(), limit: '30' });
+    if (typeFilter) params.set('type', typeFilter);
+    if (categoryFilter) params.set('category', categoryFilter);
+
+    try {
+      const res = await fetch(`/api/transactions?${params}`);
+      const data = await res.json();
+      setTransactions(data.transactions || []);
+      setTotalPages(data.pagination?.pages || 1);
+      setSummary(data.summary || { income: 0, expense: 0, profit: 0 });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, typeFilter, categoryFilter]);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  const categories = ['Car Purchase', 'Car Repair', 'Salary Payment', 'Office Expense', 'Cash Sale', 'Installment Payment', 'Rental Income', 'Other Income', 'Other Expense'];
+
+  return (
+    <div style={{ marginBottom: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <h2 className="page-title">Finance</h2>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => setActiveTab('transactions')} style={{ padding: '10px 16px', fontSize: '14px', border: '1px solid', borderColor: activeTab === 'transactions' ? '#28aaa9' : '#ced4da', borderRadius: '3px', background: activeTab === 'transactions' ? '#28aaa9' : '#ffffff', color: activeTab === 'transactions' ? '#ffffff' : '#525f80', cursor: 'pointer' }}>Transactions</button>
+          <button onClick={() => setActiveTab('report')} style={{ padding: '10px 16px', fontSize: '14px', border: '1px solid', borderColor: activeTab === 'report' ? '#28aaa9' : '#ced4da', borderRadius: '3px', background: activeTab === 'report' ? '#28aaa9' : '#ffffff', color: activeTab === 'report' ? '#ffffff' : '#525f80', cursor: 'pointer' }}>Reports</button>
+        </div>
+      </div>
+
+      {activeTab === 'transactions' ? (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Income</p>
+              <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '8px 0 0' }}>${summary.income.toLocaleString()}</p>
+            </div>
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Expenses</p>
+              <p style={{ fontSize: '28px', fontWeight: 700, color: '#ec4561', margin: '8px 0 0' }}>${summary.expense.toLocaleString()}</p>
+            </div>
+            <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+              <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Net Profit</p>
+              <p style={{ fontSize: '28px', fontWeight: 700, color: summary.profit >= 0 ? '#28aaa9' : '#ec4561', margin: '8px 0 0' }}>${summary.profit.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
+                <option value="">All Types</option>
+                <option value="Income">Income</option>
+                <option value="Expense">Expense</option>
+              </select>
+              <select value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
+                <option value="">All Categories</option>
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <button onClick={() => setShowModal(true)} style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}>+ Add Transaction</button>
+          </div>
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {loading ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+            ) : transactions.length === 0 ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No transactions found.</div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
+                  <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
+                    <tr>
+                      {['Date', 'Type', 'Category', 'Description', 'Amount'].map((h) => (
+                        <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody style={{ borderBottom: '1px solid #eee' }}>
+                    {transactions.map((txn) => (
+                      <tr key={txn._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                        <td style={{ padding: '12px', color: '#525f80' }}>{new Date(txn.date).toLocaleDateString()}</td>
+                        <td style={{ padding: '12px' }}>
+                          <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: txn.type === 'Income' ? '#42ca7f20' : '#ec456120', color: txn.type === 'Income' ? '#42ca7f' : '#ec4561' }}>{txn.type}</span>
+                        </td>
+                        <td style={{ padding: '12px' }}>{txn.category}</td>
+                        <td style={{ padding: '12px' }}>{txn.description}</td>
+                        <td style={{ padding: '12px', fontWeight: 600, color: txn.type === 'Income' ? '#42ca7f' : '#ec4561' }}>{txn.type === 'Income' ? '+' : '-'}${txn.amount.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+              <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>Prev</button>
+              <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>Page {page} of {totalPages}</span>
+              <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>Next</button>
+            </div>
+          )}
+
+          {showModal && <TransactionModal onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchTransactions(); }} />}
+        </>
+      ) : (
+        <FinancialReport />
+      )}
+    </div>
+  );
+}
+
+function FinancialReport() {
+  const [report, setReport] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('month');
+
+  useEffect(() => {
+    fetch(`/api/reports/financial?period=${period}`)
+      .then(r => r.json())
+      .then(data => { setReport(data); setLoading(false); })
+      .catch(console.error);
+  }, [period]);
+
+  if (loading) return <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading report...</div>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        {['day', 'week', 'month', 'year'].map(p => (
+          <button key={p} onClick={() => setPeriod(p)} style={{ padding: '8px 16px', fontSize: '14px', border: '1px solid', borderColor: period === p ? '#28aaa9' : '#ced4da', borderRadius: '3px', background: period === p ? '#28aaa9' : '#ffffff', color: period === p ? '#ffffff' : '#525f80', textTransform: 'capitalize', cursor: 'pointer' }}>{p}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Income</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '8px 0 0' }}>${(report?.summary?.totalIncome || 0).toLocaleString()}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Expenses</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#ec4561', margin: '8px 0 0' }}>${(report?.summary?.totalExpense || 0).toLocaleString()}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Net Profit</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: (report?.summary?.netProfit || 0) >= 0 ? '#28aaa9' : '#ec4561', margin: '8px 0 0' }}>${(report?.summary?.netProfit || 0).toLocaleString()}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Profit Margin</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '8px 0 0' }}>{report?.summary?.profitMargin || 0}%</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div className="card" style={{ padding: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#2a3142' }}>Income Breakdown</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cash Sales</span><span style={{ fontWeight: 600 }}>${(report?.breakdown?.cashSales || 0).toLocaleString()}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Installment Payments</span><span style={{ fontWeight: 600 }}>${(report?.breakdown?.installmentPayments || 0).toLocaleString()}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Rental Income</span><span style={{ fontWeight: 600 }}>${(report?.breakdown?.rentalIncome || 0).toLocaleString()}</span></div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '20px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#2a3142' }}>Expense Breakdown</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Car Purchases</span><span style={{ fontWeight: 600, color: '#ec4561' }}>${(report?.breakdown?.carPurchaseCosts || 0).toLocaleString()}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Repairs</span><span style={{ fontWeight: 600, color: '#ec4561' }}>${(report?.breakdown?.repairCosts || 0).toLocaleString()}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Salaries</span><span style={{ fontWeight: 600, color: '#ec4561' }}>${(report?.breakdown?.salaryExpenses || 0).toLocaleString()}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Other</span><span style={{ fontWeight: 600, color: '#ec4561' }}>${(report?.breakdown?.otherExpenses || 0).toLocaleString()}</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: '20px', marginTop: '24px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '16px', color: '#2a3142' }}>Car Profit Analysis</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div><p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Average Profit per Car</p><p style={{ fontSize: '24px', fontWeight: 700, color: '#28aaa9', margin: '8px 0 0' }}>${(report?.carProfit?.average || 0).toLocaleString()}</p></div>
+          <div><p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Car Profit</p><p style={{ fontSize: '24px', fontWeight: 700, color: '#42ca7f', margin: '8px 0 0' }}>${(report?.carProfit?.total || 0).toLocaleString()}</p></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TransactionModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
+  const [form, setForm] = useState({ date: new Date().toISOString().split('T')[0], type: 'Income', category: 'Other Income', amount: '', description: '' });
+  const [loading, setLoading] = useState(false);
+
+  const categories = form.type === 'Income' ? ['Cash Sale', 'Installment Payment', 'Rental Income', 'Other Income'] : ['Car Purchase', 'Car Repair', 'Salary Payment', 'Office Expense', 'Other Expense'];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch('/api/transactions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      onSave();
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '450px' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Add Transaction</h3>
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Date *</label><input required type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
+            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Type *</label><select required value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value, category: '' })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}><option value="Income">Income</option><option value="Expense">Expense</option></select></div>
+            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Category *</label><select required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Amount *</label><input required type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
+          </div>
+          <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Description *</label><input required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Save'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -119,64 +119,168 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
     }
   };
 
-  const inputClass =
-    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
-  const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
-  const fileInputClass =
-    'block w-full cursor-pointer rounded-md border border-dashed border-gray-300 bg-gray-50 p-2 text-sm text-gray-700 transition-colors focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100';
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: '40px',
+    fontSize: '14px',
+    borderRadius: '0',
+    padding: '0.375rem 1rem',
+    border: '1px solid #ced4da',
+    background: '#ffffff',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    color: '#2a3142',
+    marginBottom: '4px',
+  };
+
+  const fileInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    height: 'auto',
+    padding: '8px',
+    border: '1px dashed #ced4da',
+    background: '#f8f9fa',
+    cursor: 'pointer',
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-3">
-          <p className="text-sm text-red-700">{error}</p>
+        <div
+          style={{
+            background: 'rgba(236, 69, 97, 0.1)',
+            border: '1px solid #ec4561',
+            borderRadius: '3px',
+            padding: '12px',
+            marginBottom: '20px',
+          }}
+        >
+          <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div>
-          <label className={labelClass}>Supplier Name *</label>
-          <input name="supplierName" required value={form.supplierName} onChange={handleChange} className={inputClass} placeholder="Supplier Co." />
+          <label style={labelStyle}>Supplier Name *</label>
+          <input
+            name="supplierName"
+            required
+            value={form.supplierName}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="Supplier Co."
+          />
         </div>
         <div>
-          <label className={labelClass}>Supplier Contact</label>
-          <input name="supplierContact" value={form.supplierContact} onChange={handleChange} className={inputClass} placeholder="+1 234 567 8900" />
+          <label style={labelStyle}>Supplier Contact</label>
+          <input
+            name="supplierContact"
+            value={form.supplierContact}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="+1 234 567 8900"
+          />
         </div>
         <div>
-          <label className={labelClass}>Purchase Price *</label>
-          <input name="purchasePrice" type="number" required min="0" step="0.01" value={form.purchasePrice} onChange={handleChange} className={inputClass} placeholder="25000" />
+          <label style={labelStyle}>Purchase Price *</label>
+          <input
+            name="purchasePrice"
+            type="number"
+            required
+            min="0"
+            step="0.01"
+            value={form.purchasePrice}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="25000"
+          />
         </div>
         <div>
-          <label className={labelClass}>Purchase Date *</label>
-          <input name="purchaseDate" type="date" required value={form.purchaseDate} onChange={handleChange} className={inputClass} />
+          <label style={labelStyle}>Purchase Date *</label>
+          <input
+            name="purchaseDate"
+            type="date"
+            required
+            value={form.purchaseDate}
+            onChange={handleChange}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className={labelClass}>Brand *</label>
-          <input name="brand" required value={form.brand} onChange={handleChange} className={inputClass} placeholder="Toyota" />
+          <label style={labelStyle}>Brand *</label>
+          <input
+            name="brand"
+            required
+            value={form.brand}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="Toyota"
+          />
         </div>
         <div>
-          <label className={labelClass}>Model *</label>
-          <input name="model" required value={form.model} onChange={handleChange} className={inputClass} placeholder="Camry" />
+          <label style={labelStyle}>Model *</label>
+          <input
+            name="model"
+            required
+            value={form.model}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="Camry"
+          />
         </div>
         <div>
-          <label className={labelClass}>Year *</label>
-          <input name="year" type="number" required min="1900" max={new Date().getFullYear() + 1} value={form.year} onChange={handleChange} className={inputClass} />
+          <label style={labelStyle}>Year *</label>
+          <input
+            name="year"
+            type="number"
+            required
+            min="1900"
+            max={new Date().getFullYear() + 1}
+            value={form.year}
+            onChange={handleChange}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className={labelClass}>Color</label>
-          <input name="color" value={form.color} onChange={handleChange} className={inputClass} placeholder="Silver" />
+          <label style={labelStyle}>Color</label>
+          <input
+            name="color"
+            value={form.color}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="Silver"
+          />
         </div>
         <div>
-          <label className={labelClass}>Engine Number</label>
-          <input name="engineNumber" value={form.engineNumber} onChange={handleChange} className={inputClass} />
+          <label style={labelStyle}>Engine Number</label>
+          <input
+            name="engineNumber"
+            value={form.engineNumber}
+            onChange={handleChange}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className={labelClass}>Chassis Number *</label>
-          <input name="chassisNumber" required value={form.chassisNumber} onChange={handleChange} className={inputClass} />
+          <label style={labelStyle}>Chassis Number *</label>
+          <input
+            name="chassisNumber"
+            required
+            value={form.chassisNumber}
+            onChange={handleChange}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className={labelClass}>Status</label>
-          <select name="status" value={form.status} onChange={handleChange} className={inputClass}>
+          <label style={labelStyle}>Status</label>
+          <select
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            style={inputStyle}
+          >
             {['In Stock', 'Under Repair', 'Reserved', 'Sold', 'Rented'].map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
@@ -184,49 +288,104 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         </div>
       </div>
 
-      <div>
-        <label className={labelClass}>Notes</label>
-        <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} className={inputClass} placeholder="Additional notes..." />
+      <div style={{ marginBottom: '20px' }}>
+        <label style={labelStyle}>Notes</label>
+        <textarea
+          name="notes"
+          value={form.notes}
+          onChange={handleChange}
+          rows={3}
+          style={{ ...inputStyle, height: 'auto', padding: '8px 1rem' }}
+          placeholder="Additional notes..."
+        />
       </div>
 
-      <div>
-        <label htmlFor="car-images" className={labelClass}>Images</label>
+      <div style={{ marginBottom: '20px' }}>
+        <label style={labelStyle}>Images</label>
         <input
-          id="car-images"
           type="file"
           accept="image/*"
           multiple
           onChange={handleImageUpload}
-          className={fileInputClass}
+          style={fileInputStyle}
         />
-        <p className="mt-1 text-xs text-gray-500">Upload one or more images (JPG, PNG, WEBP).</p>
+        <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
+          Upload one or more images (JPG, PNG, WEBP).
+        </p>
         {form.images.length > 0 && (
-          <div className="mt-3">
-            <p className="mb-2 text-xs font-medium text-gray-600">{form.images.length} image{form.images.length > 1 ? 's' : ''} selected</p>
-            <div className="flex flex-wrap gap-2">
-            {form.images.map((img, i) => (
-              <div key={i} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img} alt={`Car image ${i + 1}`} className="w-20 h-20 object-cover rounded" />
-                <button
-                  type="button"
-                  onClick={() => removeImage(i)}
-                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+          <div style={{ marginTop: '12px' }}>
+            <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginBottom: '8px' }}>
+              {form.images.length} image{form.images.length > 1 ? 's' : ''} selected
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {form.images.map((img, i) => (
+                <div key={i} style={{ position: 'relative' }}>
+                  <img
+                    src={img}
+                    alt={`Car image ${i + 1}`}
+                    style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '3px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(i)}
+                    style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '-4px',
+                      background: '#ec4561',
+                      color: '#ffffff',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      fontSize: '12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         )}
       </div>
 
-      <div className="flex gap-3 justify-end">
-        <button type="button" onClick={() => router.back()} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: 500,
+            color: '#2a3142',
+            background: '#ffffff',
+            border: '1px solid #ced4da',
+            borderRadius: '3px',
+            cursor: 'pointer',
+          }}
+        >
           Cancel
         </button>
-        <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: 500,
+            color: '#ffffff',
+            background: '#28aaa9',
+            border: '1px solid #28aaa9',
+            borderRadius: '3px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+          }}
+        >
           {loading ? 'Saving...' : mode === 'edit' ? 'Update Car' : 'Add Car'}
         </button>
       </div>

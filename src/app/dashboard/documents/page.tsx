@@ -13,13 +13,13 @@ interface VehicleDoc {
   car?: { carId: string; brand: string; model: string };
 }
 
-function getExpiryClass(expiryDate: string): string {
+function getExpiryStyle(expiryDate: string): React.CSSProperties {
   const days = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / 86400000);
-  if (days < 0) return 'bg-red-100 text-red-800';
-  if (days <= 7) return 'text-red-600 font-semibold';
-  if (days <= 15) return 'text-yellow-600 font-semibold';
-  if (days <= 30) return 'text-orange-500 font-medium';
-  return '';
+  if (days < 0) return { color: '#ec4561', fontWeight: 600 };
+  if (days <= 7) return { color: '#ec4561', fontWeight: 600 };
+  if (days <= 15) return { color: '#f8b425', fontWeight: 600 };
+  if (days <= 30) return { color: '#f8a426', fontWeight: 500 };
+  return { color: '#2a3142' };
 }
 
 export default function DocumentsPage() {
@@ -47,60 +47,128 @@ export default function DocumentsPage() {
   }, [fetchDocs]);
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">Documents</h2>
-        <Link href="/dashboard/documents/new" className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-indigo-500">
+    <div style={{ marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+        }}
+      >
+        <h2 className="page-title">Documents</h2>
+        <Link
+          href="/dashboard/documents/new"
+          style={{
+            background: '#28aaa9',
+            color: '#ffffff',
+            fontSize: '14px',
+            fontWeight: 500,
+            padding: '10px 16px',
+            borderRadius: '3px',
+            textDecoration: 'none',
+            border: '1px solid #28aaa9',
+          }}
+        >
           + Add Document
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
         ) : documents.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No documents found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No documents found.</div>
         ) : (
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
+            <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
                 {['Car ID', 'Type', 'Issue Date', 'Expiry Date', 'File', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  <th
+                    key={h}
+                    style={{
+                      padding: '12px',
+                      textAlign: 'left',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#525f80',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody style={{ borderBottom: '1px solid #eee' }}>
               {documents.map((doc) => {
                 const daysLeft = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / 86400000);
+                const expiryStyle = getExpiryStyle(doc.expiryDate);
                 return (
-                  <tr key={doc._id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-indigo-600">{doc.carId}</td>
-                    <td className="px-4 py-3">{doc.documentType}</td>
-                    <td className="px-4 py-3">{new Date(doc.issueDate).toLocaleDateString()}</td>
-                    <td className={`px-4 py-3 ${getExpiryClass(doc.expiryDate)}`}>
+                  <tr key={doc._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                    <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{doc.carId}</td>
+                    <td style={{ padding: '12px' }}>{doc.documentType}</td>
+                    <td style={{ padding: '12px' }}>{new Date(doc.issueDate).toLocaleDateString()}</td>
+                    <td style={{ padding: '12px', ...expiryStyle }}>
                       {new Date(doc.expiryDate).toLocaleDateString()}
                       {daysLeft <= 30 && daysLeft >= 0 && (
-                        <span className="ml-1 text-xs">({daysLeft}d left)</span>
+                        <span style={{ marginLeft: '4px', fontSize: '11px' }}>({daysLeft}d left)</span>
                       )}
-                      {daysLeft < 0 && <span className="ml-1 text-xs">(Expired)</span>}
+                      {daysLeft < 0 && <span style={{ marginLeft: '4px', fontSize: '11px' }}>(Expired)</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 truncate max-w-xs">{doc.fileName || '-'}</td>
-                    <td className="px-4 py-3">
-                      <Link href={`/dashboard/documents/${doc._id}`} className="text-indigo-600 hover:underline">View</Link>
+                    <td style={{ padding: '12px', color: '#525f80', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {doc.fileName || '-'}
+                    </td>
+                    <td style={{ padding: '12px' }}>
+                      <Link href={`/dashboard/documents/${doc._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>
+                        View
+                      </Link>
                     </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {totalPages > 1 && (
-        <div className="flex gap-2 justify-end">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Prev</button>
-          <span className="px-3 py-1 text-sm">Page {page} of {totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Next</button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12px',
+              border: '1px solid #ced4da',
+              borderRadius: '3px',
+              background: '#ffffff',
+              cursor: page === 1 ? 'not-allowed' : 'pointer',
+              opacity: page === 1 ? 0.5 : 1,
+            }}
+          >
+            Prev
+          </button>
+          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12px',
+              border: '1px solid #ced4da',
+              borderRadius: '3px',
+              background: '#ffffff',
+              cursor: page === totalPages ? 'not-allowed' : 'pointer',
+              opacity: page === totalPages ? 0.5 : 1,
+            }}
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

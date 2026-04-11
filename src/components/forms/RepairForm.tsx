@@ -133,24 +133,50 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
     }
   };
 
-  const inputClass =
-    'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
-  const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
-  const fileInputClass =
-    'block w-full cursor-pointer rounded-md border border-dashed border-gray-300 bg-gray-50 p-2 text-sm text-gray-700 transition-colors focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 file:mr-4 file:rounded-md file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-indigo-700 hover:file:bg-indigo-100';
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: '40px',
+    fontSize: '14px',
+    borderRadius: '0',
+    padding: '0.375rem 1rem',
+    border: '1px solid #ced4da',
+    background: '#ffffff',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    color: '#2a3142',
+    marginBottom: '4px',
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
       {error && (
-        <div className="rounded-md bg-red-50 border border-red-200 p-3">
-          <p className="text-sm text-red-700">{error}</p>
+        <div
+          style={{
+            background: 'rgba(236, 69, 97, 0.1)',
+            border: '1px solid #ec4561',
+            borderRadius: '3px',
+            padding: '12px',
+            marginBottom: '20px',
+          }}
+        >
+          <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div>
-          <label className={labelClass}>Car *</label>
-          <select name="car" required value={form.car} onChange={handleChange} className={inputClass}>
+          <label style={labelStyle}>Car *</label>
+          <select
+            name="car"
+            required
+            value={form.car}
+            onChange={handleChange}
+            style={inputStyle}
+          >
             <option value="">Select a car</option>
             {cars.map((car) => (
               <option key={car._id} value={car._id}>
@@ -160,20 +186,48 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
           </select>
         </div>
         <div>
-          <label className={labelClass}>Repair Date *</label>
-          <input name="repairDate" type="date" required value={form.repairDate} onChange={handleChange} className={inputClass} />
+          <label style={labelStyle}>Repair Date *</label>
+          <input
+            name="repairDate"
+            type="date"
+            required
+            value={form.repairDate}
+            onChange={handleChange}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className={labelClass}>Labor Cost ($)</label>
-          <input name="laborCost" type="number" min="0" step="0.01" value={form.laborCost} onChange={handleChange} className={inputClass} />
+          <label style={labelStyle}>Labor Cost ($)</label>
+          <input
+            name="laborCost"
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.laborCost}
+            onChange={handleChange}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className={labelClass}>Parts/Repair Cost ($)</label>
-          <input name="repairCost" type="number" min="0" step="0.01" value={form.repairCost} onChange={handleChange} className={inputClass} />
+          <label style={labelStyle}>Parts/Repair Cost ($)</label>
+          <input
+            name="repairCost"
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.repairCost}
+            onChange={handleChange}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className={labelClass}>Status</label>
-          <select name="status" value={form.status} onChange={handleChange} className={inputClass}>
+          <label style={labelStyle}>Status</label>
+          <select
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            style={inputStyle}
+          >
             {['Pending', 'In Progress', 'Completed'].map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
@@ -181,54 +235,96 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
         </div>
       </div>
 
-      <div>
-        <label className={labelClass}>Repair Description *</label>
-        <textarea name="repairDescription" required value={form.repairDescription} onChange={handleChange} rows={3} className={inputClass} />
+      <div style={{ marginBottom: '20px' }}>
+        <label style={labelStyle}>Repair Description *</label>
+        <textarea
+          name="repairDescription"
+          required
+          value={form.repairDescription}
+          onChange={handleChange}
+          rows={3}
+          style={{ ...inputStyle, height: 'auto', padding: '8px 1rem' }}
+        />
       </div>
 
-      <div>
-        <label className={labelClass}>Parts Replaced</label>
-        <textarea name="partsReplaced" value={form.partsReplaced} onChange={handleChange} rows={2} className={inputClass} />
+      <div style={{ marginBottom: '20px' }}>
+        <label style={labelStyle}>Parts Replaced</label>
+        <textarea
+          name="partsReplaced"
+          value={form.partsReplaced}
+          onChange={handleChange}
+          rows={2}
+          style={{ ...inputStyle, height: 'auto', padding: '8px 1rem' }}
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div>
-          <label htmlFor="before-images" className={labelClass}>Before Images</label>
+          <label style={labelStyle}>Before Images</label>
           <input
-            id="before-images"
             type="file"
             accept="image/*"
             multiple
             onChange={handleImageUpload('beforeImages')}
-            className={fileInputClass}
+            style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
           />
-          <p className="mt-1 text-xs text-gray-500">Add photos before repair work starts.</p>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>Add photos before repair work starts.</p>
           {form.beforeImages.length > 0 && (
-            <p className="mt-2 text-xs font-medium text-gray-600">{form.beforeImages.length} image{form.beforeImages.length > 1 ? 's' : ''} selected</p>
+            <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginTop: '8px' }}>
+              {form.beforeImages.length} image{form.beforeImages.length > 1 ? 's' : ''} selected
+            </p>
           )}
         </div>
         <div>
-          <label htmlFor="after-images" className={labelClass}>After Images</label>
+          <label style={labelStyle}>After Images</label>
           <input
-            id="after-images"
             type="file"
             accept="image/*"
             multiple
             onChange={handleImageUpload('afterImages')}
-            className={fileInputClass}
+            style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
           />
-          <p className="mt-1 text-xs text-gray-500">Add photos after repair is completed.</p>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>Add photos after repair is completed.</p>
           {form.afterImages.length > 0 && (
-            <p className="mt-2 text-xs font-medium text-gray-600">{form.afterImages.length} image{form.afterImages.length > 1 ? 's' : ''} selected</p>
+            <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginTop: '8px' }}>
+              {form.afterImages.length} image{form.afterImages.length > 1 ? 's' : ''} selected
+            </p>
           )}
         </div>
       </div>
 
-      <div className="flex gap-3 justify-end">
-        <button type="button" onClick={() => router.back()} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: 500,
+            color: '#2a3142',
+            background: '#ffffff',
+            border: '1px solid #ced4da',
+            borderRadius: '3px',
+            cursor: 'pointer',
+          }}
+        >
           Cancel
         </button>
-        <button type="submit" disabled={loading} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-md hover:bg-indigo-500 disabled:opacity-60">
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            padding: '10px 20px',
+            fontSize: '14px',
+            fontWeight: 500,
+            color: '#ffffff',
+            background: '#28aaa9',
+            border: '1px solid #28aaa9',
+            borderRadius: '3px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.6 : 1,
+          }}
+        >
           {loading ? 'Saving...' : mode === 'edit' ? 'Update Repair' : 'Add Repair'}
         </button>
       </div>

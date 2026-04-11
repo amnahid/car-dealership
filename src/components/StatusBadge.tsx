@@ -4,19 +4,30 @@ interface StatusBadgeProps {
   status: CarStatus;
 }
 
-const statusConfig: Record<CarStatus, { label: string; className: string }> = {
-  'In Stock': { label: 'In Stock', className: 'bg-green-100 text-green-800' },
-  'Under Repair': { label: 'Under Repair', className: 'bg-yellow-100 text-yellow-800' },
-  Reserved: { label: 'Reserved', className: 'bg-blue-100 text-blue-800' },
-  Sold: { label: 'Sold', className: 'bg-gray-100 text-gray-800' },
-  Rented: { label: 'Rented', className: 'bg-purple-100 text-purple-800' },
+const statusConfig: Record<CarStatus, { label: string; background: string; color: string }> = {
+  'In Stock': { label: 'In Stock', background: '#42ca7f', color: '#ffffff' },
+  'Under Repair': { label: 'Under Repair', background: '#f8b425', color: '#ffffff' },
+  Reserved: { label: 'Reserved', background: '#38a4f8', color: '#ffffff' },
+  Sold: { label: 'Sold', background: '#adb5bd', color: '#ffffff' },
+  Rented: { label: 'Rented', background: '#9c27b0', color: '#ffffff' },
 };
 
+const defaultConfig = { label: 'Unknown', background: '#adb5bd', color: '#ffffff' };
+
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
+  const config = statusConfig[status] || defaultConfig;
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${config.className}`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '8px 10px',
+        fontWeight: 500,
+        fontSize: '12px',
+        borderRadius: '3px',
+        background: config.background,
+        color: config.color,
+      }}
     >
       {config.label}
     </span>

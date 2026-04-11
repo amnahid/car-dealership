@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectDB, DatabaseConnectionError } from '@/lib/db';
+import SalaryPayment from '@/models/SalaryPayment';
+import Employee from '@/models/Employee';
+import Transaction from '@/models/Transaction';
+import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '15');
+    const employeeId = searchParams.get('employeeId') || '';
+    const month = searchParams.get('month') ? parseInt(searchParams.get('month')!) : null;
+    const year = searchParams.get('year') ? parseInt(searchParams.get('year')!) : null;
+
+    const query: Record<string, unknown> = {};
+
+    if (employeeId) query.employee = employeeId;
+    if (month) query.month = month;
+    if (year) query.year = year;
+
+    const skip = (page - 1) * limit;
+    const [payments, total] = await Promise.all([
+      SalaryPayment.find(query).sort({ paymentDate: -1 }).skip(skip).limit(limit).lean(),
+      SalaryPayment.countDocuments(query),
+    ]);
+
+    // Get total paid this month
+    const now = new Date();
+    const monthlyTotal = await SalaryPayment.aggregate([
+      { $match: { month: now.getMonth() + 1, year: now.getFullYear() } },
+      { $group: { _id: null, total: { $sum: '$amount' } } },
+    ]);
+
+    return NextResponse.json({
+      payments,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      totalThisMonth: monthlyTotal[0]?.total || 0,
+    });
+  } catch (error) {
+    console.error('Get salary payments error:', error);
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    await connectDB();
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { employee, employeeId, employeeName, amount, paymentDate, month, year, paymentType, notes } = body;
+
+    if (!employee || !employeeId || !employeeName || !amount || !paymentDate || !month || !year) {
+      return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
+    }
+
+    const payment = await SalaryPayment.create({
+      employee, employeeId, employeeName, amount, paymentDate, month, year,
+      paymentType: paymentType || 'Monthly', notes,
+      createdBy: user.userId,
+    });
+
+    // Create transaction record
+    await Transaction.create({
+      date: new Date(paymentDate),
+      type: 'Expense',
+      category: 'Salary Payment',
+      amount,
+      description: `Salary payment to ${employeeName} - ${paymentType || 'Monthly'}`,
+      referenceId: payment._id.toString(),
+      referenceType: 'SalaryPayment',
+      createdBy: user.userId,
+    });
+
+    await logActivity({
+      userId: user.userId,
+      userName: user.name,
+      action: `Recorded salary payment: $${amount} to ${employeeName}`,
+      module: 'HR',
+      targetId: payment._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
+    return NextResponse.json({ payment }, { status: 201 });
+  } catch (error) {
+    console.error('Create salary payment error:', error);
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

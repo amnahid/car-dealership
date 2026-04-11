@@ -46,12 +46,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const expiringDocsCount = await getExpiringDocsCount();
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: '#f9fbfd' }}>
       <Sidebar userRole={user.role} />
-      <div className="flex-1 flex flex-col">
-        <Header userName={user.name} userRole={user.role} expiringDocsCount={expiringDocsCount} />
-        <main className="flex-1 p-6">{children}</main>
-      </div>
+      <Header userName={user.name} userRole={user.role} expiringDocsCount={expiringDocsCount} userEmail={user.email} userAvatar={user.avatar} />
+      <main style={{ padding: '24px', marginTop: '70px', marginBottom: '60px', marginLeft: '240px' }}>
+        {children}
+      </main>
+      <footer className="footer">
+        <p style={{ margin: 0 }}>&copy; 2024 NahidDealership. All rights reserved.</p>
+      </footer>
     </div>
   );
 }

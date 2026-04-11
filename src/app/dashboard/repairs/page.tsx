@@ -37,62 +37,138 @@ export default function RepairsPage() {
     fetchRepairs();
   }, [fetchRepairs]);
 
-  const statusColor: Record<string, string> = {
-    Pending: 'bg-yellow-100 text-yellow-800',
-    'In Progress': 'bg-blue-100 text-blue-800',
-    Completed: 'bg-green-100 text-green-800',
+  const statusStyles: Record<string, { background: string; color: string }> = {
+    Pending: { background: '#f8b425', color: '#ffffff' },
+    'In Progress': { background: '#38a4f8', color: '#ffffff' },
+    Completed: { background: '#42ca7f', color: '#ffffff' },
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-800">Repairs</h2>
-        <Link href="/dashboard/repairs/new" className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-indigo-500">
+    <div style={{ marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+        }}
+      >
+        <h2 className="page-title">Repairs</h2>
+        <Link
+          href="/dashboard/repairs/new"
+          style={{
+            background: '#28aaa9',
+            color: '#ffffff',
+            fontSize: '14px',
+            fontWeight: 500,
+            padding: '10px 16px',
+            borderRadius: '3px',
+            textDecoration: 'none',
+            border: '1px solid #28aaa9',
+          }}
+        >
           + Add Repair
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
         ) : repairs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No repairs found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No repairs found.</div>
         ) : (
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '700px' }}>
+            <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
                 {['Car ID', 'Description', 'Total Cost', 'Repair Date', 'Status', 'Actions'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  <th
+                    key={h}
+                    style={{
+                      padding: '12px',
+                      textAlign: 'left',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#525f80',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody style={{ borderBottom: '1px solid #eee' }}>
               {repairs.map((r) => (
-                <tr key={r._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-indigo-600">{r.carId}</td>
-                  <td className="px-4 py-3 max-w-xs truncate">{r.repairDescription}</td>
-                  <td className="px-4 py-3">${r.totalCost?.toLocaleString()}</td>
-                  <td className="px-4 py-3">{new Date(r.repairDate).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor[r.status] || 'bg-gray-100 text-gray-800'}`}>
+                <tr key={r._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                  <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{r.carId}</td>
+                  <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.repairDescription}
+                  </td>
+                  <td style={{ padding: '12px' }}>${r.totalCost?.toLocaleString()}</td>
+                  <td style={{ padding: '12px' }}>{new Date(r.repairDate).toLocaleDateString()}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        borderRadius: '3px',
+                        ...(statusStyles[r.status] || { background: '#adb5bd', color: '#ffffff' }),
+                      }}
+                    >
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/dashboard/repairs/${r._id}`} className="text-indigo-600 hover:underline">View</Link>
+                  <td style={{ padding: '12px' }}>
+                    <Link href={`/dashboard/repairs/${r._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>
+                      View
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {totalPages > 1 && (
-        <div className="flex gap-2 justify-end">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Prev</button>
-          <span className="px-3 py-1 text-sm">Page {page} of {totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Next</button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12px',
+              border: '1px solid #ced4da',
+              borderRadius: '3px',
+              background: '#ffffff',
+              cursor: page === 1 ? 'not-allowed' : 'pointer',
+              opacity: page === 1 ? 0.5 : 1,
+            }}
+          >
+            Prev
+          </button>
+          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12px',
+              border: '1px solid #ced4da',
+              borderRadius: '3px',
+              background: '#ffffff',
+              cursor: page === totalPages ? 'not-allowed' : 'pointer',
+              opacity: page === totalPages ? 0.5 : 1,
+            }}
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

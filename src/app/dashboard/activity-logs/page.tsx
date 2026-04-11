@@ -36,45 +36,103 @@ export default function ActivityLogsPage() {
   }, [fetchLogs]);
 
   return (
-    <div className="space-y-5">
-      <h2 className="text-2xl font-bold text-gray-800">Activity Logs</h2>
+    <div style={{ marginBottom: '24px' }}>
+      <h2 className="page-title" style={{ marginBottom: '24px' }}>Activity Logs</h2>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div className="p-8 text-center text-gray-500">Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">No activity logs found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No activity logs found.</div>
         ) : (
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
+            <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
                 {['Action', 'Module', 'User', 'IP Address', 'Date'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                  <th
+                    key={h}
+                    style={{
+                      padding: '12px',
+                      textAlign: 'left',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#525f80',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody style={{ borderBottom: '1px solid #eee' }}>
               {logs.map((log) => (
-                <tr key={log._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">{log.action}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex rounded-full bg-indigo-100 text-indigo-800 px-2.5 py-0.5 text-xs font-medium">{log.module}</span>
+                <tr key={log._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                  <td style={{ padding: '12px' }}>{log.action}</td>
+                  <td style={{ padding: '12px' }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        borderRadius: '3px',
+                        background: '#28aaa9',
+                        color: '#ffffff',
+                      }}
+                    >
+                      {log.module}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 font-medium">{log.userName}</td>
-                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">{log.ipAddress}</td>
-                  <td className="px-4 py-3 text-gray-500">{new Date(log.createdAt).toLocaleString()}</td>
+                  <td style={{ padding: '12px', fontWeight: 500 }}>{log.userName}</td>
+                  <td style={{ padding: '12px', color: '#525f80', fontFamily: 'monospace', fontSize: '12px' }}>
+                    {log.ipAddress}
+                  </td>
+                  <td style={{ padding: '12px', color: '#525f80' }}>{new Date(log.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {totalPages > 1 && (
-        <div className="flex gap-2 justify-end">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Prev</button>
-          <span className="px-3 py-1 text-sm">Page {page} of {totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Next</button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12px',
+              border: '1px solid #ced4da',
+              borderRadius: '3px',
+              background: '#ffffff',
+              cursor: page === 1 ? 'not-allowed' : 'pointer',
+              opacity: page === 1 ? 0.5 : 1,
+            }}
+          >
+            Prev
+          </button>
+          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{
+              padding: '8px 12px',
+              fontSize: '12px',
+              border: '1px solid #ced4da',
+              borderRadius: '3px',
+              background: '#ffffff',
+              cursor: page === totalPages ? 'not-allowed' : 'pointer',
+              opacity: page === totalPages ? 0.5 : 1,
+            }}
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

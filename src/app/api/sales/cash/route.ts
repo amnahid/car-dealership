@@ -1,0 +1,114 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectDB, DatabaseConnectionError } from '@/lib/db';
+import CashSale from '@/models/CashSale';
+import Car from '@/models/Car';
+import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '15');
+    const search = searchParams.get('search') || '';
+
+    const query: Record<string, unknown> = {};
+
+    if (search) {
+      query.$or = [
+        { customerName: { $regex: search, $options: 'i' } },
+        { carId: { $regex: search, $options: 'i' } },
+        { saleId: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+    const [sales, total] = await Promise.all([
+      CashSale.find(query)
+        .sort({ saleDate: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      CashSale.countDocuments(query),
+    ]);
+
+    // Calculate totals
+    const totalRevenue = await CashSale.aggregate([
+      { $match: query },
+      { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+    ]);
+
+    return NextResponse.json({
+      sales,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      totalRevenue: totalRevenue[0]?.total || 0,
+    });
+  } catch (error) {
+    console.error('Get cash sales error:', error);
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    await connectDB();
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { carId, car, customer, customerName, customerPhone, salePrice, discountAmount, agentName, agentCommission, saleDate, notes } = body;
+
+    if (!carId || !car || !customer || !customerName || !customerPhone || !salePrice || !saleDate) {
+      return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
+    }
+
+    const finalPrice = salePrice - (discountAmount || 0);
+
+    const sale = await CashSale.create({
+      car: car,
+      carId,
+      customer,
+      customerName,
+      customerPhone,
+      salePrice,
+      discountAmount: discountAmount || 0,
+      finalPrice,
+      agentName,
+      agentCommission: agentCommission || 0,
+      saleDate,
+      notes,
+      createdBy: user.userId,
+    });
+
+    // Update car status to Sold
+    await Car.findByIdAndUpdate(car, { status: 'Sold' });
+
+    await logActivity({
+      userId: user.userId,
+      userName: user.name,
+      action: `Created cash sale: ${sale.saleId} for car ${carId}`,
+      module: 'Sales',
+      targetId: sale._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
+    return NextResponse.json({ sale }, { status: 201 });
+  } catch (error) {
+    console.error('Create cash sale error:', error);
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
