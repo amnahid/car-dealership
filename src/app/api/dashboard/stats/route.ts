@@ -69,11 +69,11 @@ export async function GET(request: NextRequest) {
       ]),
       Car.aggregate([{ $group: { _id: null, total: { $sum: '$totalRepairCost' } } }]),
       Transaction.aggregate([
-        { $match: { type: 'expense', category: 'Salary' } },
+        { $match: { type: 'expense', category: 'Salary', isDeleted: false } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       Transaction.aggregate([
-        { $match: { type: 'expense' } },
+        { $match: { type: 'expense', isDeleted: false } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       CashSale.aggregate([
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
       { $group: { _id: null, total: { $sum: '$repairs.cost' } } }
     ]);
     const monthlySalaries = await Transaction.aggregate([
-      { $match: { type: 'expense', category: 'Salary', date: { $gte: startOfMonth } } },
+      { $match: { type: 'expense', category: 'Salary', date: { $gte: startOfMonth }, isDeleted: false } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
     const monthlyExpenses = (monthlyRepairCost[0]?.total || 0) + (monthlySalaries[0]?.total || 0);

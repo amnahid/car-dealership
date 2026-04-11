@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
       ]),
       Transaction.aggregate([
-        { $match: { type: 'Expense', date: dateFilter, category: { $ne: 'Salary Payment' } } },
+        { $match: { type: 'Expense', date: dateFilter, category: { $ne: 'Salary Payment' }, isDeleted: false } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
     ]);

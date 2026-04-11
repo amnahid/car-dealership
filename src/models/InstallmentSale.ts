@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type InstallmentPaymentStatus = 'Pending' | 'Paid' | 'Overdue' | 'Failed';
-export type InstallmentSaleStatus = 'Active' | 'Completed' | 'Defaulted';
+export type InstallmentSaleStatus = 'Active' | 'Completed' | 'Defaulted' | 'Cancelled';
 
 export interface IInstallmentPayment {
   installmentNumber: number;
