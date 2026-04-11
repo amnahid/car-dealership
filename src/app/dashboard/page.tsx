@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import InstallmentAlertsModal from '@/components/InstallmentAlertsModal';
 
 interface StatsData {
   totalCars: number;
@@ -170,6 +171,7 @@ function FinancialCard({
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showAlertsModal, setShowAlertsModal] = useState(false);
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<any>(null);
 
@@ -256,10 +258,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ marginBottom: '24px' }}>
-      <h2 className="page-title" style={{ marginBottom: '24px' }}>Dashboard Overview</h2>
+    <>
+      <div style={{ marginBottom: '24px' }}>
+        <h2 className="page-title" style={{ marginBottom: '24px' }}>Dashboard Overview</h2>
 
-      {stats.expiringDocuments > 0 && (
+        {stats.expiringDocuments > 0 && (
         <div
           style={{
             background: '#fff3cd',
@@ -389,11 +392,13 @@ export default function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
             {stats.overdueInstallments > 0 && (
               <div
+                onClick={() => setShowAlertsModal(true)}
                 className="card"
                 style={{
                   padding: '20px',
                   borderLeft: '4px solid #ec4561',
                   background: '#fff5f5',
+                  cursor: 'pointer',
                 }}
               >
                 <p style={{ fontSize: '14px', fontWeight: 600, color: '#ec4561', margin: 0 }}>
@@ -406,11 +411,13 @@ export default function DashboardPage() {
             )}
             {stats.upcomingInstallments > 0 && (
               <div
+                onClick={() => setShowAlertsModal(true)}
                 className="card"
                 style={{
                   padding: '20px',
                   borderLeft: '4px solid #f8b425',
                   background: '#fffbf0',
+                  cursor: 'pointer',
                 }}
               >
                 <p style={{ fontSize: '14px', fontWeight: 600, color: '#f8b425', margin: 0 }}>
@@ -474,8 +481,19 @@ export default function DashboardPage() {
               </li>
             ))}
           </ul>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+
+      <InstallmentAlertsModal
+        isOpen={showAlertsModal}
+        onClose={() => setShowAlertsModal(false)}
+        onPaymentPaid={() => {
+          fetch('/api/dashboard/stats')
+            .then((res) => res.ok ? res.json() : null)
+            .then((data) => setStats(data));
+        }}
+      />
+    </>
   );
 }

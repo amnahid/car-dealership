@@ -157,18 +157,15 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
               ))}
             </tr></thead>
             <tbody className="divide-y divide-gray-50">
-              {documents.map((d) => {
-                const daysLeft = Math.ceil((new Date(d.expiryDate).getTime() - Date.now()) / 86400000);
-                return (
-                  <tr key={d._id}>
-                    <td className="px-3 py-2">{d.documentType}</td>
-                    <td className={`px-3 py-2 ${daysLeft <= 7 ? 'text-red-600 font-semibold' : daysLeft <= 30 ? 'text-orange-500' : ''}`}>
-                      {new Date(d.expiryDate).toLocaleDateString()} {daysLeft <= 30 && `(${daysLeft}d)`}
-                    </td>
-                    <td className="px-3 py-2 text-gray-500">{d.fileName || '-'}</td>
-                  </tr>
-                );
-              })}
+              {documents.map((d) => (
+                <tr key={d._id}>
+                  <td className="px-3 py-2">{d.documentType}</td>
+                  <td className="px-3 py-2">
+                    {new Date(d.expiryDate).toLocaleDateString()}
+                  </td>
+                  <td className="px-3 py-2 text-gray-500">{d.fileName || '-'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}

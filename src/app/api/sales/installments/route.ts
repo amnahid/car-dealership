@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
 import Car from '@/models/Car';
+import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 
@@ -136,6 +137,18 @@ export async function POST(request: NextRequest) {
 
     // Update car status to Reserved
     await Car.findByIdAndUpdate(car, { status: 'Reserved' });
+
+    // Create income transaction for down payment
+    await Transaction.create({
+      date: new Date(startDate),
+      type: 'Income',
+      category: 'Installment Payment',
+      amount: downPayment,
+      description: `Down payment for installment sale ${sale.saleId} - Car ${carId}`,
+      referenceId: sale._id.toString(),
+      referenceType: 'InstallmentSale',
+      createdBy: user.userId,
+    });
 
     await logActivity({
       userId: user.userId,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
+import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import mongoose from 'mongoose';
@@ -65,6 +66,18 @@ export async function POST(
     }
 
     await sale.save();
+
+    // Create income transaction for the payment
+    await Transaction.create({
+      date: new Date(paymentDate),
+      type: 'Income',
+      category: 'Installment Payment',
+      amount,
+      description: `Installment ${installmentNumber} for sale ${sale.saleId} - Car ${sale.carId}`,
+      referenceId: sale._id.toString(),
+      referenceType: 'InstallmentSale',
+      createdBy: user.userId,
+    });
 
     await logActivity({
       userId: user.userId,

@@ -40,8 +40,6 @@ export async function GET(request: NextRequest) {
       totalRepairCostAgg,
       totalSalariesAgg,
       salesByMonth,
-      overdueInstallmentsAgg,
-      upcomingInstallmentsAgg,
     ] = await Promise.all([
       Car.countDocuments(),
       Car.countDocuments({ status: 'In Stock' }),
@@ -61,9 +59,9 @@ export async function GET(request: NextRequest) {
       ]),
       InstallmentSale.aggregate([
         { $match: { status: 'Active' } },
-        { $unwind: '$payments' },
-        { $match: { 'payments.paidDate': { $gte: startOfMonth } } },
-        { $group: { _id: null, total: { $sum: '$payments.amount' } } }
+        { $unwind: '$paymentSchedule' },
+        { $match: { 'paymentSchedule.status': 'Paid', 'paymentSchedule.paidDate': { $gte: startOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$paymentSchedule.amount' } } }
       ]),
       Rental.aggregate([
         { $match: { startDate: { $gte: startOfMonth } } },
@@ -89,18 +87,21 @@ export async function GET(request: NextRequest) {
         },
         { $sort: { _id: 1 } }
       ]),
-      InstallmentSale.aggregate([
-        { $match: { status: 'Active' } },
-        { $unwind: '$payments' },
-        { $match: { 'payments.paid': false, 'payments.dueDate': { $lt: now } } },
-        { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$payments.amount' } } }
-      ]),
-      InstallmentSale.aggregate([
-        { $match: { status: 'Active' } },
-        { $unwind: '$payments' },
-        { $match: { 'payments.paid': false, 'payments.dueDate': { $gte: now, $lte: sevenDaysFromNow } } },
-        { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$payments.amount' } } }
-      ]),
+    ]);
+
+    // Run overdue/ upcoming queries separately AFTER Promise.all to avoid Promise.all caching issues
+    const overdueAgg = await InstallmentSale.aggregate([
+      { $match: { status: 'Active' } },
+      { $unwind: '$paymentSchedule' },
+      { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $lt: now } } },
+      { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
+    ]);
+
+    const upcomingAgg = await InstallmentSale.aggregate([
+      { $match: { status: 'Active' } },
+      { $unwind: '$paymentSchedule' },
+      { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $gte: now, $lte: sevenDaysFromNow } } },
+      { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
     ]);
 
     const expiringDocuments = await VehicleDocument.countDocuments({
@@ -168,11 +169,11 @@ export async function GET(request: NextRequest) {
       installmentPaid,
       rentalRevenue,
       pendingInstallments: pendingInstallmentsAgg[0]?.total || 0,
-      overdueInstallments: overdueInstallmentsAgg[0]?.count || 0,
-      overdueInstallmentsAmount: overdueInstallmentsAgg[0]?.total || 0,
-      upcomingInstallments: upcomingInstallmentsAgg[0]?.count || 0,
-      upcomingInstallmentsAmount: upcomingInstallmentsAgg[0]?.total || 0,
-      salesByMonth:       salesByMonth.map((s: { _id: string; total: number; count: number }) => ({ month: s._id, total: s.total, count: s.count })),
+      overdueInstallments: (overdueAgg[0]?.count || 0),
+      overdueInstallmentsAmount: (overdueAgg[0]?.total || 0),
+      upcomingInstallments: (upcomingAgg[0]?.count || 0),
+      upcomingInstallmentsAmount: (upcomingAgg[0]?.total || 0),
+      salesByMonth: salesByMonth.map((s: { _id: string; total: number; count: number }) => ({ month: s._id, total: s.total, count: s.count })),
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);

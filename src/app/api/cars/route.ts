@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Car from '@/models/Car';
+import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 
@@ -51,6 +52,19 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const body = await request.json();
     const car = await Car.create({ ...body, createdBy: auth.userId });
+
+    if (body.purchasePrice && body.purchasePrice > 0) {
+      await Transaction.create({
+        date: new Date(),
+        type: 'Expense',
+        category: 'Car Purchase',
+        amount: body.purchasePrice,
+        description: `Purchase of car ${car.brand} ${car.model} (${car.year})`,
+        referenceId: car._id.toString(),
+        referenceType: 'Car',
+        createdBy: auth.userId,
+      });
+    }
 
     await logActivity({
       userId: auth.userId,

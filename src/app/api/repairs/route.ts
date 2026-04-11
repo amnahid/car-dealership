@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Repair from '@/models/Repair';
 import Car from '@/models/Car';
+import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 
@@ -55,6 +56,19 @@ export async function POST(request: NextRequest) {
     const repair = await Repair.create({ ...body, createdBy: auth.userId });
 
     await updateCarRepairCost(body.car);
+
+    if (repair.totalCost && repair.totalCost > 0) {
+      await Transaction.create({
+        date: new Date(repair.repairDate),
+        type: 'Expense',
+        category: 'Car Repair',
+        amount: repair.totalCost,
+        description: `Repair for car ${body.carId} - ${repair.repairDescription || 'Maintenance'}`,
+        referenceId: repair._id.toString(),
+        referenceType: 'Repair',
+        createdBy: auth.userId,
+      });
+    }
 
     await logActivity({
       userId: auth.userId,
