@@ -3,7 +3,7 @@ import { compressImage } from './imageUtils';
 export async function uploadFile(
   file: File,
   folder: string = 'general'
-): Promise<{ url?: string; error?: string }> {
+): Promise<{ url?: string; success?: boolean; error?: string }> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('folder', folder);
@@ -20,8 +20,8 @@ export async function uploadFile(
       return { error: data.error || 'Upload failed' };
     }
 
-    return { url: data.url };
-  } catch (error) {
+    return { url: data.url, success: true };
+  } catch {
     return { error: 'Network error during upload' };
   }
 }
@@ -29,11 +29,11 @@ export async function uploadFile(
 export async function uploadImage(
   file: File,
   folder: string = 'images'
-): Promise<{ url?: string; error?: string }> {
+): Promise<{ url?: string; success?: boolean; error?: string }> {
   try {
     const compressed = await compressImage(file, 1);
     return uploadFile(compressed, folder);
-  } catch (error) {
+  } catch {
     return { error: 'Image compression failed' };
   }
 }

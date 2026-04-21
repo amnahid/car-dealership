@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { fullName, phone, email, address, nationalId, drivingLicense, emergencyContactName, emergencyContactPhone, notes } = body;
+    const { fullName, phone, email, address, nationalId, drivingLicense, emergencyContactName, emergencyContactPhone, notes, profilePhoto } = body;
 
     if (!fullName || !phone || !address) {
       return NextResponse.json({ error: 'Full name, phone, and address are required' }, { status: 400 });
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       emergencyContactName,
       emergencyContactPhone,
       notes,
+      profilePhoto,
       createdBy: user.userId,
     });
 

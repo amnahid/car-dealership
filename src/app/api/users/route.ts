@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { hashPassword } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
+import { sendUserCredentialsEmail, generateStrongPassword } from '@/lib/userCredentialsEmail';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,8 +30,13 @@ export async function POST(request: NextRequest) {
     await connectDB();
     const { name, email, password, role } = await request.json();
 
-    if (!name || !email || !password || !role) {
-      return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
+    if (!name || !email || !role) {
+      return NextResponse.json({ error: 'Name, email, and role are required' }, { status: 400 });
+    }
+
+    const validRoles = ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'];
+    if (!validRoles.includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
     const existing = await User.findOne({ email: email.toLowerCase() });
@@ -38,7 +44,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
     }
 
-    const hashed = await hashPassword(password);
+    const finalPassword = password || generateStrongPassword(12);
+    const hashed = await hashPassword(finalPassword);
     const user = await User.create({ name, email, password: hashed, role });
 
     await logActivity({
@@ -50,8 +57,19 @@ export async function POST(request: NextRequest) {
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
+    sendUserCredentialsEmail({ name, email, role }, finalPassword).catch((err) => {
+      console.error('Failed to send credentials email:', err);
+    });
+
     const { password: _, ...userWithoutPassword } = user.toObject();
-    return NextResponse.json({ user: userWithoutPassword }, { status: 201 });
+    return NextResponse.json({
+      user: userWithoutPassword,
+      generatedPassword: password ? undefined : finalPassword,
+      emailSent: true,
+      message: password
+        ? 'User created successfully'
+        : 'User created and credentials sent via email',
+    }, { status: 201 });
   } catch (error) {
     console.error('Create user error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

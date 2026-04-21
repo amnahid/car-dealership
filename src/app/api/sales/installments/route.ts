@@ -73,8 +73,13 @@ export async function GET(request: NextRequest) {
       },
     ]);
 
+    const salesWithDeliver = sales.map((s) => ({
+      ...s,
+      canDeliver: s.totalPrice > 0 ? ((s.totalPaid / s.totalPrice) * 100 >= (s.deliveryThresholdPercent ?? 30)) : false,
+    }));
+
     return NextResponse.json({
-      sales,
+      sales: salesWithDeliver,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       totalValue: totalStats[0]?.totalValue || 0,
       totalPaid: totalStats[0]?.totalPaid || 0,
@@ -100,7 +105,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       carId, car, customer, customerName, customerPhone,
-      totalPrice, downPayment, interestRate, tenureMonths, startDate, notes
+      totalPrice, downPayment, interestRate, tenureMonths, startDate, notes,
+      deliveryThresholdPercent, lateFeePercent
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !totalPrice || !downPayment || !tenureMonths || !startDate) {
@@ -111,7 +117,6 @@ export async function POST(request: NextRequest) {
     const monthlyPayment = loanAmount / tenureMonths;
     const remainingAmount = loanAmount;
 
-    // Generate payment schedule
     const start = new Date(startDate);
     const paymentSchedule = [];
     for (let i = 1; i <= tenureMonths; i++) {
@@ -146,6 +151,8 @@ export async function POST(request: NextRequest) {
       nextPaymentAmount: Math.round(monthlyPayment * 100) / 100,
       totalPaid: 0,
       remainingAmount,
+      deliveryThresholdPercent: deliveryThresholdPercent ?? 30,
+      lateFeePercent: lateFeePercent ?? 2,
       status: 'Active',
       notes,
       createdBy: user.userId,

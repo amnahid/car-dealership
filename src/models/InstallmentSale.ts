@@ -32,6 +32,8 @@ export interface IInstallmentSaleDocument extends Document {
   nextPaymentAmount: number;
   totalPaid: number;
   remainingAmount: number;
+  deliveryThresholdPercent: number;
+  lateFeePercent: number;
   status: InstallmentSaleStatus;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
@@ -65,6 +67,8 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     nextPaymentAmount: { type: Number, required: true, min: 0 },
     totalPaid: { type: Number, default: 0, min: 0 },
     remainingAmount: { type: Number, required: true, min: 0 },
+    deliveryThresholdPercent: { type: Number, default: 30, min: 0, max: 100 },
+    lateFeePercent: { type: Number, default: 2, min: 0, max: 100 },
     status: {
       type: String,
       enum: ['Active', 'Completed', 'Defaulted'],

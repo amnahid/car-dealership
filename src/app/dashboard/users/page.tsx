@@ -18,11 +18,21 @@ interface UserFormData {
   role: string;
 }
 
+interface CreateResponse {
+  message?: string;
+  generatedPassword?: string;
+  emailSent?: boolean;
+  error?: string;
+  user: User;
+}
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [generatedPw, setGeneratedPw] = useState('');
   const [formData, setFormData] = useState<UserFormData>({ name: '', email: '', password: '', role: 'Sales Agent' });
   const [saving, setSaving] = useState(false);
 
@@ -48,17 +58,27 @@ export default function UsersPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+    setGeneratedPw('');
     setSaving(true);
     try {
+      const payload: Record<string, unknown> = { ...formData };
+      if (!payload.password) delete payload.password;
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
-      const data = await res.json();
+      const data: CreateResponse = await res.json();
       if (!res.ok) {
         setError(data.error || 'Failed to create user');
         return;
+      }
+      if (data.generatedPassword) {
+        setGeneratedPw(data.generatedPassword);
+        setSuccess('User created! Login credentials sent via email.');
+      } else {
+        setSuccess('User created successfully.');
       }
       setShowForm(false);
       setFormData({ name: '', email: '', password: '', role: 'Sales Agent' });
@@ -151,6 +171,25 @@ export default function UsersPage() {
               <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
             </div>
           )}
+          {success && (
+            <div
+              style={{
+                background: 'rgba(40, 170, 169, 0.1)',
+                border: '1px solid #28aaa9',
+                borderRadius: '3px',
+                padding: '12px',
+                marginBottom: '16px',
+              }}
+            >
+              <p style={{ color: '#28aaa9', fontSize: '14px', margin: 0 }}>{success}</p>
+              {generatedPw && (
+                <div style={{ marginTop: '8px', padding: '8px', background: '#fff', borderRadius: '4px' }}>
+                  <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>Generated Password (share with user):</p>
+                  <code style={{ fontSize: '14px', color: '#2a3142', fontWeight: 600 }}>{generatedPw}</code>
+                </div>
+              )}
+            </div>
+          )}
           <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>
             <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Name *</label>
@@ -172,14 +211,17 @@ export default function UsersPage() {
               />
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>Password *</label>
+              <label style={labelStyle}>Password {formData.password ? '' : '(auto-generated if blank)'}</label>
               <input
                 type="password"
-                required
                 value={formData.password}
                 onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
+                placeholder="Leave blank to auto-generate"
                 style={inputStyle}
               />
+              <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '4px 0 0' }}>
+                A strong password will be auto-generated if left blank. Login credentials will be sent via email.
+              </p>
             </div>
             <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>Role *</label>
@@ -262,7 +304,9 @@ export default function UsersPage() {
             <tbody style={{ borderBottom: '1px solid #eee' }}>
               {users.map((u) => (
                 <tr key={u._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                  <td style={{ padding: '12px', fontWeight: 500 }}>{u.name}</td>
+                  <td style={{ padding: '12px' }}>
+                    <a href={`/dashboard/users/${u._id}`} style={{ color: '#28aaa9', fontWeight: 500, textDecoration: 'none' }}>{u.name}</a>
+                  </td>
                   <td style={{ padding: '12px', color: '#525f80' }}>{u.email}</td>
                   <td style={{ padding: '12px' }}>
                     <span

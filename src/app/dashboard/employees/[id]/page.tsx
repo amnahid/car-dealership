@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import ImageUpload from '@/components/ImageUpload';
 
 interface Employee {
   _id: string;
@@ -15,6 +16,7 @@ interface Employee {
   baseSalary: number;
   joiningDate: string;
   isActive: boolean;
+  photo?: string;
 }
 
 interface SalaryPayment {
@@ -146,6 +148,16 @@ export default function EmployeeDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Personal Information</h3>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <ImageUpload value={employee.photo} onChange={async (url) => {
+              const res = await fetch(`/api/employees/${employee._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ photo: url }),
+              });
+              if (res.ok) setEmployee({ ...employee, photo: url });
+            }} folder="employees" label={employee.name} size={80} />
+          </div>
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Employee ID</span>

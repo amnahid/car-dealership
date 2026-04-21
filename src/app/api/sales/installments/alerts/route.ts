@@ -123,15 +123,12 @@ export async function POST(request: NextRequest) {
 
     if (action === 'send-reminders' || action === 'send-overdue') {
       const now = new Date();
-      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0));
-      const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999));
 
       const sales = await InstallmentSale.find({ status: 'Active' }).lean();
 
       let remindersSent = 0;
       let overdueSent = 0;
-      let failed = 0;
+      const failed = 0;
 
       for (const sale of sales) {
         const customerData = await Customer.findById(sale.customer).lean();

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import EditCustomerModal from '@/components/EditCustomerModal';
+import ImageUpload from '@/components/ImageUpload';
 
 interface Customer {
   _id: string;
@@ -16,6 +17,7 @@ interface Customer {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   notes?: string;
+  profilePhoto?: string;
   createdAt: string;
 }
 
@@ -128,7 +130,7 @@ export default function CustomersPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Customer ID', 'Name', 'Phone', 'Email', 'Address', 'Created', 'Actions'].map((h) => (
+                  {['Customer ID', 'Photo', 'Name', 'Phone', 'Email', 'Address', 'Created', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>
                       {h}
                     </th>
@@ -139,6 +141,15 @@ export default function CustomersPage() {
                 {customers.map((customer) => (
                   <tr key={customer._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{customer.customerId}</td>
+                    <td style={{ padding: '12px' }}>
+                      {customer.profilePhoto ? (
+                        <img src={customer.profilePhoto} alt={customer.fullName} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      ) : (
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#9ca8b3', fontWeight: 600 }}>
+                          {customer.fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ padding: '12px' }}>{customer.fullName}</td>
                     <td style={{ padding: '12px' }}>{customer.phone}</td>
                     <td style={{ padding: '12px' }}>{customer.email || '-'}</td>
@@ -222,6 +233,7 @@ function CustomerModal({ customer, onClose, onSave }: { customer: Customer | nul
     emergencyContactName: '',
     emergencyContactPhone: '',
     notes: '',
+    profilePhoto: customer?.profilePhoto || '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -258,6 +270,9 @@ function CustomerModal({ customer, onClose, onSave }: { customer: Customer | nul
       <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%' }}>
         <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{customer ? 'Edit Customer' : 'Add Customer'}</h3>
         <form onSubmit={handleSubmit}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <ImageUpload value={form.profilePhoto} onChange={(url) => setForm({ ...form, profilePhoto: url })} folder="customers" label={form.fullName || 'Customer'} size={80} />
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Full Name *</label>

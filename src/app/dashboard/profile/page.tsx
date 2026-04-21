@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import ImageUpload from '@/components/ImageUpload';
 
 interface UserProfile {
   name: string;
@@ -17,7 +18,6 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [form, setForm] = useState({ name: '', phone: '', avatar: '', currentPassword: '', newPassword: '', confirmPassword: '' });
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -31,19 +31,17 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleAvatarClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setForm(prev => ({ ...prev, avatar: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+  const handleAvatarChange = async (url: string) => {
+    setForm(prev => ({ ...prev, avatar: url }));
+    const res = await fetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: form.name, phone: form.phone, avatar: url }),
+    });
+    if (res.ok) {
+      setUser(u => u ? { ...u, avatar: url } : u);
+      setMessage('Avatar updated!');
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -122,38 +120,7 @@ export default function ProfilePage() {
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', color: '#2a3142' }}>Profile Information</h3>
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div
-              onClick={handleAvatarClick}
-              style={{
-                width: '100px',
-                height: '100px',
-                borderRadius: '50%',
-                background: '#28aaa9',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#ffffff',
-                fontSize: '36px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                overflow: 'hidden',
-                marginBottom: '8px',
-              }}
-            >
-              {form.avatar ? (
-                <img src={form.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                user?.name?.charAt(0).toUpperCase() || '?'
-              )}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
-            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>Click to upload photo</p>
+            <ImageUpload value={form.avatar} onChange={handleAvatarChange} folder="avatars" label={user?.name || 'Profile'} size={100} />
           </div>
           <form onSubmit={handleSaveProfile}>
             <div style={{ marginBottom: '16px' }}>

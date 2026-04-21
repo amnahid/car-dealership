@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import ImageUpload from '@/components/ImageUpload';
 
 interface Employee {
   _id: string;
@@ -14,6 +15,7 @@ interface Employee {
   baseSalary: number;
   joiningDate: string;
   isActive: boolean;
+  photo?: string;
 }
 
 export default function EmployeesPage() {
@@ -108,7 +110,7 @@ export default function EmployeesPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '900px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['ID', 'Name', 'Phone', 'Email', 'Designation', 'Department', 'Salary', 'Status', 'Actions'].map((h) => (
+                  {['ID', 'Photo', 'Name', 'Phone', 'Email', 'Designation', 'Department', 'Salary', 'Status', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -117,6 +119,15 @@ export default function EmployeesPage() {
                 {employees.map((emp) => (
                   <tr key={emp._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{emp.employeeId}</td>
+                    <td style={{ padding: '12px' }}>
+                      {emp.photo ? (
+                        <img src={emp.photo} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                      ) : (
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#9ca8b3', fontWeight: 600 }}>
+                          {emp.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ padding: '12px', fontWeight: 500 }}>{emp.name}</td>
                     <td style={{ padding: '12px' }}>{emp.phone}</td>
                     <td style={{ padding: '12px' }}>{emp.email || '-'}</td>
@@ -165,6 +176,7 @@ function EmployeeModal({ employee, onClose, onSave }: { employee: Employee | nul
     baseSalary: employee?.baseSalary?.toString() || '',
     joiningDate: employee?.joiningDate?.split('T')[0] || new Date().toISOString().split('T')[0],
     isActive: employee?.isActive ?? true,
+    photo: employee?.photo || '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -186,6 +198,9 @@ function EmployeeModal({ employee, onClose, onSave }: { employee: Employee | nul
         <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{employee ? 'Edit Employee' : 'Add Employee'}</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+              <ImageUpload value={form.photo} onChange={(url) => setForm({ ...form, photo: url })} folder="employees" label={form.name || 'Employee'} size={80} />
+            </div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Name *</label><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Phone *</label><input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Email</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>

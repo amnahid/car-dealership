@@ -55,11 +55,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, phone, email, designation, department, baseSalary, joiningDate, isActive } = body;
+    const { name, phone, email, designation, department, baseSalary, joiningDate, isActive, photo } = body;
 
     const employee = await Employee.findByIdAndUpdate(
       id,
-      { name, phone, email, designation, department, baseSalary, joiningDate, isActive },
+      { name, phone, email, designation, department, baseSalary, joiningDate, isActive, photo },
       { new: true }
     );
 

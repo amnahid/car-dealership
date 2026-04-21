@@ -4,6 +4,7 @@ import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { hashPassword } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
+import { sendUserCredentialsEmail, generateStrongPassword } from '@/lib/userCredentialsEmail';
 
 export async function GET(
   request: NextRequest,
@@ -77,7 +78,6 @@ export async function DELETE(
     await connectDB();
     const { id } = await params;
 
-    // Prevent deleting self
     if (id === auth.userId) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
     }
@@ -97,6 +97,55 @@ export async function DELETE(
     return NextResponse.json({ message: 'User deactivated successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await getAuthPayload(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (auth.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+
+    if (action !== 'reset-password') {
+      return NextResponse.json({ error: 'Invalid action. Use ?action=reset-password' }, { status: 400 });
+    }
+
+    await connectDB();
+    const { id } = await params;
+
+    const user = await User.findById(id);
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const newPassword = generateStrongPassword(12);
+    user.password = await hashPassword(newPassword);
+    await user.save();
+
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: `Reset password for user ${user.name}`,
+      module: 'Users',
+      targetId: id,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
+    sendUserCredentialsEmail({ name: user.name, email: user.email, role: user.role }, newPassword).catch((err) => {
+      console.error('Failed to send reset password email:', err);
+    });
+
+    return NextResponse.json({
+      message: 'Password reset and sent via email',
+      emailSent: true,
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

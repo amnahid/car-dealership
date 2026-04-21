@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import EditCustomerModal from '@/components/EditCustomerModal';
+import ImageUpload from '@/components/ImageUpload';
 
 interface Customer {
   _id: string;
@@ -115,6 +116,16 @@ export default function CustomerDetailPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
         <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <ImageUpload value={customer.profilePhoto} onChange={async (url) => {
+              const res = await fetch(`/api/customers/${customer._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profilePhoto: url }),
+              });
+              if (res.ok) setCustomer({ ...customer, profilePhoto: url });
+            }} folder="customers" label={customer.fullName} size={80} />
+          </div>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Personal Information</h3>
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>

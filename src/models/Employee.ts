@@ -10,6 +10,7 @@ export interface IEmployeeDocument extends Document {
   baseSalary: number;
   joiningDate: Date;
   isActive: boolean;
+  photo?: string;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -24,6 +25,7 @@ const EmployeeSchema = new Schema<IEmployeeDocument>(
     baseSalary: { type: Number, required: true, min: 0 },
     joiningDate: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
+    photo: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
