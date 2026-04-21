@@ -1,46 +1,39 @@
 require('dotenv').config({ path: '.env.local' });
+const { Resend } = require('resend');
 
-const API_KEY = process.env.MAILERLITE_API_KEY;
-const TO_EMAIL = 'nahidshikder60@gmail.com';
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function testEmail() {
-  console.log('Testing MailerLite API Key Format...\n');
-  console.log('API Key:', API_KEY?.substring(0, 30) + '...\n');
+  console.log('Testing Resend email...\n');
 
-  // Try different authentication methods
-  const authMethods = [
-    `Bearer ${API_KEY}`,
-    API_KEY,
-    `ApiKey ${API_KEY}`,
-  ];
-
-  for (const auth of authMethods) {
-    console.log(`Testing auth: ${auth.substring(0, 20)}...`);
-    try {
-      const response = await fetch('https://api.mailerlite.com/api/v2/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': auth,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          to: TO_EMAIL,
-          subject: 'Test Email',
-          from: 'noreply@mailerlite.com',
-          from_name: 'Car Dealership',
-          html: '<h1>Test</h1>',
-        }),
-      });
-      const data = await response.json();
-      console.log(`  Status: ${response.status}`);
-      if (!response.ok) {
-        console.log(`  Error: ${data.error?.message || JSON.stringify(data)}`);
-      }
-    } catch (error) {
-      console.log(`  Error: ${error.message}`);
-    }
+  if (!process.env.RESEND_API_KEY) {
+    console.log('❌ API key not configured');
+    process.exit(1);
   }
+
+  console.log('✅ API key found');
+  console.log('   Sending test email...\n');
+
+  const { data, error } = await resend.emails.send({
+    from: 'Car Dealership System <noreply@businessgrowthstudio.online>',
+    to: ['nahidshikder60@gmail.com'],
+    subject: 'Test Email - Car Dealership System',
+    html: `
+      <h1 style="color: #28aaa9;">Test Email</h1>
+      <p>This is a test email from your Car Dealership System.</p>
+      <p>If you received this, your email configuration is working!</p>
+    `,
+  });
+
+  if (error) {
+    console.log('❌ Failed to send email');
+    console.log('   Error:', error.message);
+    process.exit(1);
+  }
+
+  console.log('✅✅✅ EMAIL SENT SUCCESSFULLY! ✅✅✅');
+  console.log('   Check inbox: nahidshikder60@gmail.com');
+  console.log('   Email ID:', data?.id);
 }
 
 testEmail();

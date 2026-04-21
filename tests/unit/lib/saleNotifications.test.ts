@@ -1,19 +1,21 @@
-global.fetch = jest.fn();
+jest.mock('twilio');
 
 describe('saleNotifications.ts', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.resetModules();
-    process.env.MAILERLITE_API_KEY = 'test_mailerlite_api_key';
-    process.env.MAILERLITE_FROM_EMAIL = 'test@example.com';
+    process.env.RESEND_API_KEY = 're_test_api_key';
+    process.env.RESEND_FROM_EMAIL = 'noreply@test.com';
+    process.env.RESEND_FROM_NAME = 'Test App';
     process.env.TWILIO_ACCOUNT_SID = 'test';
     process.env.TWILIO_AUTH_TOKEN = 'test';
     process.env.TWILIO_PHONE_NUMBER = '+1234567890';
   });
 
   afterEach(() => {
-    delete process.env.MAILERLITE_API_KEY;
-    delete process.env.MAILERLITE_FROM_EMAIL;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.RESEND_FROM_EMAIL;
+    delete process.env.RESEND_FROM_NAME;
     delete process.env.TWILIO_ACCOUNT_SID;
     delete process.env.TWILIO_AUTH_TOKEN;
     delete process.env.TWILIO_PHONE_NUMBER;
@@ -35,7 +37,6 @@ describe('saleNotifications.ts', () => {
 
   describe('CustomerInfo interface', () => {
     it('should define CustomerInfo interface', async () => {
-      const module = await import('../../../src/lib/saleNotifications');
       const customer = {
         name: 'John Doe',
         phone: '+1234567890',
@@ -84,7 +85,7 @@ describe('saleNotifications.ts', () => {
     });
 
     it('should return false when email service is not configured', async () => {
-      delete process.env.MAILERLITE_API_KEY;
+      delete process.env.RESEND_API_KEY;
       const { isEmailServiceConfigured } = await import('../../../src/lib/saleNotifications');
       expect(isEmailServiceConfigured()).toBe(false);
     });
@@ -92,9 +93,6 @@ describe('saleNotifications.ts', () => {
 
   describe('sendSaleThankYouNotifications', () => {
     it('should send sale thank you notifications with all required fields', async () => {
-      const mockFetch = global.fetch as jest.Mock;
-      mockFetch.mockResolvedValue({ ok: true, text: jest.fn().mockResolvedValue('OK') } as any);
-
       const { sendSaleThankYouNotifications } = await import('../../../src/lib/saleNotifications');
 
       const result = await sendSaleThankYouNotifications(
@@ -139,9 +137,6 @@ describe('saleNotifications.ts', () => {
 
   describe('sendRentalConfirmationNotifications', () => {
     it('should send rental confirmation notifications', async () => {
-      const mockFetch = global.fetch as jest.Mock;
-      mockFetch.mockResolvedValue({ ok: true, text: jest.fn().mockResolvedValue('OK') } as any);
-
       const { sendRentalConfirmationNotifications } = await import('../../../src/lib/saleNotifications');
 
       const result = await sendRentalConfirmationNotifications(

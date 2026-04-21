@@ -1,7 +1,7 @@
 import { sendExpirySms, SmsResult, isSmsServiceConfigured } from './sms';
-import { sendExpiryAlertEmail, isEmailServiceConfigured } from './email';
+import { sendExpiryAlertEmail, isEmailServiceConfigured, sendEmail } from './email';
 
-export { isEmailServiceConfigured };
+export { isEmailServiceConfigured, sendEmail };
 
 interface CustomerInfo {
   name: string;
@@ -29,7 +29,7 @@ interface RentalInfo {
 }
 
 function formatSaleThankYouMessage(customer: CustomerInfo, sale: SaleInfo): string {
-  return `Thank you for your purchase, ${customer.name}! Your car ${sale.carBrand || ''} ${sale.carModel || sale.carId} has been sold to you for $${sale.finalPrice.toLocaleString()}. Your invoice is available. Welcome to AMYAL CAR!`;
+  return `Thank you for your purchase, ${customer.name}! Your car ${sale.carBrand || ''} ${sale.carModel || sale.carId} has been sold to you for $${sale.finalPrice.toLocaleString()}. Your invoice is available. Welcome to Car Dealership!`;
 }
 
 function formatRentalConfirmationMessage(customer: CustomerInfo, rental: RentalInfo): string {
@@ -195,35 +195,14 @@ async function sendCustomerEmail(
     return { success: false, error: 'No email address provided' };
   }
 
-  const apiKey = process.env.MAILERLITE_API_KEY!;
-  const fromEmail = process.env.MAILERLITE_FROM_EMAIL || 'alerts@yourdomain.com';
-  const fromName = process.env.MAILERLITE_FROM_NAME || 'Car Dealership System';
-
   try {
-    const response = await fetch('https://api.mailerlite.com/api/v2/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        email: {
-          from: fromEmail,
-          from_name: fromName,
-          to: to,
-          subject: subject,
-          html: html,
-        },
-      }),
+    const result = await sendEmail({
+      to: to,
+      subject: subject,
+      html: html,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('MailerLite API error:', response.status, errorText);
-      return { success: false, error: `MailerLite API error: ${response.status}` };
-    }
-
-    return { success: true };
+    return result;
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }

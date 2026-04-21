@@ -1,3 +1,14 @@
+import { Resend } from 'resend';
+
+let resendClient: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
+
 export interface DocumentAlertInfo {
   carId: string;
   brand: string;
@@ -13,16 +24,16 @@ interface EmailResult {
 }
 
 function isEmailConfigured(): boolean {
-  const apiKey = process.env.MAILERLITE_API_KEY;
-  return !!(apiKey && apiKey !== 'your_mailerlite_api_key_here');
+  const apiKey = process.env.RESEND_API_KEY;
+  return !!(apiKey && apiKey !== 'your_resend_api_key_here');
 }
 
 function getRecipients(): string[] {
-  const adminEmail = process.env.MAILERLITE_ADMIN_EMAIL;
+  const adminEmail = process.env.RESEND_ADMIN_EMAIL;
   if (adminEmail) {
     return [adminEmail];
   }
-  return ['admin@amyalcar.com'];
+  return ['admin@dealership.com'];
 }
 
 function buildEmailHtml(docInfo: DocumentAlertInfo): string {
@@ -100,7 +111,7 @@ function buildEmailHtml(docInfo: DocumentAlertInfo): string {
           </tr>
           <tr>
             <td style="background-color: #f5f5f5; padding: 20px; text-align: center;">
-              <p style="color: #888888; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} AMYAL CAR. All rights reserved.</p>
+              <p style="color: #888888; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} Car Dealership. All rights reserved.</p>
             </td>
           </tr>
         </table>
@@ -117,38 +128,24 @@ export async function sendExpiryAlertEmail(to: string, docInfo: DocumentAlertInf
     return { success: false, error: 'Email service not configured' };
   }
 
-  const apiKey = process.env.MAILERLITE_API_KEY!;
-
   try {
     const html = buildEmailHtml(docInfo);
-    const fromEmail = process.env.MAILERLITE_FROM_EMAIL || 'alerts@yourdomain.com';
-    const fromName = process.env.MAILERLITE_FROM_NAME || 'Car Dealership System';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@businessgrowthstudio.online';
+    const fromName = process.env.RESEND_FROM_NAME || 'Car Dealership System';
 
-    // Use MailerLite's API v2 for sending
-    const response = await fetch('https://api.mailerlite.com/api/v2/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        email: {
-          from: fromEmail,
-          from_name: fromName,
-          to: to,
-          subject: `Document Expiring: ${docInfo.carId} - ${docInfo.documentType}`,
-          html: html,
-        },
-      }),
+    const { data, error } = await getResendClient().emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [to],
+      subject: `Document Expiring: ${docInfo.carId} - ${docInfo.documentType}`,
+      html: html,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('MailerLite API error:', response.status, errorText);
-      return { success: false, error: `MailerLite API error: ${response.status}` };
+    if (error) {
+      console.error('Resend API error:', error);
+      return { success: false, error: error.message };
     }
 
-    console.log(`Expiry alert email sent to ${to} for car ${docInfo.carId}`);
+    console.log(`Expiry alert email sent to ${to} for car ${docInfo.carId}`, data?.id);
     return { success: true };
   } catch (error) {
     console.error('Error sending expiry alert email:', error);
@@ -178,4 +175,38 @@ export async function sendBatchExpiryAlertEmails(docInfos: DocumentAlertInfo[]):
 
 export function isEmailServiceConfigured(): boolean {
   return isEmailConfigured();
+}
+
+export async function sendEmail(options: {
+  to: string | string[];
+  subject: string;
+  html: string;
+}): Promise<EmailResult> {
+  if (!isEmailConfigured()) {
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  try {
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@businessgrowthstudio.online';
+    const fromName = process.env.RESEND_FROM_NAME || 'Car Dealership System';
+    const toEmails = Array.isArray(options.to) ? options.to : [options.to];
+
+    const { data, error } = await getResendClient().emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: toEmails,
+      subject: options.subject,
+      html: options.html,
+    });
+
+    if (error) {
+      console.error('Resend API error:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`Email sent to ${toEmails.join(', ')}`, data?.id);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
