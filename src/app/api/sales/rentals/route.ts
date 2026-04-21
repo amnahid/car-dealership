@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Rental from '@/models/Rental';
 import Car from '@/models/Car';
+import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { sendRentalConfirmationNotifications } from '@/lib/saleNotifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,14 +22,28 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
 
-    const query: Record<string, unknown> = { status: { $ne: 'Cancelled' } };
+    const statusFilter = {
+      $or: [
+        { status: { $nin: ['Cancelled', 'Completed'] } },
+        { status: { $exists: false } }
+      ]
+    };
+
+    let query: Record<string, unknown> = { ...statusFilter };
 
     if (search) {
-      query.$or = [
-        { customerName: { $regex: search, $options: 'i' } },
-        { carId: { $regex: search, $options: 'i' } },
-        { rentalId: { $regex: search, $options: 'i' } },
-      ];
+      query = {
+        $and: [
+          statusFilter,
+          {
+            $or: [
+              { customerName: { $regex: search, $options: 'i' } },
+              { carId: { $regex: search, $options: 'i' } },
+              { rentalId: { $regex: search, $options: 'i' } },
+            ]
+          }
+        ]
+      };
     }
 
     if (status) {
@@ -127,6 +143,32 @@ export async function POST(request: NextRequest) {
       targetId: rental._id.toString(),
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
+
+    // Send confirmation notifications to customer
+    try {
+      const customerData = await Customer.findById(customer).lean();
+      const carData = await Car.findById(car).lean();
+
+      await sendRentalConfirmationNotifications(
+        {
+          name: customerName,
+          phone: customerPhone,
+          email: customerData?.email,
+        },
+        {
+          rentalId: rental.rentalId,
+          carId: rental.carId,
+          carBrand: carData?.brand,
+          carModel: carData?.model,
+          startDate: rental.startDate.toString(),
+          endDate: rental.endDate.toString(),
+          totalAmount: rental.totalAmount,
+          dailyRate: rental.dailyRate,
+        }
+      );
+    } catch (notifyError) {
+      console.error('Customer notification failed:', notifyError);
+    }
 
     return NextResponse.json({ rental }, { status: 201 });
   } catch (error) {

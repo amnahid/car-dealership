@@ -24,8 +24,8 @@ const karla = Karla({
 });
 
 export const metadata: Metadata = {
-  title: "NahidDealership - Car Dealership & Rental Management",
-  description: "Car Dealership & Rental Management System",
+  title: "AMYAL CAR - Car Dealership & Rental Management",
+  description: "AMYAL CAR - Car Dealership & Rental Management System",
 };
 
 export default function RootLayout({

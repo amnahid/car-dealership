@@ -1,0 +1,235 @@
+{
+  "main": {
+    "id": "54143d87e7d726db",
+    "type": "split",
+    "children": [
+      {
+        "id": "ec9b60d95228687f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "60437d7569459533",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "car_dealership_roadmap.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "car_dealership_roadmap"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "63b216d9269e3691",
+    "type": "split",
+    "children": [
+      {
+        "id": "c5ab38282925b3af",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a8909b9f633cb121",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "0864cd069cc4e03f",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "4776e81da61ba1d6",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "bd49ab2422a6ea02",
+    "type": "split",
+    "children": [
+      {
+        "id": "db6a26bbb87940b4",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b667a2e9bad6c27a",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "car_dealership_roadmap.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for car_dealership_roadmap"
+            }
+          },
+          {
+            "id": "f7b57d9b7d63a33f",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "car_dealership_roadmap.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from car_dealership_roadmap"
+            }
+          },
+          {
+            "id": "51d99d8ebbaaf386",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "3a1194ff4de40ad9",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "ca57a71990da90a4",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "car_dealership_roadmap.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of car_dealership_roadmap"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "60437d7569459533",
+  "lastOpenFiles": [
+    "tests/e2e/screenshots/desktop-finance-reports-1776540169997.png",
+    "tests/e2e/screenshots/desktop-finance-summary-1776540167510.png",
+    "tests/e2e/screenshots/desktop-finance-transactions-1776540164977.png",
+    "tests/e2e/screenshots/desktop-finance-page-1776540162523.png",
+    "tests/e2e/screenshots/desktop-auth-empty-validation-1776540158934.png",
+    "tests/e2e/screenshots/desktop-auth-invalid-credentials-1776540157028.png",
+    "tests/e2e/screenshots/desktop-auth-login-success-1776540153475.png",
+    "tests/e2e/screenshots/desktop-auth-credentials-filled-1776540151984.png",
+    "tests/e2e/screenshots/desktop-auth-login-page-1776540151169.png",
+    "tests/e2e/screenshots/desktop-installments-alerts-content-1776540149158.png",
+    "tests/e2e/screenshots/desktop-installments-form-visible-1776540147701.png",
+    "tests/e2e/tests/11-responsive.spec.js",
+    "tests/e2e/tests/10-finance.spec.js",
+    "tests/e2e/tests/09-documents.spec.js",
+    "tests/e2e/tests/08-rentals.spec.js",
+    "tests/e2e/tests/07-installments.spec.js",
+    "tests/e2e/tests/06-cash-sales.spec.js",
+    "tests/e2e/tests/05-employees.spec.js",
+    "tests/e2e/tests/04-customers.spec.js",
+    "tests/e2e/tests/03-cars.spec.js",
+    "tests/e2e/tests/02-dashboard.spec.js",
+    "tests/e2e/node_modules/axios/lib/helpers/README.md",
+    "tests/e2e/node_modules/axios/lib/env/README.md",
+    "tests/e2e/node_modules/axios/lib/core/README.md",
+    "tests/e2e/node_modules/axios/lib/adapters/README.md",
+    "tests/e2e/node_modules/socks/docs/examples/typescript/connectExample.md",
+    "tests/e2e/node_modules/socks/docs/examples/typescript/bindExample.md",
+    "tests/e2e/node_modules/socks/docs/examples/typescript/associateExample.md",
+    "tests/e2e/node_modules/socks/docs/examples/javascript/bindExample.md",
+    "tests/e2e/node_modules/socks/docs/examples/javascript/connectExample.md",
+    "tests/e2e/node_modules/socks/docs/examples/javascript/associateExample.md",
+    "tests/e2e/node_modules/socks/docs/examples/index.md",
+    "tests/e2e/node_modules/socks/docs/migratingFromV1.md",
+    "tests/e2e/node_modules/socks/docs/index.md",
+    "tests/e2e/node_modules/@sinonjs/commons/lib/prototypes/README.md",
+    "tests/e2e/node_modules/axios/node_modules/proxy-from-env/README.md",
+    "tests/e2e/node_modules/spawnd/node_modules/signal-exit/README.md",
+    "tests/e2e/node_modules/make-dir/node_modules/semver/README.md",
+    "tests/e2e/node_modules/jest-worker/node_modules/supports-color/readme.md",
+    "tests/e2e/node_modules/istanbul-lib-instrument/node_modules/semver/README.md",
+    "tests/e2e/node_modules/jest-snapshot/node_modules/semver/README.md",
+    "tests/e2e/node_modules/cosmiconfig/node_modules/js-yaml/README.md",
+    "tests/e2e/node_modules/puppeteer/node_modules/argparse/README.md",
+    "tests/e2e/node_modules/puppeteer/node_modules/argparse/CHANGELOG.md",
+    "tests/e2e/node_modules/smart-buffer/docs/ROADMAP.md",
+    "tests/e2e/node_modules/smart-buffer/docs/README_v3.md"
+  ]
+}

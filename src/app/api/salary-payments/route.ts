@@ -21,7 +21,12 @@ export async function GET(request: NextRequest) {
     const month = searchParams.get('month') ? parseInt(searchParams.get('month')!) : null;
     const year = searchParams.get('year') ? parseInt(searchParams.get('year')!) : null;
 
-    const query: Record<string, unknown> = { status: 'Active' };
+    const query: Record<string, unknown> = {
+      $or: [
+        { status: 'Active' },
+        { status: { $exists: false } }
+      ]
+    };
 
     if (employeeId) query.employee = employeeId;
     if (month) query.month = month;

@@ -17,14 +17,29 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '15');
     const search = searchParams.get('search') || '';
 
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {
+      $or: [
+        { isDeleted: false },
+        { isDeleted: { $exists: false } }
+      ]
+    };
 
     if (search) {
-      query.$or = [
-        { fullName: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { customerId: { $regex: search, $options: 'i' } },
+      query.$and = [
+        {
+          $or: [
+            { isDeleted: false },
+            { isDeleted: { $exists: false } }
+          ]
+        },
+        {
+          $or: [
+            { fullName: { $regex: search, $options: 'i' } },
+            { phone: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            { customerId: { $regex: search, $options: 'i' } },
+          ]
+        }
       ];
     }
 

@@ -69,11 +69,11 @@ export async function GET(request: NextRequest) {
       ]),
       Car.aggregate([{ $group: { _id: null, total: { $sum: '$totalRepairCost' } } }]),
       Transaction.aggregate([
-        { $match: { type: 'expense', category: 'Salary', isDeleted: false } },
+        { $match: { type: 'expense', category: 'Salary', $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }] } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       Transaction.aggregate([
-        { $match: { type: 'expense', isDeleted: false } },
+        { $match: { type: 'expense', $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }] } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       CashSale.aggregate([

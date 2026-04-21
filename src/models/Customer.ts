@@ -12,6 +12,7 @@ export interface ICustomerDocument extends Document {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   notes?: string;
+  isDeleted: boolean;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -28,6 +29,7 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     emergencyContactName: { type: String, trim: true },
     emergencyContactPhone: { type: String, trim: true },
     notes: { type: String },
+    isDeleted: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

@@ -14,6 +14,7 @@ export interface ICashSaleDocument extends Document {
   agentCommission?: number;
   saleDate: Date;
   status: 'Active' | 'Cancelled';
+  invoiceUrl?: string;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -33,6 +34,7 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     agentCommission: { type: Number, default: 0, min: 0 },
     saleDate: { type: Date, required: true },
     status: { type: String, enum: ['Active', 'Cancelled'], default: 'Active' },
+    invoiceUrl: { type: String },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

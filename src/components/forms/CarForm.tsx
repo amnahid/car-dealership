@@ -3,12 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CarStatus } from '@/types';
+import { uploadImage, deleteFile } from '@/lib/uploadClient';
 
-interface CarFormData {
+interface PurchaseData {
   supplierName: string;
   supplierContact: string;
   purchasePrice: string;
   purchaseDate: string;
+  documentUrl?: string;
+  notes: string;
+}
+
+interface CarFormData {
   brand: string;
   model: string;
   year: string;
@@ -18,23 +24,31 @@ interface CarFormData {
   status: CarStatus;
   notes: string;
   images: string[];
+  purchase: PurchaseData;
 }
 
 interface CarFormProps {
-  initialData?: Partial<CarFormData> & { _id?: string };
+  initialData?: Partial<CarFormData> & { _id?: string; purchase?: PurchaseData };
   mode: 'create' | 'edit';
 }
+
+const emptyPurchase: PurchaseData = {
+  supplierName: '',
+  supplierContact: '',
+  purchasePrice: '',
+  purchaseDate: '',
+  documentUrl: '',
+  notes: '',
+};
 
 export default function CarForm({ initialData, mode }: CarFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [error, setError] = useState('');
 
   const [form, setForm] = useState<CarFormData>({
-    supplierName: '',
-    supplierContact: '',
-    purchasePrice: '',
-    purchaseDate: '',
     brand: '',
     model: '',
     year: new Date().getFullYear().toString(),
@@ -44,6 +58,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
     status: 'In Stock',
     notes: '',
     images: [],
+    purchase: { ...emptyPurchase },
   });
 
   useEffect(() => {
@@ -51,35 +66,91 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
       setForm((prev) => ({
         ...prev,
         ...initialData,
-        purchasePrice: initialData.purchasePrice?.toString() || '',
         year: initialData.year?.toString() || new Date().getFullYear().toString(),
+        purchase: initialData.purchase ? {
+          ...emptyPurchase,
+          supplierName: initialData.purchase.supplierName || '',
+          supplierContact: initialData.purchase.supplierContact || '',
+          purchasePrice: initialData.purchase.purchasePrice?.toString() || '',
+          purchaseDate: initialData.purchase.purchaseDate?.toString() || '',
+          documentUrl: initialData.purchase.documentUrl || '',
+          notes: initialData.purchase.notes || '',
+        } : { ...emptyPurchase },
       }));
     }
-  // initialData is only used to populate the form on mount/edit; intentionally omitting to avoid infinite loops
+  // initialData is only used to populate the form on mount/edit
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?._id]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name.startsWith('purchase.')) {
+      const field = name.replace('purchase.', '');
+      setForm((prev) => ({
+        ...prev,
+        purchase: { ...prev.purchase, [field]: value },
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const base64 = ev.target?.result as string;
-        setForm((prev) => ({ ...prev, images: [...prev.images, base64] }));
-      };
-      reader.readAsDataURL(file);
-    });
+    setUploading(true);
+    setUploadProgress(`Uploading 0/${files.length}...`);
+
+    const newImages: string[] = [];
+    let uploaded = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadProgress(`Uploading ${i + 1}/${files.length}...`);
+      
+      const result = await uploadImage(file, 'cars');
+      if (result.url) {
+        newImages.push(result.url);
+      } else {
+        alert(`Failed to upload ${file.name}: ${result.error}`);
+      }
+      uploaded = i + 1;
+      setUploadProgress(`Uploading ${uploaded}/${files.length}...`);
+    }
+
+    setForm((prev) => ({ ...prev, images: [...prev.images, ...newImages] }));
+    setUploading(false);
+    setUploadProgress('');
   };
 
-  const removeImage = (index: number) => {
+  const handlePurchaseDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await uploadImage(file, 'cars/purchase');
+      if (result.url) {
+        setForm((prev) => ({
+          ...prev,
+          purchase: { ...prev.purchase, documentUrl: result.url },
+        }));
+      } else {
+        alert(`Failed to upload: ${result.error}`);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = async (index: number) => {
+    const imageUrl = form.images[index];
+    if (imageUrl.startsWith('/uploads/')) {
+      await deleteFile(imageUrl);
+    }
     setForm((prev) => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
 
@@ -91,8 +162,11 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
     try {
       const payload = {
         ...form,
-        purchasePrice: parseFloat(form.purchasePrice),
         year: parseInt(form.year),
+        purchase: {
+          ...form.purchase,
+          purchasePrice: parseFloat(form.purchase.purchasePrice),
+        },
       };
 
       const url = mode === 'edit' && initialData?._id ? `/api/cars/${initialData._id}` : '/api/cars';
@@ -137,6 +211,15 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
     marginBottom: '4px',
   };
 
+  const sectionTitleStyle: React.CSSProperties = {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: '#2a3142',
+    marginBottom: '16px',
+    paddingBottom: '8px',
+    borderBottom: '1px solid #e9ecef',
+  };
+
   const fileInputStyle: React.CSSProperties = {
     ...inputStyle,
     height: 'auto',
@@ -162,13 +245,14 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         </div>
       )}
 
+      <div style={sectionTitleStyle}>Purchase Information</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div>
           <label style={labelStyle}>Supplier Name *</label>
           <input
-            name="supplierName"
+            name="purchase.supplierName"
             required
-            value={form.supplierName}
+            value={form.purchase.supplierName}
             onChange={handleChange}
             style={inputStyle}
             placeholder="Supplier Co."
@@ -177,8 +261,8 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         <div>
           <label style={labelStyle}>Supplier Contact</label>
           <input
-            name="supplierContact"
-            value={form.supplierContact}
+            name="purchase.supplierContact"
+            value={form.purchase.supplierContact}
             onChange={handleChange}
             style={inputStyle}
             placeholder="+1 234 567 8900"
@@ -187,12 +271,12 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         <div>
           <label style={labelStyle}>Purchase Price *</label>
           <input
-            name="purchasePrice"
+            name="purchase.purchasePrice"
             type="number"
             required
             min="0"
             step="0.01"
-            value={form.purchasePrice}
+            value={form.purchase.purchasePrice}
             onChange={handleChange}
             style={inputStyle}
             placeholder="25000"
@@ -201,14 +285,61 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         <div>
           <label style={labelStyle}>Purchase Date *</label>
           <input
-            name="purchaseDate"
+            name="purchase.purchaseDate"
             type="date"
             required
-            value={form.purchaseDate}
+            value={form.purchase.purchaseDate}
             onChange={handleChange}
             style={inputStyle}
           />
         </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div>
+          <label style={labelStyle}>Purchase Document</label>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={handlePurchaseDocUpload}
+            disabled={uploading}
+            style={fileInputStyle}
+          />
+          {form.purchase.documentUrl && (
+            <div style={{ marginTop: '8px' }}>
+              <a
+                href={form.purchase.documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#28aaa9', fontSize: '14px' }}
+              >
+                View Uploaded Document
+              </a>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, purchase: { ...prev.purchase, documentUrl: '' } }))}
+                style={{ marginLeft: '12px', color: '#ec4561', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+        <div>
+          <label style={labelStyle}>Purchase Notes</label>
+          <textarea
+            name="purchase.notes"
+            value={form.purchase.notes}
+            onChange={handleChange}
+            rows={2}
+            style={{ ...inputStyle, height: 'auto', padding: '8px 1rem' }}
+            placeholder="Additional notes about the purchase..."
+          />
+        </div>
+      </div>
+
+      <div style={sectionTitleStyle}>Vehicle Information</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div>
           <label style={labelStyle}>Brand *</label>
           <input
@@ -307,10 +438,11 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
           accept="image/*"
           multiple
           onChange={handleImageUpload}
+          disabled={uploading}
           style={fileInputStyle}
         />
         <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
-          Upload one or more images (JPG, PNG, WEBP).
+          {uploading ? uploadProgress : 'Upload one or more images (JPG, PNG, WEBP). Images will be compressed.'}
         </p>
         {form.images.length > 0 && (
           <div style={{ marginTop: '12px' }}>

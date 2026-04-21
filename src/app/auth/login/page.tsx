@@ -51,7 +51,7 @@ export default function LoginPage() {
               margin: 0,
             }}
           >
-            NahidDealership
+            AMYAL CAR
           </h1>
           <p
             style={{
@@ -61,7 +61,7 @@ export default function LoginPage() {
               marginTop: '8px',
             }}
           >
-            Car Dealership & Rental Management System
+            Car Dealership & Rental Management
           </p>
         </div>
         <div style={{ marginBottom: '24px' }}>
@@ -86,7 +86,7 @@ export default function LoginPage() {
             marginTop: '16px',
           }}
         >
-          Default: admin@dealership.com / Admin@123
+          Default: admin@amyalcar.com / Admin@123
         </p>
       </div>
     </div>

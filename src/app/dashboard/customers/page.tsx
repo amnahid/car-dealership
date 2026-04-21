@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import EditCustomerModal from '@/components/EditCustomerModal';
 
 interface Customer {
   _id: string;
@@ -11,6 +12,10 @@ interface Customer {
   email?: string;
   address: string;
   nationalId?: string;
+  drivingLicense?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  notes?: string;
   createdAt: string;
 }
 
@@ -47,6 +52,30 @@ export default function CustomersPage() {
   const handleSearch = (value: string) => {
     setSearch(value);
     setPage(1);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this customer?')) return;
+    if (!confirm('This action cannot be undone. Continue?')) return;
+    try {
+      const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      fetchCustomers();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleUpdateCustomer = async (id: string, data: Partial<Customer>) => {
+    try {
+      const res = await fetch(`/api/customers/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); return; }
+      setShowModal(false);
+      setEditingCustomer(null);
+      fetchCustomers();
+    } catch (err) { console.error(err); }
   };
 
   return (
@@ -116,15 +145,23 @@ export default function CustomersPage() {
                     <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{customer.address}</td>
                     <td style={{ padding: '12px', color: '#525f80' }}>{new Date(customer.createdAt).toLocaleDateString()}</td>
                     <td style={{ padding: '12px' }}>
-                      <button
-                        onClick={() => { setEditingCustomer(customer); setShowModal(true); }}
-                        style={{ color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', marginRight: '12px' }}
-                      >
-                        Edit
-                      </button>
-                      <Link href={`/dashboard/customers/${customer._id}`} style={{ color: '#525f80', textDecoration: 'none' }}>
-                        View
-                      </Link>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => { setEditingCustomer(customer); setShowModal(true); }}
+                          style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(customer._id)}
+                          style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+                        >
+                          Delete
+                        </button>
+                        <Link href={`/dashboard/customers/${customer._id}`} style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>
+                          View
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -156,11 +193,19 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {showModal && (
+      {showModal && !editingCustomer && (
         <CustomerModal
-          customer={editingCustomer}
-          onClose={() => setShowModal(false)}
+          customer={null}
+          onClose={() => { setShowModal(false); setEditingCustomer(null); }}
           onSave={() => { setShowModal(false); fetchCustomers(); }}
+        />
+      )}
+
+      {showModal && editingCustomer && (
+        <EditCustomerModal
+          customer={editingCustomer}
+          onClose={() => { setShowModal(false); setEditingCustomer(null); }}
+          onSave={(data) => handleUpdateCustomer(editingCustomer._id, data)}
         />
       )}
     </div>

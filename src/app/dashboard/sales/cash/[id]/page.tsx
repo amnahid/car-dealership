@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
 
 interface Sale {
@@ -17,13 +18,17 @@ interface Sale {
   agentCommission?: number;
   saleDate: string;
   notes?: string;
+  status?: string;
+  invoiceUrl?: string;
 }
 
 export default function CashSaleDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     const id = params?.id;
@@ -42,6 +47,26 @@ export default function CashSaleDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [params?.id]);
+
+  const handleGenerateInvoice = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/sales/cash/${params?.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate-invoice' }),
+      });
+      if (!res.ok) throw new Error('Failed to generate invoice');
+      const data = await res.json();
+      if (data.invoiceUrl) {
+        setSale((prev) => prev ? { ...prev, invoiceUrl: data.invoiceUrl } : null);
+      }
+    } catch (err) {
+      alert('Failed to generate invoice');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>;
@@ -75,6 +100,17 @@ export default function CashSaleDetailPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Sale ID</span>
               <span style={{ color: '#28aaa9', fontWeight: 600, fontFamily: 'monospace' }}>{sale.saleId}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Status</span>
+              <span style={{ 
+                padding: '4px 8px', 
+                borderRadius: '3px', 
+                fontSize: '12px', 
+                fontWeight: 500,
+                background: sale.status === 'Cancelled' ? '#ec456120' : '#28aaa920', 
+                color: sale.status === 'Cancelled' ? '#ec4561' : '#28aaa9' 
+              }}>{sale.status || 'Active'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Sale Date</span>
@@ -121,18 +157,20 @@ export default function CashSaleDetailPage() {
           </div>
         </div>
 
-        {(sale.agentName || sale.agentCommission) && (
+        {sale.agentName && (
           <div className="card" style={{ padding: '24px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Agent Information</h3>
             <div style={{ display: 'grid', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>Agent Name</span>
-                <span style={{ color: '#2a3142' }}>{sale.agentName || '-'}</span>
+                <span style={{ color: '#2a3142' }}>{sale.agentName}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca8b3' }}>Commission</span>
-                <span style={{ color: '#2a3142' }}>${(sale.agentCommission || 0).toLocaleString()}</span>
-              </div>
+              {sale.agentCommission !== undefined && sale.agentCommission > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#9ca8b3' }}>Commission</span>
+                  <span style={{ color: '#2a3142' }}>${sale.agentCommission.toLocaleString()}</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -142,6 +180,43 @@ export default function CashSaleDetailPage() {
             <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Notes</h3>
             <p style={{ color: '#525f80', margin: 0 }}>{sale.notes}</p>
           </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+        <button
+          onClick={() => router.push(`/dashboard/sales/cash?edit=${sale._id}`)}
+          style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #f8b425', borderRadius: '3px', background: '#ffffff', color: '#f8b425', cursor: 'pointer' }}
+        >
+          Edit Sale
+        </button>
+        {sale.invoiceUrl ? (
+          <a
+            href={sale.invoiceUrl}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #28aaa9', borderRadius: '3px', background: '#ffffff', color: '#28aaa9', textDecoration: 'none', cursor: 'pointer' }}
+          >
+            Download Invoice
+          </a>
+        ) : (
+          <button
+            onClick={handleGenerateInvoice}
+            disabled={generating}
+            style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #28aaa9', borderRadius: '3px', background: generating ? '#f0f0f0' : '#28aaa9', color: generating ? '#999' : '#ffffff', cursor: generating ? 'not-allowed' : 'pointer' }}
+          >
+            {generating ? 'Generating...' : 'Generate Invoice'}
+          </button>
+        )}
+        {sale.invoiceUrl && (
+          <button
+            onClick={handleGenerateInvoice}
+            disabled={generating}
+            style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #666', borderRadius: '3px', background: generating ? '#f0f0f0' : '#ffffff', color: generating ? '#999' : '#666', cursor: generating ? 'not-allowed' : 'pointer' }}
+          >
+            {generating ? 'Regenerating...' : 'Regenerate Invoice'}
+          </button>
         )}
       </div>
     </div>

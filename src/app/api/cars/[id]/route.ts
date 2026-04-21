@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import Car from '@/models/Car';
+import CarPurchase from '@/models/CarPurchase';
 import Repair from '@/models/Repair';
 import VehicleDocument from '@/models/Document';
 import { getAuthPayload } from '@/lib/apiAuth';
@@ -13,7 +14,10 @@ export async function GET(
   try {
     await connectDB();
     const { id } = await params;
-    const car = await Car.findById(id).populate('createdBy', 'name email');
+    const car = await Car.findById(id)
+      .populate('createdBy', 'name email')
+      .populate('purchase')
+      .lean();
     if (!car) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
 
     const repairs = await Repair.find({ car: id }).sort({ repairDate: -1 });
@@ -37,8 +41,29 @@ export async function PUT(
     await connectDB();
     const { id } = await params;
     const body = await request.json();
-    const car = await Car.findByIdAndUpdate(id, body, { new: true, runValidators: true });
+    const { purchase, ...carData } = body;
+
+    const car = await Car.findById(id);
     if (!car) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
+
+    if (Object.keys(carData).length > 0) {
+      Object.assign(car, carData);
+      await car.save();
+    }
+
+    if (purchase) {
+      if (car.purchase) {
+        await CarPurchase.findByIdAndUpdate(car.purchase, purchase);
+      } else {
+        const newPurchase = await CarPurchase.create({
+          car: car._id,
+          ...purchase,
+          createdBy: auth.userId,
+        });
+        car.purchase = newPurchase._id;
+        await car.save();
+      }
+    }
 
     await logActivity({
       userId: auth.userId,
@@ -49,7 +74,11 @@ export async function PUT(
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    return NextResponse.json({ car });
+    const updatedCar = await Car.findById(id)
+      .populate('createdBy', 'name email')
+      .populate('purchase');
+
+    return NextResponse.json({ car: updatedCar });
   } catch (error) {
     console.error('Update car error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

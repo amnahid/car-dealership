@@ -3,19 +3,30 @@ import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { hashPassword } from '@/lib/auth';
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get('force') === 'true';
+
+    if (force) {
+      await User.deleteMany({ role: 'Admin' });
+    }
+
     const existingAdmin = await User.findOne({ role: 'Admin' });
     if (existingAdmin) {
-      return NextResponse.json({ message: 'Admin user already exists' }, { status: 200 });
+      return NextResponse.json({
+        message: 'Admin user already exists',
+        user: { id: existingAdmin._id, name: existingAdmin.name, email: existingAdmin.email, role: existingAdmin.role },
+        hint: 'Use ?force=true to delete and recreate',
+      }, { status: 200 });
     }
 
     const hashedPassword = await hashPassword('Admin@123');
     const admin = await User.create({
       name: 'System Admin',
-      email: 'admin@dealership.com',
+      email: 'admin@amyalcar.com',
       password: hashedPassword,
       role: 'Admin',
       isActive: true,

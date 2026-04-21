@@ -2,22 +2,31 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import EditRepairModal from '@/components/EditRepairModal';
 
 interface Repair {
   _id: string;
   carId: string;
   repairDescription: string;
+  partsReplaced: string;
+  laborCost: number;
+  repairCost: number;
   totalCost: number;
   repairDate: string;
   status: string;
+  beforeImages: string[];
+  afterImages: string[];
   car?: { carId: string; brand: string; model: string };
 }
 
 export default function RepairsPage() {
   const [repairs, setRepairs] = useState<Repair[]>([]);
+  const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [editingRepair, setEditingRepair] = useState<Repair | null>(null);
 
   const fetchRepairs = useCallback(async () => {
     setLoading(true);
@@ -35,7 +44,35 @@ export default function RepairsPage() {
 
   useEffect(() => {
     fetchRepairs();
+    fetch('/api/cars?limit=100')
+      .then(res => res.json())
+      .then(data => setCars(data.cars || []))
+      .catch(console.error);
   }, [fetchRepairs]);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this repair?')) return;
+    if (!confirm('This action cannot be undone. Continue?')) return;
+    try {
+      const res = await fetch(`/api/repairs/${id}`, { method: 'DELETE' });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      fetchRepairs();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleUpdateRepair = async (id: string, data: Partial<Repair>) => {
+    try {
+      const res = await fetch(`/api/repairs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); return; }
+      setShowModal(false);
+      setEditingRepair(null);
+      fetchRepairs();
+    } catch (err) { console.error(err); }
+  };
 
   const statusStyles: Record<string, { background: string; color: string }> = {
     Pending: { background: '#f8b425', color: '#ffffff' },
@@ -122,9 +159,11 @@ export default function RepairsPage() {
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
-                    <Link href={`/dashboard/repairs/${r._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>
-                      View
-                    </Link>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => { setEditingRepair(r); setShowModal(true); }} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Edit</button>
+                      <button onClick={() => handleDelete(r._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Delete</button>
+                      <Link href={`/dashboard/repairs/${r._id}`} style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>View</Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -167,10 +206,19 @@ export default function RepairsPage() {
               opacity: page === totalPages ? 0.5 : 1,
             }}
           >
-            Next
-          </button>
-        </div>
-      )}
-    </div>
-  );
+          Next
+        </button>
+      </div>
+    )}
+
+    {showModal && editingRepair && (
+      <EditRepairModal
+        repair={editingRepair}
+        cars={cars}
+        onClose={() => { setShowModal(false); setEditingRepair(null); }}
+        onSave={(data) => handleUpdateRepair(editingRepair._id, data)}
+      />
+    )}
+  </div>
+);
 }

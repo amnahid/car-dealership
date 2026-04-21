@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { DocumentType } from '@/types';
+import { uploadPdf, deleteFile, isPdfFile } from '@/lib/uploadClient';
 
 interface DocumentFormData {
   car: string;
@@ -30,6 +31,8 @@ interface DocumentFormProps {
 export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [error, setError] = useState('');
   const [cars, setCars] = useState<CarOption[]>([]);
 
@@ -64,18 +67,39 @@ export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
+
+    setUploading(true);
+    setUploadStatus('Uploading...');
+
+    let result;
+    if (isPdfFile(file.name)) {
+      result = await uploadPdf(file, 'documents');
+    } else {
+      result = await uploadPdf(file, 'documents');
+    }
+
+    if (result.url) {
       setForm((prev) => ({
         ...prev,
-        fileUrl: ev.target?.result as string,
+        fileUrl: result.url!,
         fileName: file.name,
       }));
-    };
-    reader.readAsDataURL(file);
+      setUploadStatus('Uploaded successfully');
+    } else {
+      setUploadStatus(`Upload failed: ${result.error}`);
+    }
+    setUploading(false);
+  };
+
+  const removeFile = async () => {
+    if (form.fileUrl.startsWith('/uploads/')) {
+      await deleteFile(form.fileUrl);
+    }
+    setForm((prev) => ({ ...prev, fileUrl: '', fileName: '' }));
+    setUploadStatus('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -204,24 +228,44 @@ export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
           type="file"
           accept=".pdf,.jpg,.jpeg,.png"
           onChange={handleFileUpload}
+          disabled={uploading}
           style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
         />
-        <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>Accepted formats: PDF, JPG, JPEG, PNG.</p>
+        <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
+          {uploading ? uploadStatus : 'Accepted formats: PDF, JPG, JPEG, PNG.'}
+        </p>
         {form.fileName && (
-          <p
-            style={{
-              marginTop: '8px',
-              background: 'rgba(66, 202, 127, 0.1)',
-              border: '1px solid #42ca7f',
-              borderRadius: '3px',
-              padding: '8px 12px',
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#42ca7f',
-            }}
-          >
-            Selected file: {form.fileName}
-          </p>
+          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <p
+              style={{
+                background: 'rgba(66, 202, 127, 0.1)',
+                border: '1px solid #42ca7f',
+                borderRadius: '3px',
+                padding: '8px 12px',
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#42ca7f',
+                margin: 0,
+              }}
+            >
+              Selected file: {form.fileName}
+            </p>
+            <button
+              type="button"
+              onClick={removeFile}
+              style={{
+                background: '#ec4561',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '3px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              Remove
+            </button>
+          </div>
         )}
       </div>
 

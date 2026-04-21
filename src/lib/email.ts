@@ -22,7 +22,7 @@ function getRecipients(): string[] {
   if (adminEmail) {
     return [adminEmail];
   }
-  return ['admin@dealership.com'];
+  return ['admin@amyalcar.com'];
 }
 
 function buildEmailHtml(docInfo: DocumentAlertInfo): string {
@@ -100,7 +100,7 @@ function buildEmailHtml(docInfo: DocumentAlertInfo): string {
           </tr>
           <tr>
             <td style="background-color: #f5f5f5; padding: 20px; text-align: center;">
-              <p style="color: #888888; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} NahidDealership. All rights reserved.</p>
+              <p style="color: #888888; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} AMYAL CAR. All rights reserved.</p>
             </td>
           </tr>
         </table>

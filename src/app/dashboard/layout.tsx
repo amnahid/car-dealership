@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </main>
       <footer className="footer">
-        <p style={{ margin: 0 }}>&copy; 2024 NahidDealership. All rights reserved.</p>
+        <p style={{ margin: 0 }}>&copy; 2024 AMYAL CAR. All rights reserved.</p>
       </footer>
     </div>
   );

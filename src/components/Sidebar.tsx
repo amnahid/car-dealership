@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface SidebarProps {
@@ -51,8 +52,19 @@ export default function Sidebar({ userRole }: SidebarProps) {
       }}
     >
       <div style={{ padding: '20px 24px', borderBottom: '1px solid #e9ecef' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>NahidDealership</h1>
-        <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>Management System</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Image
+            src="/amyal-logo.png"
+            alt="AMYAL CAR Logo"
+            width={40}
+            height={40}
+            style={{ borderRadius: '50%', objectFit: 'cover' }}
+          />
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>AMYAL CAR</h1>
+            <p style={{ fontSize: '11px', color: '#9ca8b3', marginTop: '2px' }}>Management System</p>
+          </div>
+        </div>
       </div>
 
       <nav style={{ padding: '12px 0' }}>

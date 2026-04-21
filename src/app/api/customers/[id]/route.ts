@@ -108,7 +108,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid customer ID' }, { status: 400 });
     }
 
-    const customer = await Customer.findByIdAndDelete(id);
+    const customer = await Customer.findByIdAndUpdate(
+      id,
+      { isDeleted: true },
+      { new: true }
+    );
 
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });

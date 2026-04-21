@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
+import Customer from '@/models/Customer';
 import { getAuthPayload } from '@/lib/apiAuth';
+import { sendPaymentReminderNotifications, sendOverdueNoticeNotifications } from '@/lib/saleNotifications';
+
+const DEFAULT_LATE_FEE_PERCENT = parseInt(process.env.LATE_FEE_PERCENT || '5');
 
 export async function GET(request: NextRequest) {
   try {
@@ -95,6 +99,106 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get installment alerts error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await connectDB();
+
+    const body = await request.json();
+    const { action, lateFeePercent } = body;
+    const lateFee = lateFeePercent || DEFAULT_LATE_FEE_PERCENT;
+
+    if (action === 'send-reminders' || action === 'send-overdue') {
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const tomorrowStart = new Date(tomorrow.setHours(0, 0, 0, 0));
+      const tomorrowEnd = new Date(tomorrow.setHours(23, 59, 59, 999));
+
+      const sales = await InstallmentSale.find({ status: 'Active' }).lean();
+
+      let remindersSent = 0;
+      let overdueSent = 0;
+      let failed = 0;
+
+      for (const sale of sales) {
+        const customerData = await Customer.findById(sale.customer).lean();
+        const carData = sale.car ? await (await import('@/models/Car')).default.findById(sale.car).lean() : null;
+
+        if (!customerData) continue;
+
+        for (const payment of (sale.paymentSchedule || [])) {
+          const dueDate = new Date(payment.dueDate);
+          const isPaid = payment.status === 'Paid';
+
+          if (!isPaid) {
+            const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const daysOverdue = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+            if (action === 'send-reminders' && daysUntilDue > 0 && daysUntilDue <= 7) {
+              await sendPaymentReminderNotifications(
+                { name: sale.customerName, phone: sale.customerPhone, email: customerData.email },
+                {
+                  saleId: sale.saleId,
+                  carId: sale.carId,
+                  carBrand: carData?.brand,
+                  carModel: carData?.model,
+                  installmentNumber: payment.installmentNumber,
+                  amount: payment.amount,
+                  dueDate: payment.dueDate.toString(),
+                  daysUntilDue,
+                  lateFeePercent: lateFee,
+                }
+              );
+              remindersSent++;
+            }
+
+            if (action === 'send-overdue' && daysOverdue > 0) {
+              await sendOverdueNoticeNotifications(
+                { name: sale.customerName, phone: sale.customerPhone, email: customerData.email },
+                {
+                  saleId: sale.saleId,
+                  carId: sale.carId,
+                  carBrand: carData?.brand,
+                  carModel: carData?.model,
+                  installmentNumber: payment.installmentNumber,
+                  amount: payment.amount,
+                  dueDate: payment.dueDate.toString(),
+                  daysOverdue,
+                  lateFeePercent: lateFee,
+                }
+              );
+              overdueSent++;
+            }
+          }
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        action,
+        remindersSent,
+        overdueSent,
+        failed,
+        lateFeePercent: lateFee,
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error) {
+    console.error('Send installment notifications error:', error);
 
     if (error instanceof DatabaseConnectionError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });

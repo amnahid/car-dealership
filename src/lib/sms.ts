@@ -58,7 +58,7 @@ export function formatExpirySms(docInfo: {
   daysUntilExpiry: number;
 }): string {
   const urgency = docInfo.daysUntilExpiry <= 7 ? 'URGENT: ' : '';
-  return `${urgency}DOC EXPIRING: ${docInfo.carId} ${docInfo.documentType} expires in ${docInfo.daysUntilExpiry} days. Renew ASAP. - NahidDealership`;
+  return `${urgency}DOC EXPIRING: ${docInfo.carId} ${docInfo.documentType} expires in ${docInfo.daysUntilExpiry} days. Renew ASAP. - AMYAL CAR`;
 }
 
 export async function sendExpirySms(to: string, message: string): Promise<SmsResult> {

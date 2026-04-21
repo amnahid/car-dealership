@@ -5,6 +5,11 @@ import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import { CarStatus } from '@/types';
 
+interface Purchase {
+  supplierName: string;
+  purchasePrice: number;
+}
+
 interface Car {
   _id: string;
   carId: string;
@@ -13,8 +18,7 @@ interface Car {
   year: number;
   color: string;
   status: CarStatus;
-  purchasePrice: number;
-  supplierName: string;
+  purchase?: Purchase;
 }
 
 export default function CarsPage() {
@@ -33,11 +37,17 @@ export default function CarsPage() {
 
     try {
       const res = await fetch(`/api/cars?${params}`);
+      if (!res.ok) {
+        console.error('Failed to fetch cars:', res.status);
+        setCars([]);
+        return;
+      }
       const data = await res.json();
       setCars(data.cars || []);
       setTotalPages(data.pagination?.pages || 1);
     } catch (err) {
       console.error(err);
+      setCars([]);
     } finally {
       setLoading(false);
     }
@@ -177,8 +187,8 @@ export default function CarsPage() {
                   <td style={{ padding: '12px' }}>{car.model}</td>
                   <td style={{ padding: '12px' }}>{car.year}</td>
                   <td style={{ padding: '12px' }}>{car.color}</td>
-                  <td style={{ padding: '12px', color: '#525f80' }}>{car.supplierName}</td>
-                  <td style={{ padding: '12px' }}>${car.purchasePrice?.toLocaleString()}</td>
+                  <td style={{ padding: '12px', color: '#525f80' }}>{car.purchase?.supplierName || '-'}</td>
+                  <td style={{ padding: '12px' }}>${car.purchase?.purchasePrice?.toLocaleString() || '-'}</td>
                   <td style={{ padding: '12px' }}>
                     <StatusBadge status={car.status} />
                   </td>

@@ -19,6 +19,15 @@ interface Doc {
   fileName: string;
 }
 
+interface Purchase {
+  supplierName: string;
+  supplierContact: string;
+  purchasePrice: number;
+  purchaseDate: string;
+  documentUrl?: string;
+  notes?: string;
+}
+
 interface Car {
   _id: string;
   carId: string;
@@ -27,15 +36,12 @@ interface Car {
   year: number;
   color: string;
   status: CarStatus;
-  purchasePrice: number;
-  purchaseDate: string;
-  supplierName: string;
-  supplierContact: string;
   engineNumber: string;
   chassisNumber: string;
   notes: string;
   totalRepairCost: number;
   images: string[];
+  purchase?: Purchase;
 }
 
 async function getCarDetail(id: string) {
@@ -72,6 +78,48 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
+      {car.purchase && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="font-semibold text-gray-800 mb-4">Purchase Information</h3>
+          <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <dt className="text-gray-500">Supplier Name</dt>
+              <dd className="font-medium text-gray-800">{car.purchase.supplierName || '-'}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Supplier Contact</dt>
+              <dd className="font-medium text-gray-800">{car.purchase.supplierContact || '-'}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Purchase Price</dt>
+              <dd className="font-medium text-gray-800">${car.purchase.purchasePrice?.toLocaleString() || '-'}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Purchase Date</dt>
+              <dd className="font-medium text-gray-800">
+                {car.purchase.purchaseDate ? new Date(car.purchase.purchaseDate).toLocaleDateString() : '-'}
+              </dd>
+            </div>
+            {car.purchase.documentUrl && (
+              <div className="col-span-2 md:col-span-4">
+                <dt className="text-gray-500">Purchase Document</dt>
+                <dd className="font-medium">
+                  <a href={car.purchase.documentUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                    View Document
+                  </a>
+                </dd>
+              </div>
+            )}
+            {car.purchase.notes && (
+              <div className="col-span-2 md:col-span-4">
+                <dt className="text-gray-500">Notes</dt>
+                <dd className="font-medium text-gray-800">{car.purchase.notes}</dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h3 className="font-semibold text-gray-800 mb-4">Vehicle Details</h3>
@@ -80,11 +128,7 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
               ['Chassis Number', car.chassisNumber],
               ['Engine Number', car.engineNumber],
               ['Color', car.color],
-              ['Purchase Date', new Date(car.purchaseDate).toLocaleDateString()],
-              ['Purchase Price', `$${car.purchasePrice?.toLocaleString()}`],
               ['Total Repair Cost', `$${car.totalRepairCost?.toLocaleString()}`],
-              ['Supplier', car.supplierName],
-              ['Supplier Contact', car.supplierContact],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between">
                 <dt className="text-gray-500">{label}</dt>

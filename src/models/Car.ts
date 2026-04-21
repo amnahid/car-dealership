@@ -4,12 +4,8 @@ import mongoose, { Schema, Model } from 'mongoose';
 export interface ICarRaw {
   _id: mongoose.Types.ObjectId;
   carId: string;
-  supplierName: string;
-  supplierContact: string;
-  purchasePrice: number;
-  purchaseDate: Date;
   brand: string;
-  carModel: string; // renamed internally to avoid Mongoose Document.model conflict
+  carModel: string;
   year: number;
   engineNumber: string;
   chassisNumber: string;
@@ -19,6 +15,7 @@ export interface ICarRaw {
   documents: string[];
   notes: string;
   totalRepairCost: number;
+  purchase?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -29,10 +26,6 @@ export type ICarDocument = mongoose.HydratedDocument<ICarRaw>;
 const CarSchema = new Schema(
   {
     carId: { type: String, unique: true },
-    supplierName: { type: String, required: true, trim: true },
-    supplierContact: { type: String, trim: true },
-    purchasePrice: { type: Number, required: true, min: 0 },
-    purchaseDate: { type: Date, required: true },
     brand: { type: String, required: true, trim: true },
     model: { type: String, required: true, trim: true },
     year: { type: Number, required: true },
@@ -48,6 +41,7 @@ const CarSchema = new Schema(
     documents: [{ type: String }],
     notes: { type: String },
     totalRepairCost: { type: Number, default: 0 },
+    purchase: { type: Schema.Types.ObjectId, ref: 'CarPurchase' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

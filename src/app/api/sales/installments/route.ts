@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
 import Car from '@/models/Car';
+import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { sendInstallmentConfirmationNotifications } from '@/lib/saleNotifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,14 +22,28 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
 
-    const query: Record<string, unknown> = { status: { $ne: 'Cancelled' } };
+    const statusFilter = {
+      $or: [
+        { status: { $ne: 'Cancelled' } },
+        { status: { $exists: false } }
+      ]
+    };
+
+    let query: Record<string, unknown> = { ...statusFilter };
 
     if (search) {
-      query.$or = [
-        { customerName: { $regex: search, $options: 'i' } },
-        { carId: { $regex: search, $options: 'i' } },
-        { saleId: { $regex: search, $options: 'i' } },
-      ];
+      query = {
+        $and: [
+          statusFilter,
+          {
+            $or: [
+              { customerName: { $regex: search, $options: 'i' } },
+              { carId: { $regex: search, $options: 'i' } },
+              { saleId: { $regex: search, $options: 'i' } },
+            ]
+          }
+        ]
+      };
     }
 
     if (status) {
@@ -159,6 +175,37 @@ export async function POST(request: NextRequest) {
       targetId: sale._id.toString(),
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
+
+    // Send confirmation notifications to customer
+    try {
+      const customerData = await Customer.findById(customer).lean();
+      const carData = await Car.findById(car).lean();
+
+      await sendInstallmentConfirmationNotifications(
+        {
+          name: customerName,
+          phone: customerPhone,
+          email: customerData?.email,
+        },
+        {
+          saleId: sale.saleId,
+          carId: sale.carId,
+          carBrand: carData?.brand,
+          carModel: carData?.model,
+          totalPrice: sale.totalPrice,
+          downPayment: sale.downPayment,
+          monthlyPayment: sale.monthlyPayment,
+          tenureMonths: sale.tenureMonths,
+          paymentSchedule: (sale.paymentSchedule || []).map((p: any) => ({
+            installmentNumber: p.installmentNumber,
+            dueDate: p.dueDate.toString(),
+            amount: p.amount,
+          })),
+        }
+      );
+    } catch (notifyError) {
+      console.error('Customer notification failed:', notifyError);
+    }
 
     return NextResponse.json({ sale }, { status: 201 });
   } catch (error) {

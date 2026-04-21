@@ -11,7 +11,8 @@ export interface IRepairDocument extends Document {
   repairDate: Date;
   beforeImages: string[];
   afterImages: string[];
-  status: 'Pending' | 'In Progress' | 'Completed';
+  status: 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+  isDeleted: boolean;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -29,9 +30,10 @@ const RepairSchema = new Schema<IRepairDocument>(
     afterImages: [{ type: String }],
     status: {
       type: String,
-      enum: ['Pending', 'In Progress', 'Completed'],
+      enum: ['Pending', 'In Progress', 'Completed', 'Cancelled'],
       default: 'Pending',
     },
+    isDeleted: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

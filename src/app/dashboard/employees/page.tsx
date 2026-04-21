@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 
 interface Employee {
   _id: string;
@@ -128,7 +129,10 @@ export default function EmployeesPage() {
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <button onClick={() => { setEditingEmployee(emp); setShowModal(true); }} style={{ color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', marginRight: '12px' }}>Edit</button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => { setEditingEmployee(emp); setShowModal(true); }} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Edit</button>
+                        <Link href={`/dashboard/employees/${emp._id}`} style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>View</Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -191,8 +195,11 @@ function EmployeeModal({ employee, onClose, onSave }: { employee: Employee | nul
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Joining Date *</label><input required type="date" value={form.joiningDate} onChange={(e) => setForm({ ...form, joiningDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Status</label><select value={form.isActive.toString()} onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}><option value="true">Active</option><option value="false">Inactive</option></select></div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
+            {employee && (
+              <button type="button" onClick={async () => { if (confirm('Delete this employee?')) { await fetch(`/api/employees/${employee._id}`, { method: 'DELETE' }); onSave(); onClose(); } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>Delete</button>
+            )}
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Close</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Save'}</button>
           </div>
         </form>

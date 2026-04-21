@@ -13,7 +13,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase(), isActive: true });
+    const user = await User.findOne({
+      email: email.toLowerCase(),
+      $or: [
+        { isActive: true },
+        { isActive: { $exists: false } }
+      ]
+    });
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
@@ -39,6 +45,9 @@ export async function POST(request: NextRequest) {
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+    const isHttps = appUrl.startsWith('https://');
+
     const response = NextResponse.json({
       user: {
         id: user._id,
@@ -50,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isHttps,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
       path: '/',

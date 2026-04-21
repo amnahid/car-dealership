@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import CashSale from '@/models/CashSale';
 import Car from '@/models/Car';
+import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { generateInvoice } from '@/lib/invoiceGenerator';
+import { sendSaleThankYouNotifications } from '@/lib/saleNotifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,14 +22,28 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '15');
     const search = searchParams.get('search') || '';
 
-    const query: Record<string, unknown> = { status: 'Active' };
+    const statusFilter = {
+      $or: [
+        { status: 'Active' },
+        { status: { $exists: false } }
+      ]
+    };
+
+    let query: Record<string, unknown> = { ...statusFilter };
 
     if (search) {
-      query.$or = [
-        { customerName: { $regex: search, $options: 'i' } },
-        { carId: { $regex: search, $options: 'i' } },
-        { saleId: { $regex: search, $options: 'i' } },
-      ];
+      query = {
+        $and: [
+          statusFilter,
+          {
+            $or: [
+              { customerName: { $regex: search, $options: 'i' } },
+              { carId: { $regex: search, $options: 'i' } },
+              { saleId: { $regex: search, $options: 'i' } },
+            ]
+          }
+        ]
+      };
     }
 
     const skip = (page - 1) * limit;
@@ -117,7 +134,56 @@ export async function POST(request: NextRequest) {
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    return NextResponse.json({ sale }, { status: 201 });
+    // Generate invoice PDF
+    let invoiceUrl = '';
+    const customerData = await Customer.findById(customer).lean();
+    const carData = await Car.findById(car).lean();
+
+    try {
+      invoiceUrl = await generateInvoice({
+        saleId: sale.saleId,
+        saleDate: sale.saleDate.toString(),
+        carId: sale.carId,
+        carBrand: carData?.brand,
+        carModel: carData?.model,
+        customerName: sale.customerName,
+        customerPhone: sale.customerPhone,
+        customerAddress: customerData?.address,
+        salePrice: sale.salePrice,
+        discountAmount: sale.discountAmount,
+        finalPrice: sale.finalPrice,
+        agentName: sale.agentName,
+        agentCommission: sale.agentCommission,
+      });
+
+      // Update sale with invoice URL
+      sale.invoiceUrl = invoiceUrl;
+      await sale.save();
+    } catch (invoiceError) {
+      console.error('Invoice generation failed:', invoiceError);
+    }
+
+    // Send thank-you notifications to customer
+    try {
+      await sendSaleThankYouNotifications(
+        {
+          name: customerName,
+          phone: customerPhone,
+          email: customerData?.email,
+        },
+        {
+          saleId: sale.saleId,
+          carId: sale.carId,
+          carBrand: carData?.brand,
+          carModel: carData?.model,
+          finalPrice: sale.finalPrice,
+        }
+      );
+    } catch (notifyError) {
+      console.error('Customer notification failed:', notifyError);
+    }
+
+    return NextResponse.json({ sale, invoiceUrl }, { status: 201 });
   } catch (error) {
     console.error('Create cash sale error:', error);
     if (error instanceof DatabaseConnectionError) {

@@ -20,7 +20,12 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    const query: Record<string, unknown> = { isDeleted: false };
+    const query: Record<string, unknown> = {
+      $or: [
+        { isDeleted: false },
+        { isDeleted: { $exists: false } }
+      ]
+    };
 
     if (type) query.type = type;
     if (category) query.category = category;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 interface Sale {
   _id: string;
@@ -16,9 +17,11 @@ interface Sale {
   agentCommission?: number;
   saleDate: string;
   notes?: string;
+  status?: string;
 }
 
 export default function CashSalesPage() {
+  const searchParams = useSearchParams();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -27,6 +30,20 @@ export default function CashSalesPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
+
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (editId) {
+      fetch(`/api/sales/cash/${editId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.sale) {
+            setEditingSale(data.sale);
+          }
+        });
+    }
+  }, [searchParams]);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number }[]>([]);
   const [customers, setCustomers] = useState<{ _id: string; fullName: string; phone: string }[]>([]);
@@ -84,16 +101,14 @@ export default function CashSalesPage() {
   };
 
   const handleUpdateSale = async (id: string, data: any) => {
-    try {
-      const res = await fetch(`/api/sales/cash/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); return; }
-      setEditingSale(null);
-      fetchSales();
-    } catch (err) { console.error(err); }
+    const res = await fetch(`/api/sales/cash/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); throw new Error('Failed'); }
+    setEditingSale(null);
+    fetchSales();
   };
 
   return (
@@ -135,7 +150,7 @@ export default function CashSalesPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Sale ID', 'Car ID', 'Customer', 'Sale Price', 'Discount', 'Final Price', 'Date', 'Actions'].map((h) => (
+                  {['Sale ID', 'Car ID', 'Customer', 'Sale Price', 'Discount', 'Final Price', 'Date', 'Status', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -154,10 +169,22 @@ export default function CashSalesPage() {
                     <td style={{ padding: '12px', fontWeight: 600 }}>${sale.finalPrice.toLocaleString()}</td>
                     <td style={{ padding: '12px', color: '#525f80' }}>{new Date(sale.saleDate).toLocaleDateString()}</td>
                     <td style={{ padding: '12px' }}>
+                      <span style={{ 
+                        padding: '4px 8px', 
+                        borderRadius: '3px', 
+                        fontSize: '12px', 
+                        fontWeight: 500,
+                        background: sale.status === 'Cancelled' ? '#ec456120' : '#28aaa920', 
+                        color: sale.status === 'Cancelled' ? '#ec4561' : '#28aaa9' 
+                      }}>{sale.status || 'Active'}</span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <Link href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
                         <button onClick={() => handleEdit(sale)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Edit</button>
-                        <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
+                        {sale.status === 'Active' && (
+                          <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -304,8 +331,11 @@ function EditCashSaleModal({ sale, onClose, onSave }: { sale: Sale; onClose: () 
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', height: '80px', fontSize: '14px', borderRadius: '0', padding: '12px', border: '1px solid #ced4da' }} />
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
+            {sale.status !== 'Cancelled' && (
+              <button type="button" onClick={async () => { if (confirm('Cancel this sale?')) { try { await onSave(sale._id, { status: 'Cancelled' }); onClose(); } catch (e) { /* error already shown */ } } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>Cancel Sale</button>
+            )}
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Close</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Save Changes'}</button>
           </div>
         </form>

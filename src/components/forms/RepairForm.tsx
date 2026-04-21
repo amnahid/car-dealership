@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RepairStatus } from '@/types';
+import { uploadImage, deleteFile } from '@/lib/uploadClient';
 
 interface RepairFormData {
   car: string;
@@ -33,6 +34,8 @@ interface RepairFormProps {
 export default function RepairForm({ initialData, mode, defaultCarId }: RepairFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [error, setError] = useState('');
   const [cars, setCars] = useState<CarOption[]>([]);
 
@@ -84,17 +87,36 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
     }
   };
 
-  const handleImageUpload = (field: 'beforeImages' | 'afterImages') => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (field: 'beforeImages' | 'afterImages') => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const base64 = ev.target?.result as string;
-        setForm((prev) => ({ ...prev, [field]: [...prev[field], base64] }));
-      };
-      reader.readAsDataURL(file);
-    });
+
+    setUploading(true);
+    setUploadStatus(`Uploading ${field === 'beforeImages' ? 'before' : 'after'} images...`);
+
+    const newImages: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const result = await uploadImage(files[i], 'repairs');
+      if (result.url) {
+        newImages.push(result.url);
+      } else {
+        alert(`Failed to upload image: ${result.error}`);
+      }
+      setUploadStatus(`Uploading ${field === 'beforeImages' ? 'before' : 'after'} images... ${i + 1}/${files.length}`);
+    }
+
+    setForm((prev) => ({ ...prev, [field]: [...prev[field], ...newImages] }));
+    setUploading(false);
+    setUploadStatus('');
+  };
+
+  const removeImage = async (field: 'beforeImages' | 'afterImages', index: number) => {
+    const imageUrl = form[field][index];
+    if (imageUrl.startsWith('/uploads/')) {
+      await deleteFile(imageUrl);
+    }
+    setForm((prev) => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -266,13 +288,30 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
             accept="image/*"
             multiple
             onChange={handleImageUpload('beforeImages')}
+            disabled={uploading}
             style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
           />
-          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>Add photos before repair work starts.</p>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
+            {uploading ? uploadStatus : 'Add photos before repair work starts.'}
+          </p>
           {form.beforeImages.length > 0 && (
-            <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginTop: '8px' }}>
-              {form.beforeImages.length} image{form.beforeImages.length > 1 ? 's' : ''} selected
-            </p>
+            <div style={{ marginTop: '8px' }}>
+              <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginBottom: '8px' }}>
+                {form.beforeImages.length} image{form.beforeImages.length > 1 ? 's' : ''} selected
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {form.beforeImages.map((img, i) => (
+                  <div key={i} style={{ position: 'relative' }}>
+                    <img src={img} alt={`Before ${i + 1}`} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '3px' }} />
+                    <button
+                      type="button"
+                      onClick={() => removeImage('beforeImages', i)}
+                      style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ec4561', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', cursor: 'pointer' }}
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
         <div>
@@ -282,13 +321,30 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
             accept="image/*"
             multiple
             onChange={handleImageUpload('afterImages')}
+            disabled={uploading}
             style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
           />
-          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>Add photos after repair is completed.</p>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
+            {uploading ? uploadStatus : 'Add photos after repair is completed.'}
+          </p>
           {form.afterImages.length > 0 && (
-            <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginTop: '8px' }}>
-              {form.afterImages.length} image{form.afterImages.length > 1 ? 's' : ''} selected
-            </p>
+            <div style={{ marginTop: '8px' }}>
+              <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginBottom: '8px' }}>
+                {form.afterImages.length} image{form.afterImages.length > 1 ? 's' : ''} selected
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {form.afterImages.map((img, i) => (
+                  <div key={i} style={{ position: 'relative' }}>
+                    <img src={img} alt={`After ${i + 1}`} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '3px' }} />
+                    <button
+                      type="button"
+                      onClick={() => removeImage('afterImages', i)}
+                      style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ec4561', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', cursor: 'pointer' }}
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>

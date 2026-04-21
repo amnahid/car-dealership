@@ -71,7 +71,11 @@ export async function DELETE(
 
     await connectDB();
     const { id } = await params;
-    const repair = await Repair.findByIdAndDelete(id);
+    const repair = await Repair.findByIdAndUpdate(
+      id,
+      { isDeleted: true },
+      { new: true }
+    );
     if (!repair) return NextResponse.json({ error: 'Repair not found' }, { status: 404 });
 
     await updateCarRepairCost(repair.car.toString());
