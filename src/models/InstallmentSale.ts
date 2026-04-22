@@ -2,6 +2,8 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type InstallmentPaymentStatus = 'Pending' | 'Paid' | 'Overdue' | 'Failed';
 export type InstallmentSaleStatus = 'Active' | 'Completed' | 'Defaulted' | 'Cancelled';
+export type ZatcaInvoiceType = 'Standard' | 'Simplified';
+export type ZatcaStatus = 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
 
 export interface IInstallmentPayment {
   installmentNumber: number;
@@ -34,6 +36,16 @@ export interface IInstallmentSaleDocument extends Document {
   remainingAmount: number;
   deliveryThresholdPercent: number;
   lateFeePercent: number;
+  vatRate: number;
+  vatAmount: number;
+  finalPriceWithVat: number;
+  // ZATCA fields
+  invoiceType: ZatcaInvoiceType;
+  zatcaUUID?: string;
+  zatcaQRCode?: string;
+  zatcaStatus: ZatcaStatus;
+  zatcaHash?: string;
+  zatcaResponse?: object;
   status: InstallmentSaleStatus;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
@@ -69,6 +81,15 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     remainingAmount: { type: Number, required: true, min: 0 },
     deliveryThresholdPercent: { type: Number, default: 30, min: 0, max: 100 },
     lateFeePercent: { type: Number, default: 2, min: 0, max: 100 },
+    vatRate: { type: Number, default: 15, min: 0 },
+    vatAmount: { type: Number, default: 0, min: 0 },
+    finalPriceWithVat: { type: Number, default: 0, min: 0 },
+    invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
+    zatcaUUID: { type: String, sparse: true },
+    zatcaQRCode: { type: String },
+    zatcaStatus: { type: String, enum: ['Pending', 'Cleared', 'Reported', 'Failed', 'NotRequired'], default: 'Pending' },
+    zatcaHash: { type: String },
+    zatcaResponse: { type: Schema.Types.Mixed },
     status: {
       type: String,
       enum: ['Active', 'Completed', 'Defaulted'],

@@ -8,6 +8,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import { generateInvoice } from '@/lib/invoiceGenerator';
 import { sendSaleThankYouNotifications } from '@/lib/saleNotifications';
+import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,13 +88,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { carId, car, customer, customerName, customerPhone, salePrice, discountAmount, agentName, agentCommission, saleDate, notes } = body;
+    const {
+      carId, car, customer, customerName, customerPhone,
+      salePrice, discountAmount, agentName, agentCommission,
+      saleDate, notes,
+      invoiceType = 'Simplified',
+      buyerTrn,
+    } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !salePrice || !saleDate) {
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
     const finalPrice = salePrice - (discountAmount || 0);
+    const { vatAmount, totalWithVat } = calculateVat(finalPrice, ZATCA_VAT_RATE);
 
     const sale = await CashSale.create({
       car: car,
@@ -104,10 +112,15 @@ export async function POST(request: NextRequest) {
       salePrice,
       discountAmount: discountAmount || 0,
       finalPrice,
+      vatRate: ZATCA_VAT_RATE,
+      vatAmount,
+      finalPriceWithVat: totalWithVat,
       agentName,
       agentCommission: agentCommission || 0,
       saleDate,
       notes,
+      invoiceType,
+      zatcaStatus: 'Pending',
       createdBy: user.userId,
     });
 
@@ -141,6 +154,47 @@ export async function POST(request: NextRequest) {
     const customerData = await Customer.findById(customer).lean();
     const carData = await Car.findById(car).lean();
 
+    // Process ZATCA invoice
+    let zatcaResult;
+    try {
+      zatcaResult = await processZatcaInvoice({
+        referenceId: sale._id.toString(),
+        referenceType: 'CashSale',
+        saleId: sale.saleId,
+        invoiceType,
+        issueDate: new Date(saleDate),
+        buyer: {
+          name: customerName,
+          trn: buyerTrn,
+          address: customerData?.address,
+          city: '',
+        },
+        lineItems: [{
+          name: `${carData?.brand || ''} ${carData?.model || ''} (${carId})`.trim(),
+          quantity: 1,
+          unitPrice: finalPrice,
+          vatRate: ZATCA_VAT_RATE,
+          vatAmount,
+          totalAmount: totalWithVat,
+        }],
+        subtotal: finalPrice,
+        vatTotal: vatAmount,
+        totalWithVat,
+        discountAmount: discountAmount || 0,
+        notes,
+        createdBy: user.userId,
+      });
+
+      sale.zatcaUUID = zatcaResult.uuid;
+      sale.zatcaQRCode = zatcaResult.qrCode;
+      sale.zatcaStatus = zatcaResult.status as 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
+      sale.zatcaHash = zatcaResult.xmlHash;
+      sale.zatcaResponse = zatcaResult.zatcaResponse;
+      await sale.save();
+    } catch (zatcaError) {
+      console.error('ZATCA processing failed:', zatcaError);
+    }
+
     try {
       invoiceUrl = await generateInvoice({
         saleId: sale.saleId,
@@ -154,11 +208,16 @@ export async function POST(request: NextRequest) {
         salePrice: sale.salePrice,
         discountAmount: sale.discountAmount,
         finalPrice: sale.finalPrice,
+        vatRate: sale.vatRate,
+        vatAmount: sale.vatAmount,
+        finalPriceWithVat: sale.finalPriceWithVat,
         agentName: sale.agentName,
         agentCommission: sale.agentCommission,
+        zatcaQRCode: zatcaResult?.qrCode,
+        zatcaUUID: zatcaResult?.uuid,
+        invoiceType,
       });
 
-      // Update sale with invoice URL
       sale.invoiceUrl = invoiceUrl;
       await sale.save();
     } catch (invoiceError) {
@@ -185,7 +244,7 @@ export async function POST(request: NextRequest) {
       console.error('Customer notification failed:', notifyError);
     }
 
-    return NextResponse.json({ sale, invoiceUrl }, { status: 201 });
+    return NextResponse.json({ sale, invoiceUrl, zatcaStatus: zatcaResult?.status }, { status: 201 });
   } catch (error) {
     console.error('Create cash sale error:', error);
     if (error instanceof DatabaseConnectionError) {

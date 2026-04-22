@@ -10,6 +10,7 @@ interface VehicleDoc {
   expiryDate: string;
   issueDate: string;
   fileName: string;
+  fileUrl?: string;
   car?: { carId: string; brand: string; model: string };
 }
 
@@ -27,6 +28,26 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this document?')) return;
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setDocuments(prev => prev.filter(d => d._id !== id));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleDownload = (url: string | undefined, fileName: string | undefined) => {
+    if (url) window.open(url, '_blank');
+  };
 
   const fetchDocs = useCallback(async () => {
     setLoading(true);
@@ -84,7 +105,7 @@ export default function DocumentsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
-                {['Car ID', 'Type', 'Issue Date', 'Expiry Date', 'File', 'Actions'].map((h) => (
+                {['Car ID', 'Type', 'Issue Date', 'Expiry Date', 'File'].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -121,9 +142,14 @@ export default function DocumentsPage() {
                       {doc.fileName || '-'}
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <Link href={`/dashboard/documents/${doc._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>
-                        View
-                      </Link>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <Link href={`/dashboard/documents/${doc._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
+                        <Link href={`/dashboard/documents/${doc._id}/edit`} style={{ color: '#525f80', textDecoration: 'none' }}>Edit</Link>
+                        {doc.fileUrl && (
+                          <button onClick={() => handleDownload(doc.fileUrl, doc.fileName)} style={{ background: 'none', border: 'none', color: '#28aaa9', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Download</button>
+                        )}
+                        <button onClick={() => handleDelete(doc._id)} disabled={deleting === doc._id} style={{ background: 'none', border: 'none', color: '#ec4561', cursor: 'pointer', padding: 0, fontSize: '14px', opacity: deleting === doc._id ? 0.5 : 1 }}>Delete</button>
+                      </div>
                     </td>
                   </tr>
                 );

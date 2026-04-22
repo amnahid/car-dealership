@@ -4,12 +4,32 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CarStatus } from '@/types';
 import { uploadImage, deleteFile } from '@/lib/uploadClient';
+import SearchableSelect from '@/components/SearchableSelect';
+import { MultiImageUpload } from '@/components/ImageUpload';
+
+interface Supplier {
+  _id: string;
+  supplierId: string;
+  companyName: string;
+  companyLogo?: string;
+  phone: string;
+  email?: string;
+}
 
 interface PurchaseData {
+  supplier: string;
   supplierName: string;
   supplierContact: string;
   purchasePrice: string;
   purchaseDate: string;
+  isNewCar: boolean;
+  conditionImages: string[];
+  insuranceUrl?: string;
+  insuranceExpiry?: string;
+  registrationUrl?: string;
+  registrationExpiry?: string;
+  roadPermitUrl?: string;
+  roadPermitExpiry?: string;
   documentUrl?: string;
   notes: string;
 }
@@ -33,10 +53,19 @@ interface CarFormProps {
 }
 
 const emptyPurchase: PurchaseData = {
+  supplier: '',
   supplierName: '',
   supplierContact: '',
   purchasePrice: '',
   purchaseDate: '',
+  isNewCar: true,
+  conditionImages: [],
+  insuranceUrl: '',
+  insuranceExpiry: '',
+  registrationUrl: '',
+  registrationExpiry: '',
+  roadPermitUrl: '',
+  roadPermitExpiry: '',
   documentUrl: '',
   notes: '',
 };
@@ -47,6 +76,11 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [error, setError] = useState('');
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loadingSuppliers, setLoadingSuppliers] = useState(false);
+  const [savingSupplier, setSavingSupplier] = useState(false);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [newSupplier, setNewSupplier] = useState({ companyName: '', companyNumber: '', phone: '', email: '' });
 
   const [form, setForm] = useState<CarFormData>({
     brand: '',
@@ -69,18 +103,116 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         year: initialData.year?.toString() || new Date().getFullYear().toString(),
         purchase: initialData.purchase ? {
           ...emptyPurchase,
+          supplier: initialData.purchase.supplier || '',
           supplierName: initialData.purchase.supplierName || '',
           supplierContact: initialData.purchase.supplierContact || '',
           purchasePrice: initialData.purchase.purchasePrice?.toString() || '',
           purchaseDate: initialData.purchase.purchaseDate?.toString() || '',
+          isNewCar: initialData.purchase.isNewCar ?? true,
+          conditionImages: initialData.purchase.conditionImages || [],
+          insuranceUrl: initialData.purchase.insuranceUrl || '',
+          insuranceExpiry: initialData.purchase.insuranceExpiry?.toString() || '',
+          registrationUrl: initialData.purchase.registrationUrl || '',
+          registrationExpiry: initialData.purchase.registrationExpiry?.toString() || '',
+          roadPermitUrl: initialData.purchase.roadPermitUrl || '',
+          roadPermitExpiry: initialData.purchase.roadPermitExpiry?.toString() || '',
           documentUrl: initialData.purchase.documentUrl || '',
           notes: initialData.purchase.notes || '',
         } : { ...emptyPurchase },
       }));
     }
-  // initialData is only used to populate the form on mount/edit
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // initialData is only used to populate the form on mount/edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?._id]);
+
+  const fetchSuppliers = async () => {
+    setLoadingSuppliers(true);
+    try {
+      const res = await fetch('/api/suppliers?list=true');
+      const data = await res.json();
+      if (data.suppliers) {
+        setSuppliers(data.suppliers);
+      }
+    } catch (err) {
+      console.error('Failed to fetch suppliers:', err);
+    } finally {
+      setLoadingSuppliers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const handleSupplierChange = (supplierId: string) => {
+    if (supplierId === '__new__') {
+      setShowSupplierModal(true);
+      return;
+    }
+    
+    const selectedSupplier = suppliers.find(s => s._id === supplierId);
+    
+    setForm(prev => ({
+      ...prev,
+      purchase: {
+        ...prev.purchase,
+        supplier: supplierId,
+        supplierName: selectedSupplier?.companyName || '',
+        supplierContact: selectedSupplier?.phone || '',
+      }
+    }));
+  };
+
+  const handleNewSupplierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewSupplier(prev => ({ ...prev, [name.replace('newSupplier.', '')]: value }));
+  };
+
+  const saveNewSupplier = async () => {
+    if (!newSupplier.companyName || !newSupplier.companyNumber || !newSupplier.phone) {
+      alert('Please fill required fields');
+      return;
+    }
+    
+    setSavingSupplier(true);
+    try {
+      const res = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName: newSupplier.companyName,
+          companyNumber: newSupplier.companyNumber,
+          phone: newSupplier.phone,
+          email: newSupplier.email,
+          address: '',
+          status: 'active',
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.supplier) {
+        await fetchSuppliers();
+        setForm(prev => ({
+          ...prev,
+          purchase: {
+            ...prev.purchase,
+            supplier: data.supplier._id,
+            supplierName: data.supplier.companyName,
+            supplierContact: data.supplier.phone,
+          }
+        }));
+        setShowSupplierModal(false);
+        setNewSupplier({ companyName: '', companyNumber: '', phone: '', email: '' });
+      } else {
+        alert(data.error || 'Failed to create supplier');
+      }
+    } catch {
+      alert('Failed to create supplier');
+    } finally {
+      setSavingSupplier(false);
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -124,6 +256,112 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
     setForm((prev) => ({ ...prev, images: [...prev.images, ...newImages] }));
     setUploading(false);
     setUploadProgress('');
+  };
+
+  const handleConditionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    setUploading(true);
+    setUploadProgress(`Uploading 0/${files.length}...`);
+
+    const newImages: string[] = [];
+    let uploaded = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadProgress(`Uploading ${i + 1}/${files.length}...`);
+      
+      const result = await uploadImage(file, 'cars/condition');
+      if (result.url) {
+        newImages.push(result.url);
+      } else {
+        alert(`Failed to upload ${file.name}: ${result.error}`);
+      }
+      uploaded = i + 1;
+      setUploadProgress(`Uploading ${uploaded}/${files.length}...`);
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      purchase: { ...prev.purchase, conditionImages: [...prev.purchase.conditionImages, ...newImages] },
+    }));
+    setUploading(false);
+    setUploadProgress('');
+  };
+
+  const handleConditionImageRemove = async (index: number) => {
+    const imageUrl = form.purchase.conditionImages[index];
+    if (imageUrl.startsWith('/uploads/')) {
+      await deleteFile(imageUrl);
+    }
+    setForm((prev) => ({
+      ...prev,
+      purchase: {
+        ...prev.purchase,
+        conditionImages: prev.purchase.conditionImages.filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  const handleInsuranceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await uploadImage(file, 'cars/documents');
+      if (result.url) {
+        setForm((prev) => ({
+          ...prev,
+          purchase: { ...prev.purchase, insuranceUrl: result.url },
+        }));
+      } else {
+        alert(`Failed to upload: ${result.error}`);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRegistrationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await uploadImage(file, 'cars/documents');
+      if (result.url) {
+        setForm((prev) => ({
+          ...prev,
+          purchase: { ...prev.purchase, registrationUrl: result.url },
+        }));
+      } else {
+        alert(`Failed to upload: ${result.error}`);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRoadPermitUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await uploadImage(file, 'cars/documents');
+      if (result.url) {
+        setForm((prev) => ({
+          ...prev,
+          purchase: { ...prev.purchase, roadPermitUrl: result.url },
+        }));
+      } else {
+        alert(`Failed to upload: ${result.error}`);
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handlePurchaseDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,27 +485,145 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
 
       <div style={sectionTitleStyle}>Purchase Information</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-        <div>
-          <label style={labelStyle}>Supplier Name *</label>
-          <input
-            name="purchase.supplierName"
-            required
-            value={form.purchase.supplierName}
-            onChange={handleChange}
-            style={inputStyle}
-            placeholder="Supplier Co."
-          />
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <SearchableSelect
+              label="Supplier"
+              value={form.purchase.supplier}
+              onChange={handleSupplierChange}
+              options={[
+                { value: '__new__', label: '+ Add New Supplier' },
+                ...suppliers.map(s => ({ value: s._id, label: `${s.companyName} (${s.supplierId})` }))
+              ]}
+              placeholder="Search supplier..."
+              disabled={loadingSuppliers}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSupplierModal(true)}
+            style={{
+              height: '40px',
+              padding: '0 12px',
+              background: '#fff',
+              border: '1px solid #ced4da',
+              borderRadius: '3px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              color: '#28aaa9',
+            }}
+          >
+            + Add New
+          </button>
         </div>
-        <div>
-          <label style={labelStyle}>Supplier Contact</label>
-          <input
-            name="purchase.supplierContact"
-            value={form.purchase.supplierContact}
-            onChange={handleChange}
-            style={inputStyle}
-            placeholder="+1 234 567 8900"
-          />
+        {showSupplierModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '8px',
+            padding: '24px',
+            width: '400px',
+            maxWidth: '90vw',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          }}>
+            <h3 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: 600, color: '#2b2d5d' }}>Add New Supplier</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={labelStyle}>Company Name *</label>
+                <input
+                  name="companyName"
+                  value={newSupplier.companyName}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, companyName: e.target.value })}
+                  style={inputStyle}
+                  placeholder="Company Name"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Company Number *</label>
+                <input
+                  name="companyNumber"
+                  value={newSupplier.companyNumber}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, companyNumber: e.target.value })}
+                  style={inputStyle}
+                  placeholder="e.g., ABC-1234"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Phone *</label>
+                <input
+                  name="phone"
+                  value={newSupplier.phone}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                  style={inputStyle}
+                  placeholder="+8801XXXXXXXXX"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Email</label>
+                <input
+                  name="email"
+                  type="email"
+                  value={newSupplier.email}
+                  onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                  style={inputStyle}
+                  placeholder="email@supplier.com"
+                />
+              </div>
+            </div>
+            <div style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSupplierModal(false);
+                  setNewSupplier({ companyName: '', companyNumber: '', phone: '', email: '' });
+                  setForm((prev) => ({ ...prev, purchase: { ...prev.purchase, supplier: '' } }));
+                }}
+                style={{
+                  padding: '10px 16px',
+                  background: '#fff',
+                  color: '#666',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveNewSupplier}
+                disabled={savingSupplier}
+                style={{
+                  padding: '10px 16px',
+                  background: '#28aaa9',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '3px',
+                  fontSize: '14px',
+                  cursor: savingSupplier ? 'not-allowed' : 'pointer',
+                  opacity: savingSupplier ? 0.6 : 1,
+                }}
+              >
+                {savingSupplier ? 'Saving...' : 'Save Supplier'}
+              </button>
+            </div>
+          </div>
         </div>
+      )}
         <div>
           <label style={labelStyle}>Purchase Price *</label>
           <input
@@ -289,6 +645,138 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
             type="date"
             required
             value={form.purchase.purchaseDate}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Car Type</label>
+          <select
+            name="purchase.isNewCar"
+            value={form.purchase.isNewCar.toString()}
+            onChange={(e) => setForm((prev) => ({
+              ...prev,
+              purchase: { ...prev.purchase, isNewCar: e.target.value === 'true' }
+            }))}
+            style={{ ...inputStyle, background: '#fff' }}
+          >
+            <option value="true">New Car</option>
+            <option value="false">Used Car</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <MultiImageUpload
+          label="Condition Images"
+          value={form.purchase.conditionImages}
+          onChange={(imgs) => setForm(prev => ({ ...prev, purchase: { ...prev.purchase, conditionImages: imgs } }))}
+          folder="cars/condition"
+          maxCount={10}
+          gridSize={120}
+        />
+      </div>
+
+      <div style={sectionTitleStyle}>Vehicle Documents</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div>
+          <label style={labelStyle}>Insurance Document</label>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={handleInsuranceUpload}
+            disabled={uploading}
+            style={fileInputStyle}
+          />
+          {form.purchase.insuranceUrl && (
+            <div style={{ marginTop: '8px' }}>
+              <a href={form.purchase.insuranceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px' }}>
+                View Document
+              </a>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, purchase: { ...prev.purchase, insuranceUrl: '' } }))}
+                style={{ marginLeft: '12px', color: '#ec4561', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+        <div>
+          <label style={labelStyle}>Insurance Expiry Date</label>
+          <input
+            name="purchase.insuranceExpiry"
+            type="date"
+            value={form.purchase.insuranceExpiry}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Registration Card</label>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={handleRegistrationUpload}
+            disabled={uploading}
+            style={fileInputStyle}
+          />
+          {form.purchase.registrationUrl && (
+            <div style={{ marginTop: '8px' }}>
+              <a href={form.purchase.registrationUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px' }}>
+                View Document
+              </a>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, purchase: { ...prev.purchase, registrationUrl: '' } }))}
+                style={{ marginLeft: '12px', color: '#ec4561', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+        <div>
+          <label style={labelStyle}>Registration Expiry Date</label>
+          <input
+            name="purchase.registrationExpiry"
+            type="date"
+            value={form.purchase.registrationExpiry}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Road Permit</label>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={handleRoadPermitUpload}
+            disabled={uploading}
+            style={fileInputStyle}
+          />
+          {form.purchase.roadPermitUrl && (
+            <div style={{ marginTop: '8px' }}>
+              <a href={form.purchase.roadPermitUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px' }}>
+                View Document
+              </a>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, purchase: { ...prev.purchase, roadPermitUrl: '' } }))}
+                style={{ marginLeft: '12px', color: '#ec4561', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+        <div>
+          <label style={labelStyle}>Road Permit Expiry Date</label>
+          <input
+            name="purchase.roadPermitExpiry"
+            type="date"
+            value={form.purchase.roadPermitExpiry}
             onChange={handleChange}
             style={inputStyle}
           />
@@ -432,58 +920,14 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
       </div>
 
       <div style={{ marginBottom: '20px' }}>
-        <label style={labelStyle}>Images</label>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleImageUpload}
-          disabled={uploading}
-          style={fileInputStyle}
+        <MultiImageUpload
+          label="Images"
+          value={form.images}
+          onChange={(imgs) => setForm(prev => ({ ...prev, images: imgs }))}
+          folder="cars"
+          maxCount={10}
+          gridSize={120}
         />
-        <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
-          {uploading ? uploadProgress : 'Upload one or more images (JPG, PNG, WEBP). Images will be compressed.'}
-        </p>
-        {form.images.length > 0 && (
-          <div style={{ marginTop: '12px' }}>
-            <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginBottom: '8px' }}>
-              {form.images.length} image{form.images.length > 1 ? 's' : ''} selected
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {form.images.map((img, i) => (
-                <div key={i} style={{ position: 'relative' }}>
-                  <img
-                    src={img}
-                    alt={`Car image ${i + 1}`}
-                    style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '3px' }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    style={{
-                      position: 'absolute',
-                      top: '-4px',
-                      right: '-4px',
-                      background: '#ec4561',
-                      color: '#ffffff',
-                      borderRadius: '50%',
-                      width: '20px',
-                      height: '20px',
-                      fontSize: '12px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>

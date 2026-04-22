@@ -19,7 +19,7 @@ export default function Header({ userName, userRole, expiringDocsCount = 0, user
       style={{
         position: 'fixed',
         top: 0,
-        left: '240px',
+        left: '260px',
         right: 0,
         height: '70px',
         background: '#ffffff',

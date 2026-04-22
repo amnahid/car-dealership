@@ -4,6 +4,7 @@ import Car from '@/models/Car';
 import CarPurchase from '@/models/CarPurchase';
 import Repair from '@/models/Repair';
 import VehicleDocument from '@/models/Document';
+import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 
@@ -16,7 +17,8 @@ export async function GET(
     const { id } = await params;
     const car = await Car.findById(id)
       .populate('createdBy', 'name email')
-      .populate('purchase')
+      .populate('purchase', 'supplier supplierName supplierContact purchasePrice purchaseDate isNewCar conditionImages insuranceUrl insuranceExpiry registrationUrl registrationExpiry roadPermitUrl roadPermitExpiry documentUrl notes')
+      .populate('purchase.supplier', 'companyName companyLogo phone email')
       .lean();
     if (!car) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
 
@@ -53,11 +55,47 @@ export async function PUT(
 
     if (purchase) {
       if (car.purchase) {
+        const existingPurchase = await CarPurchase.findById(car.purchase);
+        
+        if (existingPurchase && existingPurchase.purchasePrice !== purchase.purchasePrice) {
+          const oldTransaction = await Transaction.findOne({ referenceId: car.carId, referenceType: 'CarPurchase' });
+          if (oldTransaction) {
+            oldTransaction.amount = purchase.purchasePrice;
+            oldTransaction.description = `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`;
+            await oldTransaction.save();
+            purchase.transactionId = oldTransaction._id;
+          } else {
+            const transaction = await Transaction.create({
+              date: purchase.purchaseDate || new Date(),
+              type: 'Expense',
+              category: 'Car Purchase',
+              amount: purchase.purchasePrice,
+              description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
+              referenceId: car.carId,
+              referenceType: 'CarPurchase',
+              createdBy: auth.userId,
+            });
+            purchase.transactionId = transaction._id;
+          }
+        }
+        
         await CarPurchase.findByIdAndUpdate(car.purchase, purchase);
       } else {
+        const transaction = await Transaction.create({
+          date: purchase.purchaseDate || new Date(),
+          type: 'Expense',
+          category: 'Car Purchase',
+          amount: purchase.purchasePrice,
+          description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
+          referenceId: car.carId,
+          referenceType: 'CarPurchase',
+          createdBy: auth.userId,
+        });
+        
         const newPurchase = await CarPurchase.create({
           car: car._id,
           ...purchase,
+          transactionId: transaction._id,
           createdBy: auth.userId,
         });
         car.purchase = newPurchase._id;

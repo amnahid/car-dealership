@@ -1,72 +1,88 @@
-import { cookies } from 'next/headers';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
+'use client';
 
-interface VehicleDoc {
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+
+interface DocData {
   _id: string;
   carId: string;
   documentType: string;
   issueDate: string;
   expiryDate: string;
+  fileUrl: string;
   fileName: string;
   notes: string;
-  alertSent30: boolean;
-  alertSent15: boolean;
-  alertSent7: boolean;
 }
 
-async function getDocument(id: string) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth-token')?.value;
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/documents/${id}`,
-    { headers: { Cookie: `auth-token=${token}` }, cache: 'no-store' }
-  );
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.document;
-}
+export default function DocumentDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
+  const [doc, setDoc] = useState<DocData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const doc: VehicleDoc = await getDocument(id);
-  if (!doc) notFound();
+  useEffect(() => {
+    if (id) {
+      fetch(`/api/documents/${id}`)
+        .then(r => r.json())
+        .then(data => {
+          setDoc(data.document);
+          setLoading(false);
+        });
+    }
+  }, [id]);
+
+  if (loading) return <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>;
+  if (!doc) return <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Document not found</div>;
 
   const daysLeft = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / 86400000);
 
   return (
-    <div className="space-y-6 max-w-xl">
-      <div>
-        <Link href="/dashboard/documents" className="text-sm text-indigo-600 hover:underline">← Documents</Link>
-        <h2 className="text-2xl font-bold text-gray-800 mt-1">{doc.documentType}</h2>
-        <p className="text-gray-500 font-mono text-sm">{doc.carId}</p>
-      </div>
+    <div style={{ maxWidth: '600px' }}>
+      <Link href="/dashboard/documents" style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>← Documents</Link>
+      <h2 style={{ fontSize: '24px', fontWeight: 600, color: '#2a3142', marginTop: '8px' }}>{doc.documentType}</h2>
+      <p style={{ color: '#525f80', fontFamily: 'monospace', fontSize: '14px' }}>{doc.carId}</p>
 
       {daysLeft <= 30 && daysLeft >= 0 && (
-        <div className={`rounded-md border p-3 ${daysLeft <= 7 ? 'bg-red-50 border-red-200 text-red-800' : daysLeft <= 15 ? 'bg-yellow-50 border-yellow-200 text-yellow-800' : 'bg-orange-50 border-orange-200 text-orange-800'}`}>
-          <span style={{ display: 'inline-block', width: '14px', height: '14px', marginRight: '4px', borderRadius: '50%', background: '#f8b425', verticalAlign: 'middle' }}></span>This document expires in <strong>{daysLeft} day{daysLeft !== 1 ? 's' : ''}</strong>.
+        <div style={{ marginTop: '16px', padding: '12px', background: daysLeft <= 7 ? '#fff5f5' : '#fffbf0', border: `1px solid ${daysLeft <= 7 ? '#ec4561' : '#f5a623'}`, borderRadius: '4px' }}>
+          <span style={{ color: daysLeft <= 7 ? '#ec4561' : '#f5a623', fontWeight: 600 }}>Expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''}</span>
         </div>
       )}
       {daysLeft < 0 && (
-        <div className="rounded-md border bg-red-50 border-red-200 text-red-800 p-3">
-          <span style={{ display: 'inline-block', width: '14px', height: '14px', marginRight: '4px', borderRadius: '50%', background: '#ec4561', verticalAlign: 'middle' }}></span>This document has <strong>expired</strong>.
+        <div style={{ marginTop: '16px', padding: '12px', background: '#fff5f5', border: '1px solid #ec4561', borderRadius: '4px', color: '#ec4561', fontWeight: 600 }}>
+          This document has expired
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <dl className="space-y-3 text-sm">
-          {[
-            ['Issue Date', new Date(doc.issueDate).toLocaleDateString()],
-            ['Expiry Date', new Date(doc.expiryDate).toLocaleDateString()],
-            ['File', doc.fileName || '-'],
-            ['Notes', doc.notes || '-'],
-          ].map(([label, value]) => (
-            <div key={label} className="flex justify-between">
-              <dt className="text-gray-500">{label}</dt>
-              <dd className="font-medium text-gray-800">{value}</dd>
-            </div>
-          ))}
-        </dl>
+      <div className="card" style={{ marginTop: '20px', padding: '20px' }}>
+        <table style={{ width: '100%', fontSize: '14px' }}>
+          <tbody>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '12px', color: '#525f80' }}>Issue Date</td>
+              <td style={{ padding: '12px', fontWeight: 500 }}>{new Date(doc.issueDate).toLocaleDateString()}</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '12px', color: '#525f80' }}>Expiry Date</td>
+              <td style={{ padding: '12px', fontWeight: 500 }}>{new Date(doc.expiryDate).toLocaleDateString()}</td>
+            </tr>
+            <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+              <td style={{ padding: '12px', color: '#525f80' }}>File</td>
+              <td style={{ padding: '12px' }}>
+                {doc.fileUrl ? (
+                  <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', textDecoration: 'none' }}>{doc.fileName || 'View File'}</a>
+                ) : '-'}
+              </td>
+            </tr>
+            <tr>
+              <td style={{ padding: '12px', color: '#525f80' }}>Notes</td>
+              <td style={{ padding: '12px' }}>{doc.notes || '-'}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+        <Link href={`/dashboard/documents/${id}/edit`} style={{ padding: '10px 20px', background: '#28aaa9', color: '#fff', borderRadius: '3px', textDecoration: 'none' }}>Edit</Link>
       </div>
     </div>
   );

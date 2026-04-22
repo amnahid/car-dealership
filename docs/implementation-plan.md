@@ -353,4 +353,51 @@ Compression: 1MB max, 1920px max dimensions
 - expenses dashboard
 - CRM - message customization option
 - report generation and seperated page for reports
-- 
+
+purchase details:
+- figure out normal purchase details fields by yourself by reading car_dealership_requirements.txt and code-base
+- purchase condition images
+- condition status
+- necessary car documents, also figure out by yourself
+- should be entry to transactions
+
+supplier details:
+- Company Name
+- Company profile pic
+- Company Number
+- Sales Agent
+- Email
+- phone
+- Status(active/inactive)
+- action
+
+Dashboard
+Car 
+- supplier
+- agents
+- purchase
+- repairs
+- stock
+- documents
+Sales 
+- all sales
+- cash sales
+- installments
+- rentals
+- purchase returns
+- invoice menager
+Finance
+- Transactions
+- Reports
+- expenses
+- incomes
+Marketing (coupon type feature)
+CRM
+- customers
+- email and sms message customization (unable to find name for the section)
+HRM
+- Employees
+- (others)
+Administrations
+- Users
+- Activity Logs

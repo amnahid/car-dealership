@@ -2,19 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { DocumentType } from '@/types';
-import { uploadPdf, deleteFile, isPdfFile } from '@/lib/uploadClient';
-
-interface DocumentFormData {
-  car: string;
-  carId: string;
-  documentType: DocumentType;
-  issueDate: string;
-  expiryDate: string;
-  fileUrl: string;
-  fileName: string;
-  notes: string;
-}
+import { uploadPdf, deleteFile } from '@/lib/uploadClient';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface CarOption {
   _id: string;
@@ -23,105 +12,159 @@ interface CarOption {
   model: string;
 }
 
+interface DocSection {
+  documentType: string;
+  issueDate: string;
+  expiryDate: string;
+  fileUrl: string;
+  fileName: string;
+  enabled: boolean;
+}
+
+const DOCUMENT_TYPES = ['Insurance', 'Road Permit', 'Registration Card'];
+
+const DEFAULT_EXPIRY_MONTHS: Record<string, number> = {
+  'Insurance': 12,
+  'Road Permit': 12,
+  'Registration Card': 0,
+};
+
 interface DocumentFormProps {
-  initialData?: Partial<DocumentFormData> & { _id?: string };
   mode: 'create' | 'edit';
 }
 
-export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
+export default function DocumentForm({ mode }: DocumentFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('');
+  const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [cars, setCars] = useState<CarOption[]>([]);
+  const [selectedCar, setSelectedCar] = useState('');
+  const [autoFill, setAutoFill] = useState(true);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
-  const [form, setForm] = useState<DocumentFormData>({
-    car: '',
-    carId: '',
-    documentType: 'Insurance',
-    issueDate: '',
-    expiryDate: '',
-    fileUrl: '',
-    fileName: '',
-    notes: '',
-    ...initialData,
+  const [docs, setDocs] = useState<Record<string, DocSection>>({
+    'Insurance': { documentType: 'Insurance', issueDate: '', expiryDate: '', fileUrl: '', fileName: '', enabled: true },
+    'Road Permit': { documentType: 'Road Permit', issueDate: '', expiryDate: '', fileUrl: '', fileName: '', enabled: true },
+    'Registration Card': { documentType: 'Registration Card', issueDate: '', expiryDate: '', fileUrl: '', fileName: '', enabled: true },
   });
 
   useEffect(() => {
     fetch('/api/cars?limit=100')
-      .then((r) => r.json())
-      .then((data) => setCars(data.cars || []))
+      .then(r => r.json())
+      .then(data => setCars(data.cars || []))
       .catch(console.error);
   }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    if (name === 'car') {
-      const selectedCar = cars.find((c) => c._id === value);
-      setForm((prev) => ({ ...prev, car: value, carId: selectedCar?.carId || '' }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
+  useEffect(() => {
+    if (autoFill && selectedCar) {
+      const today = new Date();
+      const updated = { ...docs };
+      
+      Object.keys(updated).forEach(type => {
+        const months = DEFAULT_EXPIRY_MONTHS[type];
+        if (months > 0) {
+          const issueDate = today.toISOString().split('T')[0];
+          const expDate = new Date(today.setMonth(today.getMonth() + months));
+          updated[type] = {
+            ...updated[type],
+            issueDate,
+            expiryDate: expDate.toISOString().split('T')[0],
+          };
+        }
+      });
+      
+      setDocs(updated);
     }
+  }, [autoFill]);
+
+  const toggleSection = (type: string) => {
+    setExpandedSections(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const updateDoc = (type: string, field: keyof DocSection, value: string | boolean) => {
+    setDocs(prev => ({
+      ...prev,
+      [type]: { ...prev[type], [field]: value },
+    }));
+  };
+
+  const handleFileUpload = async (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploading(true);
-    setUploadStatus('Uploading...');
-
-    let result;
-    if (isPdfFile(file.name)) {
-      result = await uploadPdf(file, 'documents');
-    } else {
-      result = await uploadPdf(file, 'documents');
-    }
-
+    setUploading(type);
+    
+    const result = await uploadPdf(file, 'documents');
+    
     if (result.url) {
-      setForm((prev) => ({
+      setDocs(prev => ({
         ...prev,
-        fileUrl: result.url!,
-        fileName: file.name,
+        [type]: { ...prev[type], fileUrl: result.url!, fileName: file.name },
       }));
-      setUploadStatus('Uploaded successfully');
-    } else {
-      setUploadStatus(`Upload failed: ${result.error}`);
     }
-    setUploading(false);
+    
+    setUploading(null);
   };
 
-  const removeFile = async () => {
-    if (form.fileUrl.startsWith('/uploads/')) {
-      await deleteFile(form.fileUrl);
+  const removeFile = async (type: string) => {
+    const url = docs[type].fileUrl;
+    if (url.startsWith('/uploads/')) {
+      await deleteFile(url);
     }
-    setForm((prev) => ({ ...prev, fileUrl: '', fileName: '' }));
-    setUploadStatus('');
+    setDocs(prev => ({
+      ...prev,
+      [type]: { ...prev[type], fileUrl: '', fileName: '' },
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!selectedCar) {
+      setError('Please select a car');
+      return;
+    }
+
+    const docsWithData = Object.values(docs).filter(d => 
+      d.enabled && (d.fileUrl || (d.issueDate && d.expiryDate))
+    );
+    if (docsWithData.length === 0) {
+      setError('Please add at least one document with file or dates');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const url = mode === 'edit' && initialData?._id ? `/api/documents/${initialData._id}` : '/api/documents';
-      const method = mode === 'edit' ? 'PUT' : 'POST';
+      const car = cars.find(c => c._id === selectedCar);
+      
+      const documents = docsWithData.map(doc => ({
+        car: selectedCar,
+        carId: car?.carId,
+        documentType: doc.documentType,
+        issueDate: doc.issueDate,
+        expiryDate: doc.expiryDate,
+        fileUrl: doc.fileUrl,
+        fileName: doc.fileName,
+        notes: '',
+      }));
 
-      const res = await fetch(url, {
-        method,
+      const res = await fetch('/api/documents', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ documents }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Failed to save document');
+        console.error('Document save error:', res.status, data);
+        setError(data.error || `Failed to save (${res.status})`);
         return;
       }
+
+      console.log('Documents saved:', data);
 
       router.push('/dashboard/documents');
       router.refresh();
@@ -137,7 +180,7 @@ export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
     height: '40px',
     fontSize: '14px',
     borderRadius: '0',
-    padding: '0.375rem 1rem',
+    padding: '0 12px',
     border: '1px solid #ced4da',
     background: '#ffffff',
   };
@@ -153,134 +196,146 @@ export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
       {error && (
-        <div
-          style={{
-            background: 'rgba(236, 69, 97, 0.1)',
-            border: '1px solid #ec4561',
-            borderRadius: '3px',
-            padding: '12px',
-            marginBottom: '20px',
-          }}
-        >
+        <div style={{ background: 'rgba(236, 69, 97, 0.1)', border: '1px solid #ec4561', borderRadius: '3px', padding: '12px', marginBottom: '20px' }}>
           <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-        <div>
-          <label style={labelStyle}>Car *</label>
-          <select
-            name="car"
-            required
-            value={form.car}
-            onChange={handleChange}
-            style={inputStyle}
-          >
-            <option value="">Select a car</option>
-            {cars.map((car) => (
-              <option key={car._id} value={car._id}>
-                {car.carId} - {car.brand} {car.model}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Document Type *</label>
-          <select
-            name="documentType"
-            required
-            value={form.documentType}
-            onChange={handleChange}
-            style={inputStyle}
-          >
-            {['Insurance', 'Road Permit', 'Registration Card'].map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Issue Date *</label>
-          <input
-            name="issueDate"
-            type="date"
-            required
-            value={form.issueDate}
-            onChange={handleChange}
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Expiry Date *</label>
-          <input
-            name="expiryDate"
-            type="date"
-            required
-            value={form.expiryDate}
-            onChange={handleChange}
-            style={inputStyle}
-          />
+        <SearchableSelect
+          label="Car *"
+          value={selectedCar}
+          onChange={setSelectedCar}
+          options={cars.map(c => ({ value: c._id, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+          placeholder="Select a car..."
+        />
+        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '8px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={autoFill}
+              onChange={(e) => setAutoFill(e.target.checked)}
+            />
+            <span style={{ fontSize: '14px', color: '#525f80' }}>Auto-fill dates (1 year)</span>
+          </label>
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <label style={labelStyle}>Upload Document File</label>
-        <input
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png"
-          onChange={handleFileUpload}
-          disabled={uploading}
-          style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
-        />
-        <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
-          {uploading ? uploadStatus : 'Accepted formats: PDF, JPG, JPEG, PNG.'}
-        </p>
-        {form.fileName && (
-          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <p
-              style={{
-                background: 'rgba(66, 202, 127, 0.1)',
-                border: '1px solid #42ca7f',
-                borderRadius: '3px',
-                padding: '8px 12px',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#42ca7f',
-                margin: 0,
-              }}
-            >
-              Selected file: {form.fileName}
-            </p>
-            <button
-              type="button"
-              onClick={removeFile}
-              style={{
-                background: '#ec4561',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '3px',
-                padding: '6px 12px',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              Remove
-            </button>
+      {selectedCar && (
+        <div style={{ marginBottom: '20px' }}>
+
+        {DOCUMENT_TYPES.map(type => (
+        <div key={type} className="card" style={{ marginBottom: '12px', padding: 0, overflow: 'hidden' }}>
+          <div
+            onClick={() => {
+              const newExpanded = !expandedSections[type];
+              setExpandedSections(prev => ({ ...prev, [type]: newExpanded }));
+              if (newExpanded) {
+                updateDoc(type, 'enabled', true);
+              }
+            }}
+            style={{
+              padding: '12px 16px',
+              background: expandedSections[type] ? '#f0f8f8' : '#f8f9fa',
+              borderBottom: expandedSections[type] ? '1px solid #e5e5e5' : 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontWeight: 600, color: '#2a3142' }}>{type}</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ transform: expandedSections[type] ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s', color: '#9ca8b3' }}>
+              <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" fill="none" />
+            </svg>
           </div>
-        )}
-      </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <label style={labelStyle}>Notes</label>
-        <textarea
-          name="notes"
-          value={form.notes}
-          onChange={handleChange}
-          rows={3}
-          style={{ ...inputStyle, height: 'auto', padding: '8px 1rem' }}
-        />
-      </div>
+          {expandedSections[type] && (
+            <div style={{ padding: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={labelStyle}>Issue Date</label>
+                  <input
+                    type="date"
+                    value={docs[type].issueDate}
+                    onChange={(e) => updateDoc(type, 'issueDate', e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Expiry Date</label>
+                  <input
+                    type="date"
+                    value={docs[type].expiryDate}
+                    onChange={(e) => updateDoc(type, 'expiryDate', e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
 
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <div>
+                <label style={labelStyle}>Upload File (optional)</label>
+                {docs[type].fileUrl ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f0fdf4', border: '1px solid #42ca7f', borderRadius: '4px' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#42ca7f" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    <span style={{ flex: 1, fontSize: '14px', color: '#2a3142' }}>{docs[type].fileName}</span>
+                    <button type="button" onClick={() => removeFile(type)} style={{ background: '#ec4561', color: '#fff', border: 'none', borderRadius: '3px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => document.getElementById(`file-${type}`)?.click()}
+                    style={{
+                      ...inputStyle,
+                      height: '80px',
+                      border: '2px dashed #ced4da',
+                      background: '#f8f9fa',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      gap: '8px',
+                    }}
+                  >
+                    {uploading === type ? (
+                      <span style={{ fontSize: '12px', color: '#28aaa9' }}>Uploading...</span>
+                    ) : (
+                      <>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca8b3" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <span style={{ fontSize: '12px', color: '#9ca8b3' }}>Click to upload PDF or image</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                <input
+                  id={`file-${type}`}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => handleFileUpload(type, e)}
+                  disabled={!!uploading}
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        ))}
+
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
         <button
           type="button"
           onClick={() => router.back()}
@@ -312,7 +367,7 @@ export default function DocumentForm({ initialData, mode }: DocumentFormProps) {
             opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? 'Saving...' : mode === 'edit' ? 'Update Document' : 'Add Document'}
+          {loading ? 'Saving...' : 'Save Documents'}
         </button>
       </div>
     </form>

@@ -42,6 +42,28 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
     const body = await request.json();
+
+    if (body.documents && Array.isArray(body.documents)) {
+      console.log('Creating bulk documents:', body.documents);
+      const docs = await VehicleDocument.insertMany(
+        body.documents.map((doc: Record<string, unknown>) => ({
+          ...doc,
+          createdBy: auth.userId,
+        }))
+      );
+
+      await logActivity({
+        userId: auth.userId,
+        userName: auth.name,
+        action: `Created ${docs.length} documents for car ${body.documents[0]?.carId}`,
+        module: 'Documents',
+        targetId: docs[0]?._id?.toString() || '',
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ documents: docs }, { status: 201 });
+    }
+
     const document = await VehicleDocument.create({ ...body, createdBy: auth.userId });
 
     await logActivity({

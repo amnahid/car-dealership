@@ -20,10 +20,19 @@ interface Doc {
 }
 
 interface Purchase {
+  supplier?: string;
   supplierName: string;
   supplierContact: string;
   purchasePrice: number;
   purchaseDate: string;
+  isNewCar?: boolean;
+  conditionImages?: string[];
+  insuranceUrl?: string;
+  insuranceExpiry?: string;
+  registrationUrl?: string;
+  registrationExpiry?: string;
+  roadPermitUrl?: string;
+  roadPermitExpiry?: string;
   documentUrl?: string;
   notes?: string;
 }
@@ -83,8 +92,14 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
           <h3 className="font-semibold text-gray-800 mb-4">Purchase Information</h3>
           <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <dt className="text-gray-500">Supplier Name</dt>
-              <dd className="font-medium text-gray-800">{car.purchase.supplierName || '-'}</dd>
+              <dt className="text-gray-500">Supplier</dt>
+              <dd className="font-medium text-gray-800">
+                {car.purchase.supplier ? (
+                  <Link href={`/dashboard/cars/suppliers/${car.purchase.supplier}`} className="text-indigo-600 hover:underline">
+                    {car.purchase.supplierName}
+                  </Link>
+                ) : car.purchase.supplierName || '-'}
+              </dd>
             </div>
             <div>
               <dt className="text-gray-500">Supplier Contact</dt>
@@ -100,23 +115,97 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
                 {car.purchase.purchaseDate ? new Date(car.purchase.purchaseDate).toLocaleDateString() : '-'}
               </dd>
             </div>
-            {car.purchase.documentUrl && (
-              <div className="col-span-2 md:col-span-4">
-                <dt className="text-gray-500">Purchase Document</dt>
+            {car.purchase.isNewCar !== undefined && (
+              <div>
+                <dt className="text-gray-500">Car Condition</dt>
                 <dd className="font-medium">
-                  <a href={car.purchase.documentUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
-                    View Document
-                  </a>
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                    car.purchase.isNewCar ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                  }`}>
+                    {car.purchase.isNewCar ? 'New' : 'Used'}
+                  </span>
                 </dd>
               </div>
             )}
-            {car.purchase.notes && (
-              <div className="col-span-2 md:col-span-4">
-                <dt className="text-gray-500">Notes</dt>
-                <dd className="font-medium text-gray-800">{car.purchase.notes}</dd>
+          </dl>
+
+          {car.purchase.conditionImages && car.purchase.conditionImages.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-500 mb-2">Condition Images</h4>
+              <div className="grid grid-cols-4 gap-2">
+                {car.purchase.conditionImages.map((img, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={i} src={img} alt={`Condition ${i + 1}`} className="w-full h-20 object-cover rounded" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <h4 className="font-semibold text-gray-800 mt-4 mb-2 pt-4 border-t border-gray-100">Vehicle Documents</h4>
+          <dl className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            {car.purchase.insuranceUrl && (
+              <div>
+                <dt className="text-gray-500">Insurance</dt>
+                <dd className="font-medium">
+                  <a href={car.purchase.insuranceUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                    View Document
+                  </a>
+                  {car.purchase.insuranceExpiry && (
+                    <span className="text-gray-500 ml-2">
+                      (Exp: {new Date(car.purchase.insuranceExpiry).toLocaleDateString()})
+                    </span>
+                  )}
+                </dd>
+              </div>
+            )}
+            {car.purchase.registrationUrl && (
+              <div>
+                <dt className="text-gray-500">Registration Card</dt>
+                <dd className="font-medium">
+                  <a href={car.purchase.registrationUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                    View Document
+                  </a>
+                  {car.purchase.registrationExpiry && (
+                    <span className="text-gray-500 ml-2">
+                      (Exp: {new Date(car.purchase.registrationExpiry).toLocaleDateString()})
+                    </span>
+                  )}
+                </dd>
+              </div>
+            )}
+            {car.purchase.roadPermitUrl && (
+              <div>
+                <dt className="text-gray-500">Road Permit</dt>
+                <dd className="font-medium">
+                  <a href={car.purchase.roadPermitUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                    View Document
+                  </a>
+                  {car.purchase.roadPermitExpiry && (
+                    <span className="text-gray-500 ml-2">
+                      (Exp: {new Date(car.purchase.roadPermitExpiry).toLocaleDateString()})
+                    </span>
+                  )}
+                </dd>
               </div>
             )}
           </dl>
+
+          {car.purchase.documentUrl && (
+            <div className="col-span-2 md:col-span-4">
+              <dt className="text-gray-500">Purchase Document</dt>
+              <dd className="font-medium">
+                <a href={car.purchase.documentUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                  View Document
+                </a>
+              </dd>
+            </div>
+          )}
+          {car.purchase.notes && (
+            <div className="col-span-2 md:col-span-4">
+              <dt className="text-gray-500">Notes</dt>
+              <dd className="font-medium text-gray-800">{car.purchase.notes}</dd>
+            </div>
+          )}
         </div>
       )}
 

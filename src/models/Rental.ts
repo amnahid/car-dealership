@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export type RentalStatus = 'Active' | 'Completed' | 'Cancelled';
+export type ZatcaInvoiceType = 'Standard' | 'Simplified';
+export type ZatcaStatus = 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
 
 export interface IRentalDocument extends Document {
   rentalId: string;
@@ -13,10 +15,21 @@ export interface IRentalDocument extends Document {
   endDate: Date;
   dailyRate: number;
   totalAmount: number;
+  vatRate: number;
+  vatAmount: number;
+  totalAmountWithVat: number;
   securityDeposit: number;
   status: RentalStatus;
   returnDate?: Date;
   actualReturnDate?: Date;
+  // ZATCA fields
+  invoiceType: ZatcaInvoiceType;
+  zatcaUUID?: string;
+  zatcaQRCode?: string;
+  zatcaStatus: ZatcaStatus;
+  zatcaHash?: string;
+  zatcaResponse?: object;
+  invoiceUrl?: string;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -33,6 +46,9 @@ const RentalSchema = new Schema<IRentalDocument>(
     endDate: { type: Date, required: true },
     dailyRate: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
+    vatRate: { type: Number, default: 15, min: 0 },
+    vatAmount: { type: Number, default: 0, min: 0 },
+    totalAmountWithVat: { type: Number, default: 0, min: 0 },
     securityDeposit: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
@@ -41,6 +57,13 @@ const RentalSchema = new Schema<IRentalDocument>(
     },
     returnDate: { type: Date },
     actualReturnDate: { type: Date },
+    invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
+    zatcaUUID: { type: String, sparse: true },
+    zatcaQRCode: { type: String },
+    zatcaStatus: { type: String, enum: ['Pending', 'Cleared', 'Reported', 'Failed', 'NotRequired'], default: 'Pending' },
+    zatcaHash: { type: String },
+    zatcaResponse: { type: Schema.Types.Mixed },
+    invoiceUrl: { type: String },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

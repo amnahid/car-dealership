@@ -49,7 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div style={{ minHeight: '100vh', background: '#f9fbfd' }}>
       <Sidebar userRole={user.role} />
       <Header userName={user.name} userRole={user.role} expiringDocsCount={expiringDocsCount} userEmail={user.email} userAvatar={user.avatar} />
-      <main style={{ padding: '24px', marginTop: '70px', marginBottom: '60px', marginLeft: '240px' }}>
+      <main style={{ padding: '24px', marginTop: '70px', marginBottom: '60px', marginLeft: '260px' }}>
         {children}
       </main>
       <footer className="footer">

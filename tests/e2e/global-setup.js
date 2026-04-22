@@ -57,14 +57,20 @@ module.exports = async function globalSetup() {
   console.log('Viewport set to: Desktop (1920x1080)');
   await page.close();
 
-  // Login and stay logged in for all tests
+  // Wait for login page to fully load
+  console.log('Navigating to login page...');
   const loginPage = await browser.newPage();
   await loginPage.setViewport({ width: 1920, height: 1080 });
-  await loginPage.goto('http://localhost:3000/auth/login', { waitUntil: 'networkidle0' });
-  await loginPage.type('#email', 'admin@dealership.com');
-  await loginPage.type('#password', 'admin123');
+  await loginPage.goto('http://localhost:3000/auth/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  
+  // Wait for email input to be visible
+  await loginPage.waitForSelector('input[type="email"]', { visible: true, timeout: 10000 });
+  console.log('Login form loaded');
+  
+  await loginPage.type('input[type="email"]', 'admin@amyalcar.com');
+  await loginPage.type('input[type="password"]', 'Admin@123');
   await loginPage.click('button[type="submit"]');
-  await loginPage.waitForNavigation({ waitUntil: 'networkidle0' });
+  await loginPage.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 });
   console.log('Logged in successfully');
   await loginPage.close();
   

@@ -14,13 +14,19 @@ interface InvoiceData {
   salePrice: number;
   discountAmount: number;
   finalPrice: number;
+  vatRate?: number;
+  vatAmount?: number;
+  finalPriceWithVat?: number;
   agentName?: string;
   agentCommission?: number;
+  zatcaQRCode?: string;    // base64 QR image data URL
+  zatcaUUID?: string;
+  invoiceType?: string;    // 'Standard' | 'Simplified'
 }
 
 export async function generateInvoice(data: InvoiceData): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'public', 'invoices');
-  
+
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
@@ -35,120 +41,206 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   });
 
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
   let y = 20;
 
-  doc.setFontSize(24);
+  const isSimplified = data.invoiceType !== 'Standard';
+  const invoiceLabel = isSimplified ? 'Simplified Tax Invoice' : 'Tax Invoice';
+  const invoiceLabelAr = isSimplified ? 'فاتورة ضريبية مبسطة' : 'فاتورة ضريبية';
+  const currency = 'SAR';
+  const fmt = (n: number) => `${n.toLocaleString('en-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+
+  // Header
+  doc.setFontSize(22);
   doc.setTextColor(40, 170, 169);
-  doc.text('CAR DEALERSHIP', pageWidth / 2, y, { align: 'center' });
-  
-  y += 8;
-  doc.setFontSize(10);
-  doc.setTextColor(102, 102, 102);
-  doc.text('Car Sales & Rental Management System', pageWidth / 2, y, { align: 'center' });
-
-  y += 15;
-  doc.setFontSize(18);
-  doc.setTextColor(51, 51, 51);
-  doc.text('INVOICE', pageWidth / 2, y, { align: 'center' });
-
-  y += 8;
-  doc.setFontSize(10);
-  doc.text(`Invoice No: ${data.saleId}`, pageWidth / 2, y, { align: 'center' });
-
-  y += 15;
-  doc.setFontSize(10);
-  doc.setTextColor(51, 51, 51);
-  doc.text(`Date: ${new Date(data.saleDate).toLocaleDateString()}`, margin, y);
-
-  y += 15;
-  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Customer Details:', margin, y);
-  
+  doc.text('CAR DEALERSHIP', pageWidth / 2, y, { align: 'center' });
+
+  y += 7;
+  doc.setFontSize(9);
+  doc.setTextColor(102, 102, 102);
+  doc.setFont('helvetica', 'normal');
+  doc.text('مركز بيع وتأجير السيارات', pageWidth / 2, y, { align: 'center' });
+
+  y += 12;
+  doc.setFontSize(16);
+  doc.setTextColor(51, 51, 51);
+  doc.setFont('helvetica', 'bold');
+  doc.text(invoiceLabel, pageWidth / 2, y, { align: 'center' });
+
+  y += 6;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(invoiceLabelAr, pageWidth / 2, y, { align: 'center' });
+
+  y += 10;
+  doc.setDrawColor(40, 170, 169);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+
+  // Invoice meta
+  y += 8;
+  doc.setFontSize(9);
+  doc.setTextColor(51, 51, 51);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Invoice No:', margin, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.saleId, margin + 22, y);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', pageWidth / 2 + 5, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(new Date(data.saleDate).toLocaleDateString('en-SA'), pageWidth / 2 + 18, y);
+
+  if (data.zatcaUUID) {
+    y += 5;
+    doc.setFontSize(7.5);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`UUID: ${data.zatcaUUID}`, margin, y);
+  }
+
+  y += 10;
+  doc.setDrawColor(220, 220, 220);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, pageWidth - margin, y);
+
+  // Customer details
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text('Customer Details / بيانات العميل', margin, y);
+
   y += 6;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
   doc.text(`Name: ${data.customerName}`, margin, y);
-  
+
   y += 5;
   doc.text(`Phone: ${data.customerPhone}`, margin, y);
-  
+
   if (data.customerAddress) {
     y += 5;
     doc.text(`Address: ${data.customerAddress}`, margin, y);
   }
 
+  // Vehicle details
   y += 12;
-  doc.setFontSize(12);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Vehicle Details:', margin, y);
-  
+  doc.setTextColor(40, 40, 40);
+  doc.text('Vehicle Details / بيانات المركبة', margin, y);
+
   y += 6;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
   doc.text(`Car ID: ${data.carId}`, margin, y);
-  
+
   if (data.carBrand || data.carModel) {
     y += 5;
-    doc.text(`Vehicle: ${data.carBrand || ''} ${data.carModel || ''}`.trim(), margin, y);
+    doc.text(`Vehicle: ${(data.carBrand || '') + ' ' + (data.carModel || '')}`.trim(), margin, y);
   }
 
-  y += 15;
-  doc.setFontSize(12);
+  // Payment table
+  y += 12;
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Payment Details:', margin, y);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Payment Details / تفاصيل الدفع', margin, y);
 
-  y += 8;
+  y += 6;
   doc.setDrawColor(200, 200, 200);
   doc.line(margin, y, pageWidth - margin, y);
 
-  y += 8;
-  doc.setFontSize(10);
+  y += 6;
   doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
   doc.text('Description', margin, y);
-  doc.text('Amount (BDT)', pageWidth - margin - 40, y, { align: 'right' });
+  doc.text(`Amount (${currency})`, pageWidth - margin, y, { align: 'right' });
 
-  y += 5;
+  y += 4;
   doc.line(margin, y, pageWidth - margin, y);
 
-  y += 8;
-  doc.setFont('helvetica', 'normal');
-  doc.text('Sale Price', margin, y);
-  doc.text(data.salePrice.toLocaleString(), pageWidth - margin - 40, y, { align: 'right' });
-
+  // Sale Price row
   y += 7;
-  doc.text('Discount', margin, y);
-  doc.setTextColor(236, 69, 97);
-  doc.text(`-${data.discountAmount.toLocaleString()}`, pageWidth - margin - 40, y, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.text('Sale Price / سعر البيع', margin, y);
+  doc.text(fmt(data.salePrice), pageWidth - margin, y, { align: 'right' });
 
-  y += 10;
+  // Discount row
+  if (data.discountAmount > 0) {
+    y += 6;
+    doc.text('Discount / خصم', margin, y);
+    doc.setTextColor(200, 60, 60);
+    doc.text(`-${fmt(data.discountAmount)}`, pageWidth - margin, y, { align: 'right' });
+    doc.setTextColor(60, 60, 60);
+  }
+
+  // Subtotal (excl VAT)
+  const subtotal = data.finalPrice;
+  y += 6;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Subtotal (Excl. VAT) / المجموع قبل الضريبة', margin, y);
+  doc.text(fmt(subtotal), pageWidth - margin, y, { align: 'right' });
+
+  // VAT row
+  const vatRate = data.vatRate || 15;
+  const vatAmount = data.vatAmount || Math.round(subtotal * (vatRate / 100) * 100) / 100;
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  doc.text(`VAT ${vatRate}% / ضريبة القيمة المضافة ${vatRate}%`, margin, y);
+  doc.text(fmt(vatAmount), pageWidth - margin, y, { align: 'right' });
+
+  // Total with VAT
+  const totalWithVat = data.finalPriceWithVat || (subtotal + vatAmount);
+  y += 8;
+  doc.setDrawColor(40, 170, 169);
+  doc.setLineWidth(0.4);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 7;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(40, 170, 169);
-  doc.text('Total Amount', margin, y);
-  doc.text(data.finalPrice.toLocaleString(), pageWidth - margin - 40, y, { align: 'right' });
+  doc.text('TOTAL (Incl. VAT) / الإجمالي شامل الضريبة', margin, y);
+  doc.text(fmt(totalWithVat), pageWidth - margin, y, { align: 'right' });
 
-  y += 8;
+  y += 6;
   doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
   doc.line(margin, y, pageWidth - margin, y);
 
+  // Agent commission
   if (data.agentName && data.agentCommission) {
-    y += 12;
+    y += 8;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(51, 51, 51);
+    doc.setFontSize(9);
+    doc.setTextColor(60, 60, 60);
     doc.text(`Agent: ${data.agentName}`, margin, y);
-    doc.text(`Commission: ${data.agentCommission.toLocaleString()}`, pageWidth - margin - 40, y, { align: 'right' });
+    doc.text(`Commission: ${fmt(data.agentCommission)}`, pageWidth - margin, y, { align: 'right' });
   }
 
-  y += 30;
-  doc.setFontSize(8);
+  // QR code (ZATCA compliant — mandatory for simplified invoices)
+  if (data.zatcaQRCode) {
+    const qrSize = 35;
+    const qrY = pageHeight - margin - qrSize - 20;
+    doc.setFontSize(7);
+    doc.setTextColor(120, 120, 120);
+    doc.text('ZATCA QR Code / رمز الاستجابة السريعة', margin, qrY - 2);
+    doc.addImage(data.zatcaQRCode, 'PNG', margin, qrY, qrSize, qrSize);
+  }
+
+  // Footer
+  const footerY = pageHeight - margin - 10;
+  doc.setFontSize(7.5);
   doc.setTextColor(136, 136, 136);
-  doc.text('Thank you for your business!', pageWidth / 2, y, { align: 'center' });
-  
-  y += 5;
-  doc.text('This is a computer generated invoice.', pageWidth / 2, y, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.text('Thank you for your business! / شكراً لتعاملكم معنا', pageWidth / 2, footerY, { align: 'center' });
+  doc.text('This is a computer-generated tax invoice.', pageWidth / 2, footerY + 5, { align: 'center' });
 
   const pdfBuffer = doc.output('arraybuffer');
   fs.writeFileSync(filePath, Buffer.from(pdfBuffer));

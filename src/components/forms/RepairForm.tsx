@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RepairStatus } from '@/types';
+import { MultiImageUpload } from '@/components/ImageUpload';
 import { uploadImage, deleteFile } from '@/lib/uploadClient';
 
 interface RepairFormData {
@@ -282,70 +283,24 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div>
-          <label style={labelStyle}>Before Images</label>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload('beforeImages')}
-            disabled={uploading}
-            style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
+          <MultiImageUpload
+            label="Before Images"
+            value={form.beforeImages}
+            onChange={(imgs) => setForm(prev => ({ ...prev, beforeImages: imgs }))}
+            folder="repairs/before"
+            maxCount={5}
+            gridSize={100}
           />
-          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
-            {uploading ? uploadStatus : 'Add photos before repair work starts.'}
-          </p>
-          {form.beforeImages.length > 0 && (
-            <div style={{ marginTop: '8px' }}>
-              <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginBottom: '8px' }}>
-                {form.beforeImages.length} image{form.beforeImages.length > 1 ? 's' : ''} selected
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {form.beforeImages.map((img, i) => (
-                  <div key={i} style={{ position: 'relative' }}>
-                    <img src={img} alt={`Before ${i + 1}`} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '3px' }} />
-                    <button
-                      type="button"
-                      onClick={() => removeImage('beforeImages', i)}
-                      style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ec4561', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', cursor: 'pointer' }}
-                    >×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
         <div>
-          <label style={labelStyle}>After Images</label>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload('afterImages')}
-            disabled={uploading}
-            style={{ ...inputStyle, height: 'auto', padding: '8px', border: '1px dashed #ced4da', background: '#f8f9fa' }}
+          <MultiImageUpload
+            label="After Images"
+            value={form.afterImages}
+            onChange={(imgs) => setForm(prev => ({ ...prev, afterImages: imgs }))}
+            folder="repairs/after"
+            maxCount={5}
+            gridSize={100}
           />
-          <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
-            {uploading ? uploadStatus : 'Add photos after repair is completed.'}
-          </p>
-          {form.afterImages.length > 0 && (
-            <div style={{ marginTop: '8px' }}>
-              <p style={{ fontSize: '12px', fontWeight: 500, color: '#525f80', marginBottom: '8px' }}>
-                {form.afterImages.length} image{form.afterImages.length > 1 ? 's' : ''} selected
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {form.afterImages.map((img, i) => (
-                  <div key={i} style={{ position: 'relative' }}>
-                    <img src={img} alt={`After ${i + 1}`} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '3px' }} />
-                    <button
-                      type="button"
-                      onClick={() => removeImage('afterImages', i)}
-                      style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ec4561', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', cursor: 'pointer' }}
-                    >×</button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
