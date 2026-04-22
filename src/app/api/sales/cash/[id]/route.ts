@@ -7,6 +7,7 @@ import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import { generateInvoice } from '@/lib/invoiceGenerator';
+import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 import mongoose from 'mongoose';
 
 export async function GET(
@@ -67,7 +68,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { saleDate, salePrice, discountAmount, agentName, agentCommission, notes, status } = body;
+    const { saleDate, salePrice, discountAmount, agentName, agentCommission, notes, status, invoiceType, buyerTrn } = body;
 
     if (status !== undefined && status === 'Cancelled') {
       const currentStatus = (sale.status as string) || 'Active';
@@ -112,6 +113,10 @@ export async function PUT(
     if (notes !== undefined) sale.notes = notes;
     if (saleDate !== undefined) sale.saleDate = new Date(saleDate);
 
+    const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
+    if (invoiceType !== undefined) sale.invoiceType = invoiceType;
+    if (buyerTrn !== undefined) (sale as any).buyerTrn = buyerTrn;
+
     await sale.save();
 
     // Update transaction if exists
@@ -123,6 +128,52 @@ export async function PUT(
       }
     );
 
+    // Re-run ZATCA if invoiceType or buyerTrn changed
+    if (zatcaFieldChanged) {
+      try {
+        const customerDoc = await Customer.findById(sale.customer).lean();
+        const carDoc = await Car.findById(sale.car).lean();
+        const vatInfo = calculateVat(sale.finalPrice, ZATCA_VAT_RATE);
+        const zatcaResult = await processZatcaInvoice({
+          referenceId: sale._id.toString(),
+          referenceType: 'CashSale',
+          saleId: sale.saleId,
+          invoiceType: (sale.invoiceType as 'Standard' | 'Simplified') || 'Simplified',
+          issueDate: new Date(sale.saleDate),
+          buyer: {
+            name: sale.customerName,
+            trn: (sale as any).buyerTrn || '',
+            address: customerDoc?.address,
+            city: '',
+          },
+          lineItems: [{
+            name: carDoc ? `${carDoc.brand} ${carDoc.model} (${sale.carId})`.trim() : sale.carId,
+            quantity: 1,
+            unitPrice: vatInfo.subtotal,
+            vatRate: ZATCA_VAT_RATE,
+            vatAmount: vatInfo.vatAmount,
+            totalAmount: vatInfo.totalWithVat,
+          }],
+          subtotal: vatInfo.subtotal,
+          vatTotal: vatInfo.vatAmount,
+          totalWithVat: vatInfo.totalWithVat,
+          notes: sale.notes,
+          createdBy: user.userId,
+        });
+        await CashSale.findByIdAndUpdate(sale._id, {
+          zatcaUUID: zatcaResult.uuid,
+          zatcaQRCode: zatcaResult.qrCode,
+          zatcaHash: zatcaResult.xmlHash,
+          zatcaStatus: zatcaResult.status,
+          zatcaResponse: zatcaResult.zatcaResponse,
+          vatAmount: vatInfo.vatAmount,
+          finalPriceWithVat: vatInfo.totalWithVat,
+        });
+      } catch (zatcaError) {
+        console.error('ZATCA reprocessing failed:', zatcaError);
+      }
+    }
+
     await logActivity({
       userId: user.userId,
       userName: user.name,
@@ -132,7 +183,8 @@ export async function PUT(
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    return NextResponse.json({ sale });
+    const updatedSale = await CashSale.findById(sale._id).lean();
+    return NextResponse.json({ sale: updatedSale });
   } catch (error) {
     console.error('Update cash sale error:', error);
 

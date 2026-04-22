@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
 import Car from '@/models/Car';
+import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 import mongoose from 'mongoose';
 
 export async function GET(
@@ -64,7 +66,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { downPayment, monthlyPayment, interestRate, tenureMonths, notes } = body;
+    const { downPayment, monthlyPayment, interestRate, tenureMonths, notes, invoiceType, buyerTrn } = body;
 
     if (downPayment !== undefined) sale.downPayment = downPayment;
     if (monthlyPayment !== undefined) sale.monthlyPayment = monthlyPayment;
@@ -72,7 +74,57 @@ export async function PUT(
     if (tenureMonths !== undefined) sale.tenureMonths = tenureMonths;
     if (notes !== undefined) sale.notes = notes;
 
+    const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
+    if (invoiceType !== undefined) sale.invoiceType = invoiceType;
+    if (buyerTrn !== undefined) (sale as any).buyerTrn = buyerTrn;
+
     await sale.save();
+
+    // Re-run ZATCA if invoiceType or buyerTrn changed
+    if (zatcaFieldChanged) {
+      try {
+        const customerDoc = await Customer.findById(sale.customer).lean();
+        const carDoc = await Car.findById(sale.car).lean();
+        const vatInfo = calculateVat(sale.totalPrice, ZATCA_VAT_RATE);
+        const zatcaResult = await processZatcaInvoice({
+          referenceId: sale._id.toString(),
+          referenceType: 'InstallmentSale',
+          saleId: sale.saleId,
+          invoiceType: (sale.invoiceType as 'Standard' | 'Simplified') || 'Simplified',
+          issueDate: new Date(sale.startDate),
+          buyer: {
+            name: sale.customerName,
+            trn: (sale as any).buyerTrn || '',
+            address: customerDoc?.address,
+            city: '',
+          },
+          lineItems: [{
+            name: carDoc ? `${carDoc.brand} ${carDoc.model} (${sale.carId})`.trim() : sale.carId,
+            quantity: 1,
+            unitPrice: vatInfo.subtotal,
+            vatRate: ZATCA_VAT_RATE,
+            vatAmount: vatInfo.vatAmount,
+            totalAmount: vatInfo.totalWithVat,
+          }],
+          subtotal: vatInfo.subtotal,
+          vatTotal: vatInfo.vatAmount,
+          totalWithVat: vatInfo.totalWithVat,
+          notes: sale.notes,
+          createdBy: user.userId,
+        });
+        await InstallmentSale.findByIdAndUpdate(sale._id, {
+          zatcaUUID: zatcaResult.uuid,
+          zatcaQRCode: zatcaResult.qrCode,
+          zatcaHash: zatcaResult.xmlHash,
+          zatcaStatus: zatcaResult.status,
+          zatcaResponse: zatcaResult.zatcaResponse,
+          vatAmount: vatInfo.vatAmount,
+          finalPriceWithVat: vatInfo.totalWithVat,
+        });
+      } catch (zatcaError) {
+        console.error('ZATCA reprocessing failed:', zatcaError);
+      }
+    }
 
     await logActivity({
       userId: user.userId,

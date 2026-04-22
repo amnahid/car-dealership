@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Rental from '@/models/Rental';
 import Car from '@/models/Car';
+import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 import mongoose from 'mongoose';
 
 export async function GET(
@@ -64,7 +66,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { dailyRate, securityDeposit, returnDate, actualReturnDate, notes, status } = body;
+    const { dailyRate, securityDeposit, returnDate, actualReturnDate, notes, status, invoiceType, buyerTrn } = body;
 
     if (status !== undefined && (status === 'Completed' || status === 'Cancelled')) {
       const currentStatus = (rental.status as string) || 'Active';
@@ -102,7 +104,60 @@ export async function PUT(
     if (actualReturnDate !== undefined) rental.actualReturnDate = new Date(actualReturnDate);
     if (notes !== undefined) rental.notes = notes;
 
+    const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
+    if (invoiceType !== undefined) rental.invoiceType = invoiceType;
+    if (buyerTrn !== undefined) (rental as any).buyerTrn = buyerTrn;
+
     await rental.save();
+
+    // Re-run ZATCA if invoiceType or buyerTrn changed
+    if (zatcaFieldChanged) {
+      try {
+        const customerDoc = await Customer.findById(rental.customer).lean();
+        const carDoc = await Car.findById(rental.car).lean();
+        const days = Math.ceil((new Date(rental.endDate).getTime() - new Date(rental.startDate).getTime()) / (1000 * 60 * 60 * 24));
+        const vatInfo = calculateVat(rental.totalAmount, ZATCA_VAT_RATE);
+        const rentalDesc = carDoc
+          ? `Rental - ${carDoc.brand} ${carDoc.model} (${days} days)`.trim()
+          : `Rental - ${rental.carId} (${days} days)`;
+        const zatcaResult = await processZatcaInvoice({
+          referenceId: rental._id.toString(),
+          referenceType: 'Rental',
+          saleId: rental.rentalId,
+          invoiceType: (rental.invoiceType as 'Standard' | 'Simplified') || 'Simplified',
+          issueDate: new Date(rental.startDate),
+          buyer: {
+            name: rental.customerName,
+            trn: (rental as any).buyerTrn || '',
+            address: customerDoc?.address,
+            city: '',
+          },
+          lineItems: [{
+            name: rentalDesc,
+            quantity: days,
+            unitPrice: rental.dailyRate,
+            vatRate: ZATCA_VAT_RATE,
+            vatAmount: vatInfo.vatAmount,
+            totalAmount: vatInfo.totalWithVat,
+          }],
+          subtotal: vatInfo.subtotal,
+          vatTotal: vatInfo.vatAmount,
+          totalWithVat: vatInfo.totalWithVat,
+          notes: rental.notes,
+          createdBy: user.userId,
+        });
+        await Rental.findByIdAndUpdate(rental._id, {
+          zatcaUUID: zatcaResult.uuid,
+          zatcaQRCode: zatcaResult.qrCode,
+          zatcaHash: zatcaResult.xmlHash,
+          zatcaStatus: zatcaResult.status,
+          zatcaResponse: zatcaResult.zatcaResponse,
+          vatAmount: vatInfo.vatAmount,
+        });
+      } catch (zatcaError) {
+        console.error('ZATCA reprocessing failed:', zatcaError);
+      }
+    }
 
     await logActivity({
       userId: user.userId,
