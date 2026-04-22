@@ -3,6 +3,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import SearchableSelect from '@/components/SearchableSelect';
+
+interface Car {
+  _id: string;
+  carId: string;
+  brand: string;
+  model: string;
+  images: string[];
+}
+
+interface Customer {
+  _id: string;
+  fullName: string;
+  phone: string;
+  profilePhoto?: string;
+}
 
 interface Sale {
   _id: string;
@@ -18,6 +34,8 @@ interface Sale {
   saleDate: string;
   notes?: string;
   status?: string;
+  car?: Car;
+  customer?: Customer;
 }
 
 export default function CashSalesPage() {
@@ -123,10 +141,18 @@ export default function CashSalesPage() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Revenue</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '8px 0 0' }}>${totalRevenue.toLocaleString()}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #28aaa9' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Sales</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{sales.length}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #42ca7f' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Revenue</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>SAR{totalRevenue.toLocaleString()}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #f5a623' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Avg per Sale</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0' }}>SAR{sales.length ? Math.round(totalRevenue / sales.length).toLocaleString() : 0}</p>
         </div>
       </div>
 
@@ -150,7 +176,7 @@ export default function CashSalesPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Sale ID', 'Car ID', 'Customer', 'Sale Price', 'Discount', 'Final Price', 'Date', 'Status', 'Actions'].map((h) => (
+                  {['Car', 'Sale ID', 'Customer', 'Amount', 'Date', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -158,30 +184,37 @@ export default function CashSalesPage() {
               <tbody style={{ borderBottom: '1px solid #eee' }}>
                 {sales.map((sale) => (
                   <tr key={sale._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                    <td style={{ padding: '8px', width: '60px' }}>
+                      {sale.car?.images?.[0] ? (
+                        <img src={sale.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span>
+                        </div>
+                      )}
+                    </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{sale.saleId}</td>
-                    <td style={{ padding: '12px' }}>{sale.carId}</td>
                     <td style={{ padding: '12px' }}>
-                      <div>{sale.customerName}</div>
-                      <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{sale.customerPhone}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {sale.customer?.profilePhoto ? (
+                          <img src={sale.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%' }} />
+                        ) : (
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+                            {sale.customerName?.[0] || '?'}
+                          </div>
+                        )}
+                        <div>
+                          <div>{sale.customerName}</div>
+                          <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{sale.customerPhone}</div>
+                        </div>
+                      </div>
                     </td>
-                    <td style={{ padding: '12px' }}>${sale.salePrice.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: sale.discountAmount > 0 ? '#ec4561' : '#inherit' }}>{sale.discountAmount > 0 ? `-$${sale.discountAmount.toLocaleString()}` : '-'}</td>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>${sale.finalPrice.toLocaleString()}</td>
+                    <td style={{ padding: '12px', fontWeight: 600 }}>SAR{sale.finalPrice.toLocaleString()}</td>
                     <td style={{ padding: '12px', color: '#525f80' }}>{new Date(sale.saleDate).toLocaleDateString()}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: '3px', 
-                        fontSize: '12px', 
-                        fontWeight: 500,
-                        background: sale.status === 'Cancelled' ? '#ec456120' : '#28aaa920', 
-                        color: sale.status === 'Cancelled' ? '#ec4561' : '#28aaa9' 
-                      }}>{sale.status || 'Active'}</span>
-                    </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <Link href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
-                        <button onClick={() => handleEdit(sale)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Edit</button>
+                        <Link href={`/dashboard/sales/cash/${sale._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>Edit</Link>
                         {sale.status === 'Active' && (
                           <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
                         )}
@@ -244,18 +277,22 @@ function CashSaleModal({ cars, customers, onClose, onSave }: { cars: any[]; cust
         <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>New Cash Sale</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Car *</label>
-            <select required value={form.carId} onChange={(e) => handleCarChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-              <option value="">Select a car</option>
-              {cars.map(car => <option key={car._id} value={car.carId}>{car.carId} - {car.brand} {car.model}</option>)}
-            </select>
+            <SearchableSelect
+              label="Select Car *"
+              value={form.carId}
+              onChange={handleCarChange}
+              options={cars.map(c => ({ value: c.carId, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+              placeholder="Search car..."
+            />
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Customer *</label>
-            <select required value={form.customer} onChange={(e) => handleCustomerChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-              <option value="">Select a customer</option>
-              {customers.map(cust => <option key={cust._id} value={cust._id}>{cust.fullName} - {cust.phone}</option>)}
-            </select>
+            <SearchableSelect
+              label="Select Customer *"
+              value={form.customer}
+              onChange={handleCustomerChange}
+              options={customers.map(c => ({ value: c._id, label: `${c.fullName} - ${c.phone}` }))}
+              placeholder="Search customer..."
+            />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>

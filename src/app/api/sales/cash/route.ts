@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
         .sort({ saleDate: -1 })
         .skip(skip)
         .limit(limit)
+        .populate('car', 'carId brand model images')
+        .populate('customer', 'fullName phone profilePhoto')
         .lean(),
       CashSale.countDocuments(query),
     ]);

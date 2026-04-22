@@ -18,6 +18,8 @@ interface Rental {
   notes?: string;
   returnDate?: string;
   actualReturnDate?: string;
+  car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
+  customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
 }
 
 export default function RentalsPage() {
@@ -117,10 +119,18 @@ export default function RentalsPage() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Revenue</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '8px 0 0' }}>${totalRevenue.toLocaleString()}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #28aaa9' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Rentals</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{rentals.length}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #42ca7f' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Revenue</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>SAR{totalRevenue.toLocaleString()}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #f5a623' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Active</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0' }}>{rentals.filter(r => r.status === 'Active').length}</p>
         </div>
       </div>
 
@@ -144,7 +154,7 @@ export default function RentalsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Rental ID', 'Car', 'Customer', 'Start Date', 'End Date', 'Daily Rate', 'Total', 'Deposit', 'Status', 'Actions'].map((h) => (
+                  {['Car', 'Rental ID', 'Customer', 'Total', 'Status', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -152,28 +162,37 @@ export default function RentalsPage() {
               <tbody style={{ borderBottom: '1px solid #eee' }}>
                 {rentals.map((rental) => (
                   <tr key={rental._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                    <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{rental.rentalId}</td>
-                    <td style={{ padding: '12px' }}>{rental.carId}</td>
-                    <td style={{ padding: '12px' }}>
-                      <div>{rental.customerName}</div>
-                      <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{rental.customerPhone}</div>
+                    <td style={{ padding: '8px', width: '60px' }}>
+                      {rental.car?.images?.[0] ? (
+                        <img src={rental.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span></div>
+                      )}
                     </td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{new Date(rental.startDate).toLocaleDateString()}</td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{new Date(rental.endDate).toLocaleDateString()}</td>
-                    <td style={{ padding: '12px' }}>${rental.dailyRate}/day</td>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>${rental.totalAmount.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>${rental.securityDeposit.toLocaleString()}</td>
+                    <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{rental.rentalId}</td>
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {rental.customer?.profilePhoto ? (
+                          <img src={rental.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%' }} />
+                        ) : (
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>{rental.customerName?.[0] || '?'}</div>
+                        )}
+                        <div>
+                          <div>{rental.customerName}</div>
+                          <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{rental.customerPhone}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px', fontWeight: 600 }}>SAR{rental.totalAmount.toLocaleString()}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(rental.status) + '20', color: getStatusColor(rental.status) }}>{rental.status}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <Link href={`/dashboard/sales/rentals/${rental._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
+                        <Link href={`/dashboard/sales/rentals/${rental._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>Edit</Link>
                         {rental.status !== 'Cancelled' && (
-                          <>
-                            <button onClick={() => handleEdit(rental)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Edit</button>
-                            <button onClick={() => handleDelete(rental._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
-                          </>
+                          <button onClick={() => handleDelete(rental._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
                         )}
                       </div>
                     </td>

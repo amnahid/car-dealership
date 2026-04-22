@@ -19,6 +19,8 @@ interface Sale {
   nextPaymentDate: string;
   notes?: string;
   interestRate?: number;
+  car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
+  customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
 }
 
 export default function InstallmentsPage() {
@@ -118,14 +120,18 @@ export default function InstallmentsPage() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Value</p>
-          <p style={{ fontSize: '24px', fontWeight: 700, color: '#28aaa9', margin: '8px 0 0' }}>${stats.totalValue.toLocaleString()}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #28aaa9' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Sales</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{sales.length}</p>
         </div>
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Paid</p>
-          <p style={{ fontSize: '24px', fontWeight: 700, color: '#42ca7f', margin: '8px 0 0' }}>${stats.totalPaid.toLocaleString()}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #42ca7f' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Value</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>SAR{stats.totalValue.toLocaleString()}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #f5a623' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Remaining</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0' }}>SAR{stats.totalRemaining.toLocaleString()}</p>
         </div>
         <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
           <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Remaining</p>
@@ -153,7 +159,7 @@ export default function InstallmentsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '900px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Sale ID', 'Car', 'Customer', 'Total', 'Down Payment', 'Monthly', 'Tenure', 'Paid', 'Remaining', 'Status', 'Next Payment', 'Actions'].map((h) => (
+                  {['Car', 'Sale ID', 'Customer', 'Total', 'Paid', 'Status', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -161,30 +167,38 @@ export default function InstallmentsPage() {
               <tbody style={{ borderBottom: '1px solid #eee' }}>
                 {sales.map((sale) => (
                   <tr key={sale._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                    <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{sale.saleId}</td>
-                    <td style={{ padding: '12px' }}>{sale.carId}</td>
-                    <td style={{ padding: '12px' }}>
-                      <div>{sale.customerName}</div>
-                      <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{sale.customerPhone}</div>
+                    <td style={{ padding: '8px', width: '60px' }}>
+                      {sale.car?.images?.[0] ? (
+                        <img src={sale.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                      ) : (
+                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span></div>
+                      )}
                     </td>
-                    <td style={{ padding: '12px' }}>${sale.totalPrice.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>${sale.downPayment.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>${sale.monthlyPayment.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>{sale.tenureMonths} mo</td>
-                    <td style={{ padding: '12px', color: '#42ca7f' }}>${sale.totalPaid.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: '#ec4561' }}>${sale.remainingAmount.toLocaleString()}</td>
+                    <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{sale.saleId}</td>
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {sale.customer?.profilePhoto ? (
+                          <img src={sale.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%' }} />
+                        ) : (
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>{sale.customerName?.[0] || '?'}</div>
+                        )}
+                        <div>
+                          <div>{sale.customerName}</div>
+                          <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{sale.customerPhone}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '12px', fontWeight: 600 }}>SAR{sale.totalPrice.toLocaleString()}</td>
+                    <td style={{ padding: '12px', color: '#42ca7f' }}>SAR{sale.totalPaid.toLocaleString()}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(sale.status) + '20', color: getStatusColor(sale.status) }}>{sale.status}</span>
                     </td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{sale.nextPaymentDate ? new Date(sale.nextPaymentDate).toLocaleDateString() : '-'}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <Link href={`/dashboard/sales/installments/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
-                        {sale.status !== 'Cancelled' && (
-                          <>
-                            <button onClick={() => handleEdit(sale)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Edit</button>
-                            <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
-                          </>
+                        <Link href={`/dashboard/sales/installments/${sale._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>Edit</Link>
+                        {sale.status === 'Active' && (
+                          <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
                         )}
                       </div>
                     </td>
