@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       totalPrice, downPayment, interestRate, tenureMonths, startDate, notes,
       deliveryThresholdPercent, lateFeePercent,
       invoiceType, buyerTrn,
+      agentName, agentCommission,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !totalPrice || !downPayment || !tenureMonths || !startDate) {
@@ -165,6 +166,8 @@ export async function POST(request: NextRequest) {
       remainingAmount,
       deliveryThresholdPercent: deliveryThresholdPercent ?? 30,
       lateFeePercent: lateFeePercent ?? 2,
+      agentName: agentName || '',
+      agentCommission: agentCommission || 0,
       status: 'Active',
       notes,
       vatRate: ZATCA_VAT_RATE,
@@ -260,6 +263,9 @@ export async function POST(request: NextRequest) {
           downPayment: sale.downPayment,
           monthlyPayment: sale.monthlyPayment,
           tenureMonths: sale.tenureMonths,
+          vatRate: sale.vatRate,
+          vatAmount: sale.vatAmount,
+          finalPriceWithVat: sale.finalPriceWithVat,
           paymentSchedule: (sale.paymentSchedule || []).map((p: any) => ({
             installmentNumber: p.installmentNumber,
             dueDate: p.dueDate.toString(),

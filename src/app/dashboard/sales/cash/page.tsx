@@ -74,6 +74,7 @@ export default function CashSalesPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number }[]>([]);
   const [customers, setCustomers] = useState<{ _id: string; fullName: string; phone: string }[]>([]);
+  const [employees, setEmployees] = useState<{ _id: string; name: string; designation: string; commissionRate: number }[]>([]);
 
   const fetchSales = useCallback(async () => {
     setLoading(true);
@@ -101,10 +102,12 @@ export default function CashSalesPage() {
     if (showModal) {
       Promise.all([
         fetch('/api/cars?limit=100').then(r => r.json()),
-        fetch('/api/customers?limit=100').then(r => r.json())
-      ]).then(([carData, custData]) => {
+        fetch('/api/customers?limit=100').then(r => r.json()),
+        fetch('/api/employees?limit=100&active=true').then(r => r.json()),
+      ]).then(([carData, custData, empData]) => {
         setCars(carData.cars?.filter((c: any) => c.status === 'In Stock') || []);
         setCustomers(custData.customers || []);
+        setEmployees(empData.employees || []);
       });
     }
   }, [showModal]);
@@ -248,14 +251,15 @@ export default function CashSalesPage() {
         </div>
       )}
 
-      {showModal && <CashSaleModal cars={cars} customers={customers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
-      {editingSale && <EditCashSaleModal sale={editingSale} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
+      {showModal && <CashSaleModal cars={cars} customers={customers} employees={employees} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
+      {editingSale && <EditCashSaleModal sale={editingSale} employees={employees} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
     </div>
   );
 }
 
-function CashSaleModal({ cars, customers, onClose, onSave }: { cars: any[]; customers: any[]; onClose: () => void; onSave: () => void }) {
+function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; onClose: () => void; onSave: () => void }) {
   const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', salePrice: '', discountType: 'flat' as 'flat' | 'percentage', discountValue: '0', agentName: '', agentCommission: '', saleDate: new Date().toISOString().split('T')[0], notes: '', invoiceType: 'Simplified', buyerTrn: '' });
+  const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', address: '' });
@@ -272,6 +276,12 @@ function CashSaleModal({ cars, customers, onClose, onSave }: { cars: any[]; cust
     }
     const cust = customers.find(c => c._id === customerId);
     setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '', invoiceType: cust?.customerType === 'Business' ? 'Standard' : 'Simplified', buyerTrn: cust?.vatRegistrationNumber || '' });
+  };
+
+  const handleAgentChange = (empId: string) => {
+    setAgentId(empId);
+    const emp = employees.find(e => e._id === empId);
+    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
   };
 
   const handleAddCustomer = async () => {
@@ -357,8 +367,19 @@ function CashSaleModal({ cars, customers, onClose, onSave }: { cars: any[]; cust
               <input required type="date" value={form.saleDate} onChange={(e) => setForm({ ...form, saleDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Agent Name</label>
-              <input value={form.agentName} onChange={(e) => setForm({ ...form, agentName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <SearchableSelect
+                label="Sales Agent"
+                value={agentId}
+                onChange={handleAgentChange}
+                options={[
+                  { value: '', label: 'None' },
+                  ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                ]}
+                placeholder="Select agent..."
+              />
+              {agentId && (
+                <span style={{ fontSize: '12px', color: '#525f80' }}>Commission: {employees.find(e => e._id === agentId)?.commissionRate || 0}%</span>
+              )}
             </div>
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
@@ -419,7 +440,7 @@ function CashSaleModal({ cars, customers, onClose, onSave }: { cars: any[]; cust
   );
 }
 
-function EditCashSaleModal({ sale, onClose, onSave }: { sale: Sale; onClose: () => void; onSave: (id: string, data: any) => void }) {
+function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; employees: any[]; onClose: () => void; onSave: (id: string, data: any) => void }) {
   const [form, setForm] = useState({
     salePrice: sale.salePrice.toString(),
     discountType: (sale.discountType || 'flat') as 'flat' | 'percentage',
@@ -429,7 +450,14 @@ function EditCashSaleModal({ sale, onClose, onSave }: { sale: Sale; onClose: () 
     saleDate: sale.saleDate.split('T')[0],
     notes: sale.notes || '',
   });
+  const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
+
+  const handleAgentChange = (empId: string) => {
+    setAgentId(empId);
+    const emp = employees.find(e => e._id === empId);
+    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -465,8 +493,19 @@ function EditCashSaleModal({ sale, onClose, onSave }: { sale: Sale; onClose: () 
               <input type="date" value={form.saleDate} onChange={(e) => setForm({ ...form, saleDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Agent Name</label>
-              <input value={form.agentName} onChange={(e) => setForm({ ...form, agentName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <SearchableSelect
+                label="Sales Agent"
+                value={agentId}
+                onChange={handleAgentChange}
+                options={[
+                  { value: '', label: 'None' },
+                  ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                ]}
+                placeholder="Select agent..."
+              />
+              {agentId && (
+                <span style={{ fontSize: '12px', color: '#525f80' }}>Commission: {employees.find(e => e._id === agentId)?.commissionRate || 0}%</span>
+              )}
             </div>
           </div>
           <div style={{ marginBottom: '16px' }}>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface Sale {
   _id: string;
@@ -20,6 +21,8 @@ interface Sale {
   nextPaymentDate: string;
   notes?: string;
   interestRate?: number;
+  agentName?: string;
+  agentCommission?: number;
   car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
   customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
@@ -38,6 +41,7 @@ export default function InstallmentsPage() {
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number }[]>([]);
   const [customers, setCustomers] = useState<{ _id: string; fullName: string; phone: string }[]>([]);
+  const [employees, setEmployees] = useState<{ _id: string; name: string; designation: string; commissionRate: number }[]>([]);
 
   const fetchSales = useCallback(async () => {
     setLoading(true);
@@ -66,10 +70,12 @@ export default function InstallmentsPage() {
     if (showModal) {
       Promise.all([
         fetch('/api/cars?limit=100').then(r => r.json()),
-        fetch('/api/customers?limit=100').then(r => r.json())
-      ]).then(([carData, custData]) => {
+        fetch('/api/customers?limit=100').then(r => r.json()),
+        fetch('/api/employees?limit=100&active=true').then(r => r.json()),
+      ]).then(([carData, custData, empData]) => {
         setCars(carData.cars?.filter((c: any) => c.status === 'In Stock') || []);
         setCustomers(custData.customers || []);
+        setEmployees(empData.employees || []);
       });
     }
   }, [showModal]);
@@ -224,14 +230,15 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {showModal && <InstallmentModal cars={cars} customers={customers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
-      {editingSale && <EditInstallmentModal sale={editingSale} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
+      {showModal && <InstallmentModal cars={cars} customers={customers} employees={employees} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
+      {editingSale && <EditInstallmentModal sale={editingSale} employees={employees} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
     </div>
   );
 }
 
-function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; customers: any[]; onClose: () => void; onSave: () => void }) {
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '', lateFeePercent: '2', invoiceType: 'Simplified', buyerTrn: '', agreementDocument: '' });
+function InstallmentModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; onClose: () => void; onSave: () => void }) {
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '', lateFeePercent: '2', invoiceType: 'Simplified', buyerTrn: '', agreementDocument: '', agentName: '', agentCommission: '' });
+  const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', address: '' });
@@ -248,6 +255,12 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
     }
     const cust = customers.find(c => c._id === customerId);
     setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '', invoiceType: cust?.customerType === 'Business' ? 'Standard' : 'Simplified', buyerTrn: cust?.vatRegistrationNumber || '' });
+  };
+
+  const handleAgentChange = (empId: string) => {
+    setAgentId(empId);
+    const emp = employees.find(e => e._id === empId);
+    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
   };
 
   const handleAddCustomer = async () => {
@@ -292,19 +305,27 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
         <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>New Installment Sale</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Car *</label>
-            <select required value={form.carId} onChange={(e) => handleCarChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-              <option value="">Select a car</option>
-              {cars.map(car => <option key={car._id} value={car.carId}>{car.carId} - {car.brand} {car.model}</option>)}
-            </select>
+            <SearchableSelect
+              label="Select Car *"
+              value={form.carId}
+              onChange={handleCarChange}
+              options={cars.map(c => ({ value: c.carId, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+              placeholder="Search car..."
+              required
+            />
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Customer *</label>
-            <select required value={form.customer} onChange={(e) => handleCustomerChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-              <option value="">Select a customer</option>
-              <option value="__new__">+ Add New Customer</option>
-              {customers.map(cust => <option key={cust._id} value={cust._id}>{cust.fullName} - {cust.phone}</option>)}
-            </select>
+            <SearchableSelect
+              label="Select Customer *"
+              value={form.customer}
+              onChange={handleCustomerChange}
+              options={[
+                { value: '__new__', label: '+ Add New Customer' },
+                ...customers.map(c => ({ value: c._id, label: `${c.fullName} - ${c.phone}` })),
+              ]}
+              placeholder="Search customer..."
+              required
+            />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div>
@@ -330,6 +351,27 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Start Date *</label>
               <input required type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Sales Agent</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <SearchableSelect
+                  label="Agent"
+                  value={agentId}
+                  onChange={handleAgentChange}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                  ]}
+                  placeholder="Select agent..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Commission (%)</label>
+                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+              </div>
             </div>
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
@@ -394,15 +436,24 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
   );
 }
 
-function EditInstallmentModal({ sale, onClose, onSave }: { sale: Sale; onClose: () => void; onSave: (id: string, data: any) => void }) {
+function EditInstallmentModal({ sale, employees, onClose, onSave }: { sale: Sale; employees: any[]; onClose: () => void; onSave: (id: string, data: any) => void }) {
   const [form, setForm] = useState({
     downPayment: sale.downPayment.toString(),
     monthlyPayment: sale.monthlyPayment.toString(),
     interestRate: sale.interestRate?.toString() || '0',
     tenureMonths: sale.tenureMonths.toString(),
     notes: sale.notes || '',
+    agentName: sale.agentName || '',
+    agentCommission: sale.agentCommission?.toString() || '',
   });
+  const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
+
+  const handleAgentChange = (empId: string) => {
+    setAgentId(empId);
+    const emp = employees.find(e => e._id === empId);
+    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -438,6 +489,27 @@ function EditInstallmentModal({ sale, onClose, onSave }: { sale: Sale; onClose: 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', height: '80px', fontSize: '14px', borderRadius: '0', padding: '12px', border: '1px solid #ced4da' }} />
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Sales Agent</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <SearchableSelect
+                  label="Agent"
+                  value={agentId}
+                  onChange={handleAgentChange}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                  ]}
+                  placeholder="Select agent..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Commission (%)</label>
+                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+              </div>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
             {sale.status !== 'Cancelled' && (

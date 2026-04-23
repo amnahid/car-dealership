@@ -66,7 +66,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { dailyRate, securityDeposit, returnDate, actualReturnDate, notes, status, invoiceType, buyerTrn } = body;
+    const { dailyRate, securityDeposit, returnDate, actualReturnDate, notes, status, invoiceType, buyerTrn, agentName, agentCommission } = body;
 
     if (status !== undefined && (status === 'Completed' || status === 'Cancelled')) {
       const currentStatus = (rental.status as string) || 'Active';
@@ -103,6 +103,8 @@ export async function PUT(
     if (returnDate !== undefined) rental.returnDate = new Date(returnDate);
     if (actualReturnDate !== undefined) rental.actualReturnDate = new Date(actualReturnDate);
     if (notes !== undefined) rental.notes = notes;
+    if (agentName !== undefined) (rental as any).agentName = agentName;
+    if (agentCommission !== undefined) (rental as any).agentCommission = agentCommission;
 
     const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
     if (invoiceType !== undefined) rental.invoiceType = invoiceType;

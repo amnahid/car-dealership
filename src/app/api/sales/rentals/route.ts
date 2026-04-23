@@ -102,6 +102,7 @@ export async function POST(request: NextRequest) {
       carId, car, customer, customerName, customerPhone,
       startDate, endDate, dailyRate, securityDeposit, notes,
       invoiceType, buyerTrn,
+      agentName, agentCommission,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !startDate || !endDate || !dailyRate) {
@@ -125,6 +126,8 @@ export async function POST(request: NextRequest) {
       dailyRate,
       totalAmount,
       securityDeposit: securityDeposit || 0,
+      agentName: agentName || '',
+      agentCommission: agentCommission || 0,
       status: 'Active',
       notes,
       vatRate: ZATCA_VAT_RATE,
@@ -222,6 +225,9 @@ export async function POST(request: NextRequest) {
           endDate: rental.endDate.toString(),
           totalAmount: rental.totalAmount,
           dailyRate: rental.dailyRate,
+          vatRate: rental.vatRate,
+          vatAmount: rental.vatAmount,
+          finalPriceWithVat: rental.totalAmountWithVat,
         }
       );
     } catch (notifyError) {

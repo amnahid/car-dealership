@@ -1,0 +1,11 @@
+Car ID,Brand,Model,Year,Status,Cost,Revenue,Profit
+CAR-010,Kia,Seltos,2023,In Stock,2000000,0,-2000000
+CAR-009,Hyundai,Tucson,2022,Sold,0,0,0
+CAR-008,Nissan,Altima,2023,In Stock,2400000,0,-2400000
+CAR-007,Honda,Accord,2022,Rented,0,0,0
+CAR-006,Toyota,RAV4,2023,In Stock,3200000,0,-3200000
+CAR-005,Kia,Sportage,2023,Under Repair,2800000,0,-2800000
+CAR-004,Hyundai,Elantra,2022,Sold,0,0,0
+CAR-003,Toyota,Corolla,2023,In Stock,2100000,0,-2100000
+CAR-002,Honda,Civic,2022,Rented,0,0,0
+CAR-001,Toyota,Camry,2023,In Stock,2500000,0,-2500000

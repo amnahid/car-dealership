@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface Rental {
   _id: string;
@@ -23,6 +24,8 @@ interface Rental {
   customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   invoiceType?: 'Standard' | 'Simplified';
+  agentName?: string;
+  agentCommission?: number;
 }
 
 export default function RentalsPage() {
@@ -37,6 +40,7 @@ export default function RentalsPage() {
   const [editingRental, setEditingRental] = useState<Rental | null>(null);
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string }[]>([]);
   const [customers, setCustomers] = useState<{ _id: string; fullName: string; phone: string }[]>([]);
+  const [employees, setEmployees] = useState<{ _id: string; name: string; designation: string; commissionRate: number }[]>([]);
 
   const fetchRentals = useCallback(async () => {
     setLoading(true);
@@ -65,10 +69,12 @@ export default function RentalsPage() {
     if (showModal) {
       Promise.all([
         fetch('/api/cars?limit=100&status=In+Stock').then(r => r.json()),
-        fetch('/api/customers?limit=100').then(r => r.json())
-      ]).then(([carData, custData]) => {
+        fetch('/api/customers?limit=100').then(r => r.json()),
+        fetch('/api/employees?limit=100&active=true').then(r => r.json()),
+      ]).then(([carData, custData, empData]) => {
         setCars(carData.cars || []);
         setCustomers(custData.customers || []);
+        setEmployees(empData.employees || []);
       });
     }
   }, [showModal]);
@@ -218,14 +224,15 @@ export default function RentalsPage() {
         </div>
       )}
 
-      {showModal && <RentalModal cars={cars} customers={customers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchRentals(); }} />}
-      {editingRental && <EditRentalModal rental={editingRental} onClose={() => setEditingRental(null)} onSave={handleUpdateRental} />}
+      {showModal && <RentalModal cars={cars} customers={customers} employees={employees} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchRentals(); }} />}
+      {editingRental && <EditRentalModal rental={editingRental} employees={employees} onClose={() => setEditingRental(null)} onSave={handleUpdateRental} />}
     </div>
   );
 }
 
-function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; customers: any[]; onClose: () => void; onSave: () => void }) {
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', startDate: '', endDate: '', dailyRate: '', securityDeposit: '0', notes: '', lateFee: '0', agreementDocument: '', invoiceType: 'Simplified', buyerTrn: '' });
+function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; onClose: () => void; onSave: () => void }) {
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', startDate: '', endDate: '', dailyRate: '', securityDeposit: '0', notes: '', lateFee: '0', agreementDocument: '', invoiceType: 'Simplified', buyerTrn: '', agentName: '', agentCommission: '' });
+  const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', address: '' });
@@ -241,6 +248,12 @@ function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; custom
     }
     const cust = customers.find(c => c._id === customerId);
     setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '', invoiceType: cust?.customerType === 'Business' ? 'Standard' : 'Simplified', buyerTrn: cust?.vatRegistrationNumber || '' });
+  };
+
+  const handleAgentChange = (empId: string) => {
+    setAgentId(empId);
+    const emp = employees.find(e => e._id === empId);
+    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
   };
 
   const handleAddCustomer = async () => {
@@ -293,19 +306,27 @@ function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; custom
         <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>New Rental</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Car *</label>
-            <select required value={form.carId} onChange={(e) => handleCarChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-              <option value="">Select a car</option>
-              {cars.map(car => <option key={car._id} value={car.carId}>{car.carId} - {car.brand} {car.model}</option>)}
-            </select>
+            <SearchableSelect
+              label="Select Car *"
+              value={form.carId}
+              onChange={handleCarChange}
+              options={cars.map(c => ({ value: c.carId, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+              placeholder="Search car..."
+              required
+            />
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Customer *</label>
-            <select required value={form.customer} onChange={(e) => handleCustomerChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-              <option value="">Select a customer</option>
-              <option value="__new__">+ Add New Customer</option>
-              {customers.map(cust => <option key={cust._id} value={cust._id}>{cust.fullName} - {cust.phone}</option>)}
-            </select>
+            <SearchableSelect
+              label="Select Customer *"
+              value={form.customer}
+              onChange={handleCustomerChange}
+              options={[
+                { value: '__new__', label: '+ Add New Customer' },
+                ...customers.map(c => ({ value: c._id, label: `${c.fullName} - ${c.phone}` })),
+              ]}
+              placeholder="Search customer..."
+              required
+            />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
             <div>
@@ -338,6 +359,27 @@ function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; custom
               <p style={{ margin: 0, fontSize: '14px' }}>Total: <strong>${calculateTotal().toLocaleString()}</strong></p>
             </div>
           )}
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Sales Agent</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <SearchableSelect
+                  label="Agent"
+                  value={agentId}
+                  onChange={handleAgentChange}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                  ]}
+                  placeholder="Select agent..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Commission (%)</label>
+                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+              </div>
+            </div>
+          </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>ZATCA / Tax Invoice</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -396,15 +438,24 @@ function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; custom
   );
 }
 
-function EditRentalModal({ rental, onClose, onSave }: { rental: Rental; onClose: () => void; onSave: (id: string, data: any) => void }) {
+function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Rental; employees: any[]; onClose: () => void; onSave: (id: string, data: any) => void }) {
   const [form, setForm] = useState({
     dailyRate: rental.dailyRate.toString(),
     securityDeposit: rental.securityDeposit.toString(),
     returnDate: rental.returnDate?.split('T')[0] || '',
     actualReturnDate: rental.actualReturnDate?.split('T')[0] || '',
     notes: rental.notes || '',
+    agentName: rental.agentName || '',
+    agentCommission: rental.agentCommission?.toString() || '',
   });
+  const [agentId, setAgentId] = useState(() => employees.find(e => e.name === rental.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
+
+  const handleAgentChange = (empId: string) => {
+    setAgentId(empId);
+    const emp = employees.find(e => e._id === empId);
+    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -440,6 +491,27 @@ function EditRentalModal({ rental, onClose, onSave }: { rental: Rental; onClose:
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', height: '80px', fontSize: '14px', borderRadius: '0', padding: '12px', border: '1px solid #ced4da' }} />
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Sales Agent</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <SearchableSelect
+                  label="Agent"
+                  value={agentId}
+                  onChange={handleAgentChange}
+                  options={[
+                    { value: '', label: 'None' },
+                    ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                  ]}
+                  placeholder="Select agent..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Commission (%)</label>
+                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+              </div>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
             {rental.status !== 'Cancelled' && rental.status !== 'Completed' && (

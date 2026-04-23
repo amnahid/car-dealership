@@ -66,13 +66,15 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { downPayment, monthlyPayment, interestRate, tenureMonths, notes, invoiceType, buyerTrn } = body;
+    const { downPayment, monthlyPayment, interestRate, tenureMonths, notes, invoiceType, buyerTrn, agentName, agentCommission } = body;
 
     if (downPayment !== undefined) sale.downPayment = downPayment;
     if (monthlyPayment !== undefined) sale.monthlyPayment = monthlyPayment;
     if (interestRate !== undefined) sale.interestRate = interestRate;
     if (tenureMonths !== undefined) sale.tenureMonths = tenureMonths;
     if (notes !== undefined) sale.notes = notes;
+    if (agentName !== undefined) (sale as any).agentName = agentName;
+    if (agentCommission !== undefined) (sale as any).agentCommission = agentCommission;
 
     const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
     if (invoiceType !== undefined) sale.invoiceType = invoiceType;

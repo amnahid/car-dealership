@@ -353,6 +353,21 @@ Compression: 1MB max, 1920px max dimensions
 - expenses dashboard
 - CRM - message customization option
 - report generation and seperated page for reports
+---
+- [x]  car inventory
+
+
+- [x] in every selection drop-down across the entire application their should be add new option on them 
+
+- [x] no late fine, agreement document upload
+
+- [x] profit per car report
+
+- [ ] discount
+
+- [x] dashboard
+
+---
 
 purchase details:
 - figure out normal purchase details fields by yourself by reading car_dealership_requirements.txt and code-base
@@ -370,6 +385,15 @@ supplier details:
 - phone
 - Status(active/inactive)
 - action
+
+Customer Profile Data:
+Full name
+Phone number
+Address
+National ID document
+Driving license document
+Photo upload
+Emergency contact
 
 Dashboard
 Car 

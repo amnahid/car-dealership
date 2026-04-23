@@ -50,6 +50,8 @@ export interface IInstallmentSaleDocument extends Document {
   zatcaStatus: ZatcaStatus;
   zatcaHash?: string;
   zatcaResponse?: object;
+  agentName?: string;
+  agentCommission?: number;
   status: InstallmentSaleStatus;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
@@ -98,9 +100,9 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     zatcaStatus: { type: String, enum: ['Pending', 'Cleared', 'Reported', 'Failed', 'NotRequired'], default: 'Pending' },
     zatcaHash: { type: String },
     zatcaResponse: { type: Schema.Types.Mixed },
+    agentName: { type: String, trim: true },
+    agentCommission: { type: Number, default: 0, min: 0 },
     status: {
-      type: String,
-      enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'],
       default: 'Active',
     },
     notes: { type: String },
