@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { PdfUpload } from '@/components/ImageUpload';
 
 interface Sale {
   _id: string;
@@ -21,6 +22,8 @@ interface Sale {
   interestRate?: number;
   car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
   customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
+  zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
+  invoiceType?: 'Standard' | 'Simplified';
 }
 
 export default function InstallmentsPage() {
@@ -159,7 +162,7 @@ export default function InstallmentsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '900px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Car', 'Sale ID', 'Customer', 'Total', 'Paid', 'Status', 'Actions'].map((h) => (
+                  {['Car', 'Sale ID', 'Customer', 'Total', 'Paid', 'Status', 'ZATCA', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -194,6 +197,9 @@ export default function InstallmentsPage() {
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(sale.status) + '20', color: getStatusColor(sale.status) }}>{sale.status}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
+                      <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} saleType="InstallmentSale" />
+                    </td>
+                    <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <Link href={`/dashboard/sales/installments/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
                         <Link href={`/dashboard/sales/installments/${sale._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>Edit</Link>
@@ -225,8 +231,10 @@ export default function InstallmentsPage() {
 }
 
 function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; customers: any[]; onClose: () => void; onSave: () => void }) {
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '' });
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '', lateFeePercent: '2', invoiceType: 'Simplified', buyerTrn: '', agreementDocument: '' });
   const [loading, setLoading] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', address: '' });
 
   const handleCarChange = (carId: string) => {
     const car = cars.find(c => c.carId === carId);
@@ -234,8 +242,33 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
   };
 
   const handleCustomerChange = (customerId: string) => {
+    if (customerId === '__new__') {
+      setShowCustomerModal(true);
+      return;
+    }
     const cust = customers.find(c => c._id === customerId);
-    setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '' });
+    setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '', invoiceType: cust?.customerType === 'Business' ? 'Standard' : 'Simplified', buyerTrn: cust?.vatRegistrationNumber || '' });
+  };
+
+  const handleAddCustomer = async () => {
+    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.address) {
+      alert('Please fill in required fields');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer),
+      });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      const created = await res.json();
+      setForm({ ...form, customer: created.customer?._id || created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
+      setShowCustomerModal(false);
+      setNewCustomer({ fullName: '', phone: '', email: '', address: '' });
+      onSave();
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -269,6 +302,7 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Customer *</label>
             <select required value={form.customer} onChange={(e) => handleCustomerChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
               <option value="">Select a customer</option>
+              <option value="__new__">+ Add New Customer</option>
               {customers.map(cust => <option key={cust._id} value={cust._id}>{cust.fullName} - {cust.phone}</option>)}
             </select>
           </div>
@@ -290,8 +324,34 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
               <input required type="number" value={form.tenureMonths} onChange={(e) => setForm({ ...form, tenureMonths: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
             </div>
             <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee (%)</label>
+              <input type="number" value={form.lateFeePercent} onChange={(e) => setForm({ ...form, lateFeePercent: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+            <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Start Date *</label>
               <input required type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Agreement Document (PDF)</div>
+            <PdfUpload value={form.agreementDocument} onChange={(url) => setForm({ ...form, agreementDocument: url })} label="Agreement Document" />
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>ZATCA / Tax Invoice</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Invoice Type</label>
+                <select value={form.invoiceType} onChange={(e) => setForm({ ...form, invoiceType: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
+                  <option value="Simplified">Simplified (B2C)</option>
+                  <option value="Standard">Standard (B2B)</option>
+                </select>
+              </div>
+              {form.invoiceType === 'Standard' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Buyer TRN</label>
+                  <input value={form.buyerTrn} onChange={(e) => setForm({ ...form, buyerTrn: e.target.value })} placeholder="15-digit VAT number" style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+                </div>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
@@ -299,6 +359,36 @@ function InstallmentModal({ cars, customers, onClose, onSave }: { cars: any[]; c
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Create Sale'}</button>
           </div>
         </form>
+        
+        {showCustomerModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }}>
+            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Add Customer</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Full Name *</label>
+                  <input required value={newCustomer.fullName} onChange={(e) => setNewCustomer({ ...newCustomer, fullName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Full Name" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Phone *</label>
+                  <input required value={newCustomer.phone} onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Phone" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Email</label>
+                  <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Email" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Address *</label>
+                  <input required value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Address" />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={handleAddCustomer} disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Add Customer'}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -358,6 +448,43 @@ function EditInstallmentModal({ sale, onClose, onSave }: { sale: Sale; onClose: 
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
+  Cleared:     { bg: '#e6f4ea', color: '#2e7d32', label: 'Cleared' },
+  Reported:    { bg: '#e8f5e9', color: '#388e3c', label: 'Reported' },
+  Pending:     { bg: '#fff8e1', color: '#f57c00', label: 'Pending' },
+  Failed:      { bg: '#fce4ec', color: '#c62828', label: 'Failed' },
+  NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
+};
+
+function ZatcaStatusBadge({ status, saleId, saleType }: { status?: string; saleId: string; saleType: string }) {
+  const [retrying, setRetrying] = useState(false);
+  const s = status ? ZATCA_BADGE_COLORS[status] : ZATCA_BADGE_COLORS['NotRequired'];
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await fetch('/api/zatca/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referenceId: saleId, referenceType: saleType }),
+      });
+      window.location.reload();
+    } catch { /* silent */ } finally { setRetrying(false); }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, background: s.bg, color: s.color }}>
+        {s.label}
+      </span>
+      {status === 'Failed' && (
+        <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          {retrying ? 'Retrying...' : '↺ Retry'}
+        </button>
+      )}
     </div>
   );
 }

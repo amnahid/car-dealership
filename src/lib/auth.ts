@@ -17,6 +17,7 @@ export interface JWTPayload {
   email: string;
   role: string;
   name: string;
+  passwordVersion: number;
 }
 
 export function signToken(payload: JWTPayload): string {

@@ -17,6 +17,7 @@ export interface AuthPayload {
   email: string;
   role: string;
   name: string;
+  passwordVersion: number;
 }
 
 export async function getAuthPayload(request: NextRequest): Promise<AuthPayload | null> {
@@ -30,6 +31,7 @@ export async function getAuthPayload(request: NextRequest): Promise<AuthPayload 
       email: payload.email as string,
       role: payload.role as string,
       name: payload.name as string,
+      passwordVersion: payload.passwordVersion as number,
     };
   } catch {
     return null;

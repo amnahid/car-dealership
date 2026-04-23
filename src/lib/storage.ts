@@ -13,7 +13,7 @@ interface UploadResult {
 }
 
 function getUploadDir(): string {
-  const uploadDir = path.join(process.cwd(), 'public', 'upload');
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
@@ -54,8 +54,14 @@ async function uploadToVercelBlob(
   folder: string
 ): Promise<UploadResult> {
   try {
-    const ext = path.extname(originalName);
-    const baseName = path.basename(originalName, ext);
+    let ext = path.extname(originalName);
+    let baseName = path.basename(originalName, ext);
+    
+    if (!baseName || baseName === 'blob' || !ext) {
+      ext = contentType.includes('pdf') ? '.pdf' : '.jpg';
+      baseName = `document_${Date.now()}`;
+    }
+    
     const timestamp = Date.now();
     const safeName = `${timestamp}-${sanitizeFilename(baseName)}${ext}`;
     const blobPath = `${folder}/${safeName}`;
@@ -101,9 +107,13 @@ async function uploadToLocal(
     }
 
     const ext = path.extname(originalName);
-    const baseName = path.basename(originalName, ext);
-    const timestamp = Date.now();
-    const safeName = `${timestamp}-${sanitizeFilename(baseName)}${ext}`;
+    let baseName = path.basename(originalName, ext);
+    
+    if (!baseName || baseName === 'blob' || !ext) {
+      baseName = `document_${Date.now()}`;
+    }
+    
+    const safeName = `${Date.now()}-${sanitizeFilename(baseName)}${ext || '.pdf'}`;
     const filePath = path.join(targetDir, safeName);
 
     fs.writeFileSync(filePath, buffer);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -151,6 +152,15 @@ export default function LoginForm() {
       >
         {loading ? 'Signing in...' : 'Sign in'}
       </button>
+
+      <p style={{ textAlign: 'right', marginTop: '12px' }}>
+        <Link
+          href="/auth/forgot-password"
+          style={{ color: '#28aaa9', fontSize: '13px', textDecoration: 'none' }}
+        >
+          Forgot your password?
+        </Link>
+      </p>
     </form>
   );
 }

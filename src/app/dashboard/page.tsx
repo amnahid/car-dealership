@@ -1,8 +1,15 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import InstallmentAlertsModal from '@/components/InstallmentAlertsModal';
+import {
+  BarChartComponent,
+  LineChartComponent,
+  AreaChartComponent,
+  PieChartComponent,
+  DateRangeFilter,
+} from '@/components/charts';
 
 interface StatsData {
   totalCars: number;
@@ -38,6 +45,9 @@ interface StatsData {
   upcomingInstallments: number;
   upcomingInstallmentsAmount: number;
   salesByMonth: Array<{ month: string; total: number; count: number }>;
+  incomeByType: Array<{ name: string; value: number }>;
+  expenseByCategory: Array<{ name: string; value: number }>;
+  monthlyTrends: Array<{ month: string; income: number; expenses: number; profit: number }>;
 }
 
 const statColors: Record<string, { background: string; border: string; color: string }> = {
@@ -180,11 +190,14 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
-  const chartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstanceRef = useRef<any>(null);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   useEffect(() => {
-    fetch('/api/dashboard/stats')
+    const params = new URLSearchParams();
+    if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+    if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+    
+    fetch(`/api/dashboard/stats?${params.toString()}`)
       .then((res) => res.ok ? res.json() : Promise.reject('API Error'))
       .then((data) => {
         setStats(data);
@@ -195,63 +208,6 @@ export default function DashboardPage() {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (!stats?.salesByMonth || !chartRef.current) return;
-
-    const initChart = async () => {
-      const Chart = (await import('chart.js/auto')).default;
-
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-      }
-
-      const labels = stats.salesByMonth.map((s) => {
-        const [year, month] = s.month.split('-');
-        return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', { month: 'short' });
-      });
-
-      const data = stats.salesByMonth.map((s) => s.total);
-
-      chartInstanceRef.current = new Chart(chartRef.current!, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Revenue',
-              data,
-              backgroundColor: '#28aaa9',
-              borderRadius: 4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: (value: number | string) => '$' + Number(value).toLocaleString(),
-              },
-            },
-          },
-        },
-      });
-    };
-
-    initChart();
-
-    return () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-      }
-    };
-  }, [stats?.salesByMonth]);
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '80px 20px', color: '#9ca8b3' }}>Loading dashboard...</div>;
@@ -268,7 +224,10 @@ export default function DashboardPage() {
   return (
     <>
       <div style={{ marginBottom: '24px' }}>
-        <h2 className="page-title" style={{ marginBottom: '24px' }}>Dashboard Overview</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+          <h2 className="page-title" style={{ margin: 0 }}>Dashboard Overview</h2>
+          <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
+        </div>
 
         {stats.expiringDocuments > 0 && (
         <div
@@ -440,15 +399,83 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Sales Chart */}
+      {/* Monthly Revenue Chart */}
       <div className="card" style={{ padding: '24px', marginBottom: '24px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
-          Monthly Revenue
+          Monthly Revenue (Last 12 Months)
         </h3>
-        <div style={{ height: '300px', position: 'relative' }}>
-          <canvas ref={chartRef}></canvas>
-        </div>
+        {stats.salesByMonth && stats.salesByMonth.length > 0 && (
+          <BarChartComponent
+            data={stats.salesByMonth.map((s) => ({
+              month: s.month,
+              revenue: s.total,
+            }))}
+            dataKeys={[{ key: 'revenue', color: '#28aaa9', name: 'Revenue' }]}
+            xAxisKey="month"
+            height={300}
+          />
+        )}
       </div>
+
+      {/* Charts Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+        {/* Income Breakdown */}
+        {stats.incomeByType && stats.incomeByType.length > 0 && (
+          <PieChartComponent
+            data={stats.incomeByType}
+            title="Income by Type"
+            height={300}
+            donut
+          />
+        )}
+        {/* Expense Breakdown */}
+        {stats.expenseByCategory && stats.expenseByCategory.length > 0 && (
+          <PieChartComponent
+            data={stats.expenseByCategory}
+            title="Expenses by Category"
+            height={300}
+            donut
+          />
+        )}
+      </div>
+
+      {/* Profit Trend */}
+      {stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <LineChartComponent
+            data={stats.monthlyTrends.map((t) => ({
+              month: t.month,
+              income: t.income,
+              expenses: t.expenses,
+              profit: t.profit,
+            }))}
+            dataKeys={[
+              { key: 'income', color: '#42ca7f', name: 'Income' },
+              { key: 'expenses', color: '#ec4561', name: 'Expenses' },
+              { key: 'profit', color: '#28aaa9', name: 'Profit' },
+            ]}
+            xAxisKey="month"
+            title="Income vs Expenses Trend"
+            height={300}
+          />
+        </div>
+      )}
+
+      {/* Profit Area Chart */}
+      {stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <AreaChartComponent
+            data={stats.monthlyTrends.map((t) => ({
+              month: t.month,
+              profit: t.profit,
+            }))}
+            dataKeys={[{ key: 'profit', color: '#28aaa9', name: 'Profit' }]}
+            xAxisKey="month"
+            title="Profit Trend"
+            height={250}
+          />
+        </div>
+      )}
 
       {/* Recent Activity */}
       <div className="card" style={{ padding: '24px' }}>

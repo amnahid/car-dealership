@@ -56,7 +56,9 @@ const navItems: MenuItem[] = [
     roles: ['Admin', 'Manager', 'Accounts Officer'],
     children: [
       { href: '/dashboard/finance', label: 'Transactions', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
-      { href: '/dashboard/finance?tab=reports', label: 'Reports', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
+      { href: '/dashboard/finance/expenses', label: 'Expenses', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
+      { href: '/dashboard/finance/incomes', label: 'Incomes', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
+      { href: '/dashboard/finance/reports', label: 'Reports', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
     ]
   },
   
@@ -74,6 +76,7 @@ const navItems: MenuItem[] = [
     roles: ['Admin', 'Manager'],
     children: [
       { href: '/dashboard/employees', label: 'Employees', icon: '', roles: ['Admin', 'Manager'] },
+      { href: '/dashboard/salary-payments', label: 'Salary Payments', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
     ]
   },
   {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import { CarStatus } from '@/types';
@@ -38,21 +38,70 @@ function getDaysInStock(purchaseDate?: string, createdAt?: string): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
+interface FilterOptions {
+  colors: string[];
+  years: number[];
+  brands: string[];
+  models: string[];
+}
+
 export default function CarsPage() {
   const [cars, setCars] = useState<Car[]>([]);
-  const [allCars, setAllCars] = useState<Car[]>([]);
+  const [stats, setStats] = useState({ inStock: 0, sold: 0, underRepair: 0, rented: 0, reserved: 0, totalPurchaseValue: 0, totalRepairCost: 0, totalCost: 0 });
+  const [stockReport, setStockReport] = useState<{ brand: string; count: number; value: number; models: Record<string, number> }[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('Inventory');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [modelFilter, setModelFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+  const [colorFilter, setColorFilter] = useState('');
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ colors: [], years: [], brands: [], models: [] });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/cars/stats');
+      const data = await res.json();
+      setStats({
+        inStock: data.statusCounts?.inStock || 0,
+        sold: data.statusCounts?.sold || 0,
+        underRepair: data.statusCounts?.underRepair || 0,
+        rented: data.statusCounts?.rented || 0,
+        reserved: data.statusCounts?.reserved || 0,
+        totalPurchaseValue: data.inStockStats?.totalPurchaseValue || 0,
+        totalRepairCost: data.inStockStats?.totalRepairCost || 0,
+        totalCost: data.inStockStats?.totalCost || 0,
+      });
+      setStockReport(data.stockReport || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/cars', { method: 'OPTIONS' });
+      const data = await res.json();
+      setFilterOptions({
+        colors: data.colors || [],
+        years: data.years || [],
+        brands: data.brands || [],
+        models: data.models || [],
+      });
+    } catch (err) {
+      console.error('Failed to fetch filter options:', err);
+    }
+  }, []);
+
   const fetchCars = useCallback(async () => {
-    setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (search) params.set('brand', search);
     if (statusFilter) params.set('status', statusFilter);
+    if (modelFilter) params.set('model', modelFilter);
+    if (yearFilter) params.set('year', yearFilter);
+    if (colorFilter) params.set('color', colorFilter);
 
     try {
       const res = await fetch(`/api/cars?${params}`);
@@ -70,70 +119,21 @@ export default function CarsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
-
-  const fetchAllCars = useCallback(async () => {
-    try {
-      const res = await fetch('/api/cars?limit=1000');
-      const data = await res.json();
-      setAllCars(data.cars || []);
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
+  }, [page, search, statusFilter, modelFilter, yearFilter, colorFilter]);
 
   useEffect(() => {
     fetchCars();
   }, [fetchCars]);
 
   useEffect(() => {
-    fetchAllCars();
-  }, [fetchAllCars]);
+    fetchStats();
+  }, [fetchStats]);
 
-  const stats = useMemo(() => {
-    const inStock = allCars.filter(c => c.status === 'In Stock').length;
-    const sold = allCars.filter(c => c.status === 'Sold').length;
-    const underRepair = allCars.filter(c => c.status === 'Under Repair').length;
-    const rented = allCars.filter(c => c.status === 'Rented').length;
-    const reserved = allCars.filter(c => c.status === 'Reserved').length;
+  useEffect(() => {
+    fetchFilterOptions();
+  }, [fetchFilterOptions]);
 
-    const totalPurchaseValue = allCars
-      .filter(c => c.status === 'In Stock')
-      .reduce((sum, c) => sum + (c.purchase?.purchasePrice || 0), 0);
-
-    const totalRepairCost = allCars.reduce((sum, c) => sum + (c.totalRepairCost || 0), 0);
-
-    const totalCost = allCars.filter(c => c.status === 'In Stock')
-      .reduce((sum, c) => sum + (c.purchase?.purchasePrice || 0) + (c.totalRepairCost || 0), 0);
-
-    return { inStock, sold, underRepair, rented, reserved, totalPurchaseValue, totalRepairCost, totalCost };
-  }, [allCars]);
-
-  const stockReport = useMemo(() => {
-    const inStockCars = allCars.filter(c => c.status === 'In Stock');
-    const byBrand: any = {};
-    
-    inStockCars.forEach(car => {
-      if (!byBrand[car.brand]) {
-        byBrand[car.brand] = { count: 0, value: 0, models: {} };
-      }
-      byBrand[car.brand].count++;
-      byBrand[car.brand].value += car.purchase?.purchasePrice || 0;
-      byBrand[car.brand].models[car.model] = (byBrand[car.brand].models[car.model] || 0) + 1;
-    });
-
-    return Object.entries(byBrand)
-      .map(([brand, data]: [string, any]) => ({ brand, ...data }))
-      .sort((a, b) => b.count - a.count);
-  }, [allCars]);
-
-  const filteredCars = useMemo(() => {
-    let result = cars;
-    if (statusFilter) {
-      result = result.filter(c => c.status === statusFilter);
-    }
-    return result;
-  }, [cars, statusFilter]);
+  const filteredCars = cars;
 
   return (
     <div style={{ marginBottom: '24px' }}>
@@ -163,11 +163,13 @@ export default function CarsPage() {
         </Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '24px' }}>
         {[
           { label: 'In Stock', value: stats.inStock, color: '#28aaa9' },
-          { label: 'Sold', value: stats.sold, color: '#42ca7f' },
           { label: 'Under Repair', value: stats.underRepair, color: '#f5a623' },
+          { label: 'Reserved', value: stats.reserved, color: '#38a4f8' },
+          { label: 'Sold', value: stats.sold, color: '#42ca7f' },
+          { label: 'Rented', value: stats.rented, color: '#8b5cf6' },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -221,14 +223,32 @@ export default function CarsPage() {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
             <input
               type="text"
-              placeholder="Search by brand..."
+              placeholder="Search brand..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
               style={{
-                width: '250px',
+                width: '140px',
+                height: '40px',
+                fontSize: '14px',
+                borderRadius: '0',
+                padding: '0 12px',
+                border: '1px solid #ced4da',
+                background: '#ffffff',
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search model..."
+              value={modelFilter}
+              onChange={(e) => {
+                setModelFilter(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: '140px',
                 height: '40px',
                 fontSize: '14px',
                 borderRadius: '0',
@@ -238,12 +258,55 @@ export default function CarsPage() {
               }}
             />
             <select
+              value={yearFilter}
+              onChange={(e) => {
+                setYearFilter(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: '100px',
+                height: '40px',
+                fontSize: '14px',
+                borderRadius: '0',
+                padding: '0 12px',
+                border: '1px solid #ced4da',
+                background: '#ffffff',
+              }}
+            >
+              <option value="">Year</option>
+              {filterOptions.years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            <select
+              value={colorFilter}
+              onChange={(e) => {
+                setColorFilter(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: '120px',
+                height: '40px',
+                fontSize: '14px',
+                borderRadius: '0',
+                padding: '0 12px',
+                border: '1px solid #ced4da',
+                background: '#ffffff',
+              }}
+            >
+              <option value="">Color</option>
+              {filterOptions.colors.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
               style={{
+                width: '140px',
                 height: '40px',
                 fontSize: '14px',
                 borderRadius: '0',

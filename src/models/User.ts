@@ -8,6 +8,10 @@ export interface IUserDocument extends Document {
   avatar?: string;
   role: 'Admin' | 'Manager' | 'Accounts Officer' | 'Sales Agent';
   isActive: boolean;
+  resetToken?: string;
+  resetTokenExpiry?: Date;
+  passwordVersion: number;
+  device_id?: string;
 }
 
 const UserSchema = new Schema<IUserDocument>(
@@ -23,6 +27,10 @@ const UserSchema = new Schema<IUserDocument>(
       default: 'Sales Agent',
     },
     isActive: { type: Boolean, default: true },
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
+    passwordVersion: { type: Number, default: 1 },
+    device_id: { type: String, sparse: true },
   },
   { timestamps: true }
 );

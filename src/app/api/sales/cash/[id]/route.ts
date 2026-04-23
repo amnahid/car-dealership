@@ -68,7 +68,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { saleDate, salePrice, discountAmount, agentName, agentCommission, notes, status, invoiceType, buyerTrn } = body;
+    const { saleDate, salePrice, discountType, discountValue, agentName, agentCommission, notes, status, invoiceType, buyerTrn } = body;
 
     if (status !== undefined && status === 'Cancelled') {
       const currentStatus = (sale.status as string) || 'Active';
@@ -105,9 +105,24 @@ export async function PUT(
 
     if (salePrice !== undefined) {
       sale.salePrice = salePrice;
-      sale.finalPrice = salePrice - (discountAmount || sale.discountAmount || 0);
     }
-    if (discountAmount !== undefined) sale.discountAmount = discountAmount;
+    if (discountType !== undefined || discountValue !== undefined) {
+      const effectiveDiscountType = discountType ?? sale.discountType ?? 'flat';
+      const effectiveDiscountValue = discountValue !== undefined ? discountValue : (sale.discountValue ?? 0);
+      const effectiveSalePrice = salePrice !== undefined ? salePrice : sale.salePrice;
+      const computedDiscountAmount = effectiveDiscountType === 'percentage'
+        ? Math.round(effectiveSalePrice * effectiveDiscountValue / 100 * 100) / 100
+        : effectiveDiscountValue;
+      sale.discountType = effectiveDiscountType;
+      sale.discountValue = effectiveDiscountValue;
+      sale.discountAmount = computedDiscountAmount;
+    } else if (salePrice !== undefined) {
+      // Re-apply existing discount against updated price
+      if ((sale.discountType ?? 'flat') === 'percentage') {
+        sale.discountAmount = Math.round(salePrice * (sale.discountValue ?? 0) / 100 * 100) / 100;
+      }
+    }
+    sale.finalPrice = sale.salePrice - sale.discountAmount;
     if (agentName !== undefined) sale.agentName = agentName;
     if (agentCommission !== undefined) sale.agentCommission = agentCommission;
     if (notes !== undefined) sale.notes = notes;

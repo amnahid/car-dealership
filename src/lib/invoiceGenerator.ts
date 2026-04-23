@@ -12,6 +12,8 @@ interface InvoiceData {
   customerPhone: string;
   customerAddress?: string;
   salePrice: number;
+  discountType?: 'flat' | 'percentage';
+  discountValue?: number;
   discountAmount: number;
   finalPrice: number;
   vatRate?: number;
@@ -174,7 +176,10 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   // Discount row
   if (data.discountAmount > 0) {
     y += 6;
-    doc.text('Discount / خصم', margin, y);
+    const discountLabel = data.discountType === 'percentage' && data.discountValue
+      ? `Discount (${data.discountValue}%) / خصم`
+      : 'Discount / خصم';
+    doc.text(discountLabel, margin, y);
     doc.setTextColor(200, 60, 60);
     doc.text(`-${fmt(data.discountAmount)}`, pageWidth - margin, y, { align: 'right' });
     doc.setTextColor(60, 60, 60);

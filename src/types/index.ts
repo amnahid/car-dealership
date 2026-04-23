@@ -118,6 +118,8 @@ export interface ICashSale {
   customerName: string;
   customerPhone: string;
   salePrice: number;
+  discountType: 'flat' | 'percentage';
+  discountValue: number;
   discountAmount: number;
   finalPrice: number;
   agentName?: string;

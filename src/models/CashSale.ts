@@ -11,6 +11,8 @@ export interface ICashSaleDocument extends Document {
   customerName: string;
   customerPhone: string;
   salePrice: number;
+  discountType: 'flat' | 'percentage';
+  discountValue: number;
   discountAmount: number;
   finalPrice: number;
   vatRate: number;
@@ -23,6 +25,7 @@ export interface ICashSaleDocument extends Document {
   invoiceUrl?: string;
   // ZATCA fields
   invoiceType: ZatcaInvoiceType;
+  buyerTrn?: string;
   zatcaUUID?: string;
   zatcaQRCode?: string;
   zatcaStatus: ZatcaStatus;
@@ -41,6 +44,8 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     customerName: { type: String, required: true },
     customerPhone: { type: String, required: true },
     salePrice: { type: Number, required: true, min: 0 },
+    discountType: { type: String, enum: ['flat', 'percentage'], default: 'flat' },
+    discountValue: { type: Number, default: 0, min: 0 },
     discountAmount: { type: Number, default: 0, min: 0 },
     finalPrice: { type: Number, required: true, min: 0 },
     vatRate: { type: Number, default: 15, min: 0 },
@@ -52,6 +57,7 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     status: { type: String, enum: ['Active', 'Cancelled'], default: 'Active' },
     invoiceUrl: { type: String },
     invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
+    buyerTrn: { type: String },
     zatcaUUID: { type: String, sparse: true },
     zatcaQRCode: { type: String },
     zatcaStatus: { type: String, enum: ['Pending', 'Cleared', 'Reported', 'Failed', 'NotRequired'], default: 'Pending' },

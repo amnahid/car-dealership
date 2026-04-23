@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const employeeId = searchParams.get('employeeId') || '';
     const month = searchParams.get('month') ? parseInt(searchParams.get('month')!) : null;
     const year = searchParams.get('year') ? parseInt(searchParams.get('year')!) : null;
+    const paymentType = searchParams.get('paymentType') || '';
 
     const query: Record<string, unknown> = {
       $or: [
@@ -31,11 +32,16 @@ export async function GET(request: NextRequest) {
     if (employeeId) query.employee = employeeId;
     if (month) query.month = month;
     if (year) query.year = year;
+    if (paymentType) query.paymentType = paymentType;
 
     const skip = (page - 1) * limit;
-    const [payments, total] = await Promise.all([
+    const [payments, total, totalShownAgg] = await Promise.all([
       SalaryPayment.find(query).sort({ paymentDate: -1 }).skip(skip).limit(limit).lean(),
       SalaryPayment.countDocuments(query),
+      SalaryPayment.aggregate([
+        { $match: query },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
     ]);
 
     // Get total paid this month
@@ -49,6 +55,7 @@ export async function GET(request: NextRequest) {
       payments,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       totalThisMonth: monthlyTotal[0]?.total || 0,
+      totalShown: totalShownAgg[0]?.total || 0,
     });
   } catch (error) {
     console.error('Get salary payments error:', error);

@@ -72,14 +72,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, email, designation, department, baseSalary, joiningDate, photo } = body;
+    const { name, phone, email, designation, department, baseSalary, commissionRate, joiningDate, photo } = body;
 
     if (!name || !phone || !designation || !department || !baseSalary || !joiningDate) {
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
     const employee = await Employee.create({
-      name, phone, email, designation, department, baseSalary, joiningDate, photo,
+      name, phone, email, designation, department, baseSalary, commissionRate, joiningDate, photo,
       createdBy: user.userId,
     });
 

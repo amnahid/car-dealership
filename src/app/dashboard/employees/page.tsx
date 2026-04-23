@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import ImageUpload from '@/components/ImageUpload';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface Employee {
   _id: string;
@@ -17,6 +18,8 @@ interface Employee {
   isActive: boolean;
   photo?: string;
 }
+
+const DEPARTMENTS = ['Sales', 'Service', 'Accounts', 'Admin', 'Management'] as const;
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -78,11 +81,11 @@ export default function EmployeesPage() {
         </div>
         <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
           <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Monthly Salary Expense</p>
-          <p style={{ fontSize: '24px', fontWeight: 700, color: '#ec4561', margin: '8px 0 0' }}>${totalMonthlySalary.toLocaleString()}</p>
+          <p style={{ fontSize: '24px', fontWeight: 700, color: '#ec4561', margin: '8px 0 0' }}>SAR {totalMonthlySalary.toLocaleString()}</p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'flex-end' }}>
         <input
           type="text"
           placeholder="Search by name, phone, ID..."
@@ -90,14 +93,14 @@ export default function EmployeesPage() {
           onChange={(e) => handleSearch(e.target.value)}
           style={{ width: '250px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}
         />
-        <select
-          value={deptFilter}
-          onChange={(e) => { setDeptFilter(e.target.value); setPage(1); }}
-          style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}
-        >
-          <option value="">All Departments</option>
-          {departments.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
+        <div style={{ minWidth: '180px' }}>
+          <SearchableSelect
+            value={deptFilter}
+            onChange={(v) => { setDeptFilter(v); setPage(1); }}
+            options={[{ value: '', label: 'All Departments' }, ...DEPARTMENTS.map(d => ({ value: d, label: d }))]}
+            placeholder="All Departments"
+          />
+        </div>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -133,7 +136,7 @@ export default function EmployeesPage() {
                     <td style={{ padding: '12px' }}>{emp.email || '-'}</td>
                     <td style={{ padding: '12px' }}>{emp.designation}</td>
                     <td style={{ padding: '12px' }}>{emp.department}</td>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>${emp.baseSalary.toLocaleString()}</td>
+                    <td style={{ padding: '12px', fontWeight: 600 }}>SAR {emp.baseSalary.toLocaleString()}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: emp.isActive ? '#42ca7f20' : '#ec456120', color: emp.isActive ? '#42ca7f' : '#ec4561' }}>
                         {emp.isActive ? 'Active' : 'Inactive'}
@@ -172,8 +175,9 @@ function EmployeeModal({ employee, onClose, onSave }: { employee: Employee | nul
     phone: employee?.phone || '',
     email: employee?.email || '',
     designation: employee?.designation || '',
-    department: employee?.department || '',
+    department: employee?.department || 'Sales',
     baseSalary: employee?.baseSalary?.toString() || '',
+    commissionRate: (employee as Employee & { commissionRate?: number })?.commissionRate?.toString() || '',
     joiningDate: employee?.joiningDate?.split('T')[0] || new Date().toISOString().split('T')[0],
     isActive: employee?.isActive ?? true,
     photo: employee?.photo || '',
@@ -205,10 +209,11 @@ function EmployeeModal({ employee, onClose, onSave }: { employee: Employee | nul
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Phone *</label><input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Email</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Designation *</label><input required value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
-            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Department *</label><input required value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
+            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Department *</label><SearchableSelect required value={form.department} onChange={(v) => setForm({ ...form, department: v })} options={DEPARTMENTS.map(d => ({ value: d, label: d }))} placeholder="Select department..." /></div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Base Salary *</label><input required type="number" value={form.baseSalary} onChange={(e) => setForm({ ...form, baseSalary: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
+            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Commission Rate (%)</label><input type="number" min="0" max="100" step="0.1" placeholder="e.g. 2.5" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
             <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Joining Date *</label><input required type="date" value={form.joiningDate} onChange={(e) => setForm({ ...form, joiningDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} /></div>
-            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Status</label><select value={form.isActive.toString()} onChange={(e) => setForm({ ...form, isActive: e.target.value === 'true' })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}><option value="true">Active</option><option value="false">Inactive</option></select></div>
+            <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Status</label><SearchableSelect value={form.isActive.toString()} onChange={(v) => setForm({ ...form, isActive: v === 'true' })} options={[{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }]} /></div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
             {employee && (

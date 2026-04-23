@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import EditCustomerModal from '@/components/EditCustomerModal';
-import ImageUpload from '@/components/ImageUpload';
+import ImageUpload, { DocumentUpload } from '@/components/ImageUpload';
+import { uploadImage } from '@/lib/uploadClient';
 
 interface Customer {
   _id: string;
@@ -12,12 +13,13 @@ interface Customer {
   phone: string;
   email?: string;
   address: string;
-  nationalId?: string;
-  drivingLicense?: string;
+  nationalIdDocument?: string;
+  drivingLicenseDocument?: string;
+  iqamaDocument?: string;
+  profilePhoto?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   notes?: string;
-  profilePhoto?: string;
   createdAt: string;
 }
 
@@ -229,11 +231,13 @@ function CustomerModal({ customer, onClose, onSave }: { customer: Customer | nul
     phone: customer?.phone || '',
     email: customer?.email || '',
     address: customer?.address || '',
-    nationalId: customer?.nationalId || '',
+    nationalIdDocument: customer?.nationalIdDocument || '',
+    drivingLicenseDocument: customer?.drivingLicenseDocument || '',
+    iqamaDocument: customer?.iqamaDocument || '',
+    profilePhoto: customer?.profilePhoto || '',
     emergencyContactName: '',
     emergencyContactPhone: '',
     notes: '',
-    profilePhoto: customer?.profilePhoto || '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -273,7 +277,7 @@ function CustomerModal({ customer, onClose, onSave }: { customer: Customer | nul
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <ImageUpload value={form.profilePhoto} onChange={(url) => setForm({ ...form, profilePhoto: url })} folder="customers" label={form.fullName || 'Customer'} size={80} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Full Name *</label>
               <input required value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
@@ -286,9 +290,19 @@ function CustomerModal({ customer, onClose, onSave }: { customer: Customer | nul
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Email</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
             </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>National ID</label>
-              <input value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '8px', color: '#6c757d' }}>National ID</label>
+              <DocumentUpload value={form.nationalIdDocument} onChange={(url) => setForm({ ...form, nationalIdDocument: url })} label="National ID" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '8px', color: '#6c757d' }}>Driving License</label>
+              <DocumentUpload value={form.drivingLicenseDocument} onChange={(url) => setForm({ ...form, drivingLicenseDocument: url })} label="License" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '8px', color: '#6c757d' }}>Iqama</label>
+              <DocumentUpload value={form.iqamaDocument} onChange={(url) => setForm({ ...form, iqamaDocument: url })} label="Iqama" />
             </div>
           </div>
           <div style={{ marginBottom: '16px' }}>

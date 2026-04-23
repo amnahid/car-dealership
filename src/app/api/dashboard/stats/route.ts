@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
       totalRepairCostAgg,
       totalSalariesAgg,
       salesByMonth,
+      incomeByTypeAgg,
     ] = await Promise.all([
       Car.countDocuments(),
       Car.countDocuments({ status: 'In Stock' }),
@@ -87,26 +88,60 @@ export async function GET(request: NextRequest) {
         },
         { $sort: { _id: 1 } }
       ]),
+      CashSale.aggregate([
+        { $group: { _id: null, total: { $sum: '$finalPrice' } } }
+      ]),
     ]);
 
-    // Run overdue/ upcoming queries separately AFTER Promise.all to avoid Promise.all caching issues
-    const overdueAgg = await InstallmentSale.aggregate([
-      { $match: { status: 'Active' } },
-      { $unwind: '$paymentSchedule' },
-      { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $lt: now } } },
-      { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
+    const [
+      overdueAgg,
+      upcomingAgg,
+      expiringDocuments,
+      monthlyRepairCostAgg,
+      monthlySalariesAgg,
+      pendingInstallmentsAgg,
+      recentActivity,
+      expenseByCategoryAgg,
+      monthlyTrendsAgg,
+    ] = await Promise.all([
+      InstallmentSale.aggregate([
+        { $match: { status: 'Active' } },
+        { $unwind: '$paymentSchedule' },
+        { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $lt: now } } },
+        { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
+      ]),
+      InstallmentSale.aggregate([
+        { $match: { status: 'Active' } },
+        { $unwind: '$paymentSchedule' },
+        { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $gte: now, $lte: sevenDaysFromNow } } },
+        { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
+      ]),
+      VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
+      Car.aggregate([
+        { $match: { 'repairs.date': { $gte: startOfMonth } } },
+        { $unwind: '$repairs' },
+        { $match: { 'repairs.date': { $gte: startOfMonth } } },
+        { $group: { _id: null, total: { $sum: '$repairs.cost' } } }
+      ]),
+      Transaction.aggregate([
+        { $match: { type: 'expense', category: 'Salary', date: { $gte: startOfMonth }, isDeleted: false } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      InstallmentSale.aggregate([
+        { $match: { status: 'Active' } },
+        { $group: { _id: null, total: { $sum: '$remainingAmount' } } },
+      ]),
+      ActivityLog.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name'),
+      Transaction.aggregate([
+        { $match: { type: 'Expense', isDeleted: false } },
+        { $group: { _id: '$category', total: { $sum: '$amount' } } }
+      ]),
+      Transaction.aggregate([
+        { $match: { date: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$date' } }, income: { $sum: { $cond: [{ $eq: ['$type', 'Income'] }, '$amount', 0] } }, expenses: { $sum: { $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0] } } } },
+        { $sort: { _id: 1 } }
+      ]),
     ]);
-
-    const upcomingAgg = await InstallmentSale.aggregate([
-      { $match: { status: 'Active' } },
-      { $unwind: '$paymentSchedule' },
-      { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $gte: now, $lte: sevenDaysFromNow } } },
-      { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
-    ]);
-
-    const expiringDocuments = await VehicleDocument.countDocuments({
-      expiryDate: { $gte: now, $lte: thirtyDaysFromNow },
-    });
 
     const cashRevenue = cashRevenueAgg[0]?.total || 0;
     const installmentPaid = installmentPaidAgg[0]?.total || 0;
@@ -123,28 +158,8 @@ export async function GET(request: NextRequest) {
     const monthlyRentalRevenue = monthlyRentalRevenueAgg[0]?.total || 0;
     const monthlyRevenue = monthlyCashRevenue + monthlyInstallmentPaid + monthlyRentalRevenue;
 
-    const monthlyRepairCost = await Car.aggregate([
-      { $match: { 'repairs.date': { $gte: startOfMonth } } },
-      { $unwind: '$repairs' },
-      { $match: { 'repairs.date': { $gte: startOfMonth } } },
-      { $group: { _id: null, total: { $sum: '$repairs.cost' } } }
-    ]);
-    const monthlySalaries = await Transaction.aggregate([
-      { $match: { type: 'expense', category: 'Salary', date: { $gte: startOfMonth }, isDeleted: false } },
-      { $group: { _id: null, total: { $sum: '$amount' } } }
-    ]);
-    const monthlyExpenses = (monthlyRepairCost[0]?.total || 0) + (monthlySalaries[0]?.total || 0);
+    const monthlyExpenses = (monthlyRepairCostAgg[0]?.total || 0) + (monthlySalariesAgg[0]?.total || 0);
     const monthlyProfit = monthlyRevenue - monthlyExpenses;
-
-    const pendingInstallmentsAgg = await InstallmentSale.aggregate([
-      { $match: { status: 'Active' } },
-      { $group: { _id: null, total: { $sum: '$remainingAmount' } } },
-    ]);
-
-    const recentActivity = await ActivityLog.find()
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('user', 'name');
 
     return NextResponse.json({
       totalCars,
@@ -174,6 +189,18 @@ export async function GET(request: NextRequest) {
       upcomingInstallments: (upcomingAgg[0]?.count || 0),
       upcomingInstallmentsAmount: (upcomingAgg[0]?.total || 0),
       salesByMonth: salesByMonth.map((s: { _id: string; total: number; count: number }) => ({ month: s._id, total: s.total, count: s.count })),
+      incomeByType: [
+        { name: 'Cash Sale', value: cashRevenue },
+        { name: 'Installment', value: installmentPaid },
+        { name: 'Rental', value: rentalRevenue },
+      ],
+      expenseByCategory: expenseByCategoryAgg.map((e: { _id: string; total: number }) => ({ name: e._id, value: e.total })),
+      monthlyTrends: monthlyTrendsAgg.map((t: { _id: string; income: number; expenses: number }) => ({
+        month: t._id,
+        income: t.income,
+        expenses: t.expenses,
+        profit: t.income - t.expenses,
+      })),
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);

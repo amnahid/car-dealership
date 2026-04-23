@@ -18,7 +18,16 @@ interface Rental {
   status: string;
   returnDate?: string;
   actualReturnDate?: string;
+  lateFee?: number;
+  agreementDocument?: string;
   notes?: string;
+  vatRate?: number;
+  vatAmount?: number;
+  invoiceType?: 'Standard' | 'Simplified';
+  zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
+  zatcaUUID?: string;
+  zatcaQRCode?: string;
+  zatcaHash?: string;
 }
 
 export default function RentalDetailPage() {
@@ -150,15 +159,27 @@ export default function RentalDetailPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Daily Rate</span>
-              <span style={{ color: '#2a3142' }}>${rental.dailyRate.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {rental.dailyRate.toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Security Deposit</span>
-              <span style={{ color: '#2a3142' }}>${rental.securityDeposit.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {rental.securityDeposit.toLocaleString()}</span>
             </div>
+            {rental.lateFee !== undefined && rental.lateFee > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>Late Fee</span>
+                <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {rental.lateFee.toLocaleString()}</span>
+              </div>
+            )}
+            {rental.vatAmount !== undefined && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>VAT ({rental.vatRate ?? 15}%)</span>
+                <span style={{ color: '#2a3142' }}>SAR {rental.vatAmount.toLocaleString()}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '12px' }}>
               <span style={{ color: '#2a3142', fontWeight: 600 }}>Total Amount</span>
-              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>${rental.totalAmount.toLocaleString()}</span>
+              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>SAR {rental.totalAmount.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -169,7 +190,90 @@ export default function RentalDetailPage() {
             <p style={{ color: '#525f80', margin: 0 }}>{rental.notes}</p>
           </div>
         )}
+
+        {rental.agreementDocument && (
+          <div className="card" style={{ padding: '24px', gridColumn: '1 / -1' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Agreement Document</h3>
+            <a href={rental.agreementDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+              </svg>
+              View Agreement (PDF)
+            </a>
+          </div>
+        )}
+
+        <div className="card" style={{ padding: '24px', gridColumn: '1 / -1' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>ZATCA E-Invoice</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Invoice Type</span>
+              <span style={{ color: '#2a3142', fontWeight: 500 }}>{rental.invoiceType || 'Simplified'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>ZATCA Status</span>
+              <ZatcaStatusBadge status={rental.zatcaStatus} rentalId={rental._id} />
+            </div>
+            {rental.zatcaUUID && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gridColumn: '1 / -1' }}>
+                <span style={{ color: '#9ca8b3' }}>Invoice UUID</span>
+                <span style={{ color: '#525f80', fontFamily: 'monospace', fontSize: '13px' }}>{rental.zatcaUUID}</span>
+              </div>
+            )}
+            {rental.zatcaHash && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gridColumn: '1 / -1' }}>
+                <span style={{ color: '#9ca8b3' }}>Invoice Hash</span>
+                <span style={{ color: '#525f80', fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', textAlign: 'right', maxWidth: '60%' }}>{rental.zatcaHash}</span>
+              </div>
+            )}
+            {rental.zatcaQRCode && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#9ca8b3', fontSize: '13px' }}>QR Code</span>
+                <img src={rental.zatcaQRCode} alt="ZATCA QR Code" style={{ width: '120px', height: '120px' }} />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
+  Cleared:     { bg: '#e6f4ea', color: '#2e7d32', label: 'Cleared' },
+  Reported:    { bg: '#e8f5e9', color: '#388e3c', label: 'Reported' },
+  Pending:     { bg: '#fff8e1', color: '#f57c00', label: 'Pending' },
+  Failed:      { bg: '#fce4ec', color: '#c62828', label: 'Failed' },
+  NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
+};
+
+function ZatcaStatusBadge({ status, rentalId }: { status?: string; rentalId: string }) {
+  const [retrying, setRetrying] = useState(false);
+  const s = status ? (ZATCA_BADGE_COLORS[status] ?? ZATCA_BADGE_COLORS['NotRequired']) : ZATCA_BADGE_COLORS['NotRequired'];
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await fetch('/api/zatca/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referenceId: rentalId, referenceType: 'Rental' }),
+      });
+      window.location.reload();
+    } catch { /* silent */ } finally { setRetrying(false); }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, background: s.bg, color: s.color }}>
+        {s.label}
+      </span>
+      {status === 'Failed' && (
+        <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          {retrying ? 'Retrying...' : '↺ Retry'}
+        </button>
+      )}
     </div>
   );
 }

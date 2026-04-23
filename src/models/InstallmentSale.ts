@@ -12,6 +12,7 @@ export interface IInstallmentPayment {
   status: InstallmentPaymentStatus;
   paidDate?: Date;
   paidAmount?: number;
+  lateFee?: number;
   notes?: string;
 }
 
@@ -36,11 +37,14 @@ export interface IInstallmentSaleDocument extends Document {
   remainingAmount: number;
   deliveryThresholdPercent: number;
   lateFeePercent: number;
+  lateFeeCharged: number;
   vatRate: number;
   vatAmount: number;
   finalPriceWithVat: number;
+  agreementDocument?: string;
   // ZATCA fields
   invoiceType: ZatcaInvoiceType;
+  buyerTrn?: string;
   zatcaUUID?: string;
   zatcaQRCode?: string;
   zatcaStatus: ZatcaStatus;
@@ -73,6 +77,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
       status: { type: String, enum: ['Pending', 'Paid', 'Overdue', 'Failed'], default: 'Pending' },
       paidDate: { type: Date },
       paidAmount: { type: Number },
+      lateFee: { type: Number, default: 0 },
       notes: { type: String },
     }],
     nextPaymentDate: { type: Date, required: true },
@@ -81,10 +86,13 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     remainingAmount: { type: Number, required: true, min: 0 },
     deliveryThresholdPercent: { type: Number, default: 30, min: 0, max: 100 },
     lateFeePercent: { type: Number, default: 2, min: 0, max: 100 },
+    lateFeeCharged: { type: Number, default: 0, min: 0 },
     vatRate: { type: Number, default: 15, min: 0 },
     vatAmount: { type: Number, default: 0, min: 0 },
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
+    agreementDocument: { type: String },
     invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
+    buyerTrn: { type: String },
     zatcaUUID: { type: String, sparse: true },
     zatcaQRCode: { type: String },
     zatcaStatus: { type: String, enum: ['Pending', 'Cleared', 'Reported', 'Failed', 'NotRequired'], default: 'Pending' },
@@ -92,7 +100,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     zatcaResponse: { type: Schema.Types.Mixed },
     status: {
       type: String,
-      enum: ['Active', 'Completed', 'Defaulted'],
+      enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'],
       default: 'Active',
     },
     notes: { type: String },

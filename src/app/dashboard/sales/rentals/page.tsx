@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { PdfUpload } from '@/components/ImageUpload';
 
 interface Rental {
   _id: string;
@@ -20,6 +21,8 @@ interface Rental {
   actualReturnDate?: string;
   car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
   customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
+  zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
+  invoiceType?: 'Standard' | 'Simplified';
 }
 
 export default function RentalsPage() {
@@ -61,10 +64,10 @@ export default function RentalsPage() {
   useEffect(() => {
     if (showModal) {
       Promise.all([
-        fetch('/api/cars?limit=100').then(r => r.json()),
+        fetch('/api/cars?limit=100&status=In+Stock').then(r => r.json()),
         fetch('/api/customers?limit=100').then(r => r.json())
       ]).then(([carData, custData]) => {
-        setCars(carData.cars?.filter((c: any) => c.status === 'In Stock') || []);
+        setCars(carData.cars || []);
         setCustomers(custData.customers || []);
       });
     }
@@ -154,7 +157,7 @@ export default function RentalsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Car', 'Rental ID', 'Customer', 'Total', 'Status', 'Actions'].map((h) => (
+                  {['Car', 'Rental ID', 'Customer', 'Total', 'Status', 'ZATCA', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
                   ))}
                 </tr>
@@ -188,6 +191,9 @@ export default function RentalsPage() {
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(rental.status) + '20', color: getStatusColor(rental.status) }}>{rental.status}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
+                      <ZatcaStatusBadge status={rental.zatcaStatus} saleId={rental._id} saleType="Rental" />
+                    </td>
+                    <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <Link href={`/dashboard/sales/rentals/${rental._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
                         <Link href={`/dashboard/sales/rentals/${rental._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>Edit</Link>
@@ -219,16 +225,43 @@ export default function RentalsPage() {
 }
 
 function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; customers: any[]; onClose: () => void; onSave: () => void }) {
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', startDate: '', endDate: '', dailyRate: '', securityDeposit: '0', notes: '' });
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', startDate: '', endDate: '', dailyRate: '', securityDeposit: '0', notes: '', lateFee: '0', agreementDocument: '', invoiceType: 'Simplified', buyerTrn: '' });
   const [loading, setLoading] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', address: '' });
 
   const handleCarChange = (carId: string) => {
     setForm({ ...form, car: cars.find(c => c.carId === carId)?._id || '', carId });
   };
 
   const handleCustomerChange = (customerId: string) => {
+    if (customerId === '__new__') {
+      setShowCustomerModal(true);
+      return;
+    }
     const cust = customers.find(c => c._id === customerId);
-    setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '' });
+    setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '', invoiceType: cust?.customerType === 'Business' ? 'Standard' : 'Simplified', buyerTrn: cust?.vatRegistrationNumber || '' });
+  };
+
+  const handleAddCustomer = async () => {
+    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.address) {
+      alert('Please fill in required fields');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer),
+      });
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      const created = await res.json();
+      setForm({ ...form, customer: created.customer?._id || created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
+      setShowCustomerModal(false);
+      setNewCustomer({ fullName: '', phone: '', email: '', address: '' });
+      onSave();
+    } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   const calculateTotal = () => {
@@ -270,6 +303,7 @@ function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; custom
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Select Customer *</label>
             <select required value={form.customer} onChange={(e) => handleCustomerChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
               <option value="">Select a customer</option>
+              <option value="__new__">+ Add New Customer</option>
               {customers.map(cust => <option key={cust._id} value={cust._id}>{cust.fullName} - {cust.phone}</option>)}
             </select>
           </div>
@@ -290,17 +324,73 @@ function RentalModal({ cars, customers, onClose, onSave }: { cars: any[]; custom
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Security Deposit</label>
               <input type="number" value={form.securityDeposit} onChange={(e) => setForm({ ...form, securityDeposit: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
             </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee (SAR)</label>
+              <input type="number" value={form.lateFee} onChange={(e) => setForm({ ...form, lateFee: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Fee for late return" />
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Agreement Document (PDF)</div>
+            <PdfUpload value={form.agreementDocument} onChange={(url) => setForm({ ...form, agreementDocument: url })} label="Agreement Document" />
           </div>
           {form.startDate && form.endDate && form.dailyRate && (
             <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f9fa', borderRadius: '4px' }}>
               <p style={{ margin: 0, fontSize: '14px' }}>Total: <strong>${calculateTotal().toLocaleString()}</strong></p>
             </div>
           )}
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>ZATCA / Tax Invoice</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Invoice Type</label>
+                <select value={form.invoiceType} onChange={(e) => setForm({ ...form, invoiceType: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
+                  <option value="Simplified">Simplified (B2C)</option>
+                  <option value="Standard">Standard (B2B)</option>
+                </select>
+              </div>
+              {form.invoiceType === 'Standard' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Buyer TRN</label>
+                  <input value={form.buyerTrn} onChange={(e) => setForm({ ...form, buyerTrn: e.target.value })} placeholder="15-digit VAT number" style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+                </div>
+              )}
+            </div>
+          </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
             <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Create Rental'}</button>
           </div>
         </form>
+        
+        {showCustomerModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }}>
+            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Add Customer</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Full Name *</label>
+                  <input required value={newCustomer.fullName} onChange={(e) => setNewCustomer({ ...newCustomer, fullName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Full Name" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Phone *</label>
+                  <input required value={newCustomer.phone} onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Phone" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Email</label>
+                  <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Email" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Address *</label>
+                  <input required value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Address" />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
+                <button type="button" onClick={handleAddCustomer} disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Add Customer'}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -363,6 +453,43 @@ function EditRentalModal({ rental, onClose, onSave }: { rental: Rental; onClose:
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
+  Cleared:     { bg: '#e6f4ea', color: '#2e7d32', label: 'Cleared' },
+  Reported:    { bg: '#e8f5e9', color: '#388e3c', label: 'Reported' },
+  Pending:     { bg: '#fff8e1', color: '#f57c00', label: 'Pending' },
+  Failed:      { bg: '#fce4ec', color: '#c62828', label: 'Failed' },
+  NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
+};
+
+function ZatcaStatusBadge({ status, saleId, saleType }: { status?: string; saleId: string; saleType: string }) {
+  const [retrying, setRetrying] = useState(false);
+  const s = status ? ZATCA_BADGE_COLORS[status] : ZATCA_BADGE_COLORS['NotRequired'];
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await fetch('/api/zatca/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referenceId: saleId, referenceType: saleType }),
+      });
+      window.location.reload();
+    } catch { /* silent */ } finally { setRetrying(false); }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, background: s.bg, color: s.color }}>
+        {s.label}
+      </span>
+      {status === 'Failed' && (
+        <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          {retrying ? 'Retrying...' : '↺ Retry'}
+        </button>
+      )}
     </div>
   );
 }

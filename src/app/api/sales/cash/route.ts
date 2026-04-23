@@ -9,6 +9,7 @@ import { logActivity } from '@/lib/activityLogger';
 import { generateInvoice } from '@/lib/invoiceGenerator';
 import { sendSaleThankYouNotifications } from '@/lib/saleNotifications';
 import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '15');
     const search = searchParams.get('search') || '';
+    const customerId = searchParams.get('customer');
 
     const statusFilter = {
       $or: [
@@ -31,6 +33,10 @@ export async function GET(request: NextRequest) {
     };
 
     let query: Record<string, unknown> = { ...statusFilter };
+
+    if (customerId) {
+      query.customer = new mongoose.Types.ObjectId(customerId);
+    }
 
     if (search) {
       query = {
@@ -45,6 +51,9 @@ export async function GET(request: NextRequest) {
           }
         ]
       };
+      if (customerId) {
+        (query.$and as Record<string, unknown>[]).push({ customer: new mongoose.Types.ObjectId(customerId) });
+      }
     }
 
     const skip = (page - 1) * limit;
@@ -90,7 +99,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       carId, car, customer, customerName, customerPhone,
-      salePrice, discountAmount, agentName, agentCommission,
+      salePrice, discountType = 'flat', discountValue = 0, agentName, agentCommission,
       saleDate, notes,
       invoiceType = 'Simplified',
       buyerTrn,
@@ -100,7 +109,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
-    const finalPrice = salePrice - (discountAmount || 0);
+    const computedDiscountAmount = discountType === 'percentage'
+      ? Math.round(salePrice * (discountValue || 0) / 100 * 100) / 100
+      : (discountValue || 0);
+    const finalPrice = salePrice - computedDiscountAmount;
     const { vatAmount, totalWithVat } = calculateVat(finalPrice, ZATCA_VAT_RATE);
 
     const sale = await CashSale.create({
@@ -110,7 +122,9 @@ export async function POST(request: NextRequest) {
       customerName,
       customerPhone,
       salePrice,
-      discountAmount: discountAmount || 0,
+      discountType,
+      discountValue: discountValue || 0,
+      discountAmount: computedDiscountAmount,
       finalPrice,
       vatRate: ZATCA_VAT_RATE,
       vatAmount,
@@ -180,7 +194,7 @@ export async function POST(request: NextRequest) {
         subtotal: finalPrice,
         vatTotal: vatAmount,
         totalWithVat,
-        discountAmount: discountAmount || 0,
+        discountAmount: computedDiscountAmount,
         notes,
         createdBy: user.userId,
       });
@@ -206,6 +220,8 @@ export async function POST(request: NextRequest) {
         customerPhone: sale.customerPhone,
         customerAddress: customerData?.address,
         salePrice: sale.salePrice,
+        discountType: sale.discountType,
+        discountValue: sale.discountValue,
         discountAmount: sale.discountAmount,
         finalPrice: sale.finalPrice,
         vatRate: sale.vatRate,

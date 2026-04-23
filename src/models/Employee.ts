@@ -8,6 +8,7 @@ export interface IEmployeeDocument extends Document {
   designation: string;
   department: string;
   baseSalary: number;
+  commissionRate?: number;
   joiningDate: Date;
   isActive: boolean;
   photo?: string;
@@ -23,6 +24,7 @@ const EmployeeSchema = new Schema<IEmployeeDocument>(
     designation: { type: String, required: true, trim: true },
     department: { type: String, required: true, trim: true },
     baseSalary: { type: Number, required: true, min: 0 },
+    commissionRate: { type: Number, min: 0, max: 100 },
     joiningDate: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
     photo: { type: String },

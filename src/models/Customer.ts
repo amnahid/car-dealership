@@ -8,8 +8,9 @@ export interface ICustomerDocument extends Document {
   phone: string;
   email?: string;
   address: string;
-  nationalId?: string;
-  drivingLicense?: string;
+  nationalIdDocument?: string;
+  drivingLicenseDocument?: string;
+  iqamaDocument?: string;
   profilePhoto?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
@@ -27,8 +28,9 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     phone: { type: String, required: true, trim: true },
     email: { type: String, trim: true },
     address: { type: String, required: true, trim: true },
-    nationalId: { type: String, trim: true },
-    drivingLicense: { type: String, trim: true },
+    nationalIdDocument: { type: String },
+    drivingLicenseDocument: { type: String },
+    iqamaDocument: { type: String },
     profilePhoto: { type: String },
     emergencyContactName: { type: String, trim: true },
     emergencyContactPhone: { type: String, trim: true },

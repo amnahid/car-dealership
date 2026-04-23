@@ -56,7 +56,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { fullName, phone, email, address, nationalId, drivingLicense, emergencyContactName, emergencyContactPhone, notes, profilePhoto } = body;
+    const { fullName, phone, email, address, nationalIdDocument, drivingLicenseDocument, iqamaDocument, emergencyContactName, emergencyContactPhone, notes, profilePhoto, customerType, vatRegistrationNumber } = body;
 
     if (!fullName || !phone || !address) {
       return NextResponse.json({ error: 'Full name, phone, and address are required' }, { status: 400 });
@@ -64,7 +64,7 @@ export async function PUT(
 
     const customer = await Customer.findByIdAndUpdate(
       id,
-      { fullName, phone, email, address, nationalId, drivingLicense, emergencyContactName, emergencyContactPhone, notes, profilePhoto },
+      { fullName, phone, email, address, nationalIdDocument, drivingLicenseDocument, iqamaDocument, emergencyContactName, emergencyContactPhone, notes, profilePhoto, customerType, vatRegistrationNumber },
       { new: true }
     );
 

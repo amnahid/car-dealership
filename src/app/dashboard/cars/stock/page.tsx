@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import { formatCurrency } from '@/constants/currency';
@@ -25,15 +25,26 @@ interface Car {
   createdAt?: string;
 }
 
+interface StockStats {
+  count: number;
+  totalPurchase: number;
+  totalRepair: number;
+}
+
 export default function StockPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState<StockStats>({ count: 0, totalPurchase: 0, totalRepair: 0 });
 
   useEffect(() => {
-    fetch('/api/cars?limit=15')
+    setLoading(true);
+    const params = new URLSearchParams({ limit: '15', status: 'In Stock', page: page.toString() });
+    if (search) params.set('brand', search);
+
+    fetch(`/api/cars?${params}`)
       .then(res => res.json())
       .then(data => {
         setCars(data.cars || []);
@@ -41,26 +52,20 @@ export default function StockPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, search]);
 
-  const inStockCars = useMemo(() => 
-    cars.filter(c => c.status === 'In Stock'), 
-  [cars]);
-
-  const filteredCars = useMemo(() => {
-    if (!search) return inStockCars;
-    const s = search.toLowerCase();
-    return inStockCars.filter(c => 
-      c.brand.toLowerCase().includes(s) || 
-      c.model.toLowerCase().includes(s)
-    );
-  }, [inStockCars, search]);
-
-  const stats = useMemo(() => ({
-    count: inStockCars.length,
-    totalPurchase: inStockCars.reduce((sum, c) => sum + (c.purchase?.purchasePrice || 0), 0),
-    totalRepair: inStockCars.reduce((sum, c) => sum + (c.totalRepairCost || 0), 0),
-  }), [inStockCars]);
+  useEffect(() => {
+    fetch('/api/cars/stats')
+      .then(res => res.json())
+      .then(data => {
+        setStats({
+          count: data.statusCounts?.inStock || 0,
+          totalPurchase: data.inStockStats?.totalPurchaseValue || 0,
+          totalRepair: data.inStockStats?.totalRepairCost || 0,
+        });
+      })
+      .catch(console.error);
+  }, []);
 
   return (
     <div style={{ marginBottom: '24px' }}>
@@ -84,9 +89,9 @@ export default function StockPage() {
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
         <input
           type="text"
-          placeholder="Search by brand or model..."
+          placeholder="Search by brand..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           style={{
             width: '250px',
             height: '40px',
@@ -102,7 +107,7 @@ export default function StockPage() {
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
-        ) : filteredCars.length === 0 ? (
+        ) : cars.length === 0 ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No cars in stock.</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -117,7 +122,7 @@ export default function StockPage() {
                 </tr>
               </thead>
               <tbody style={{ borderBottom: '1px solid #eee' }}>
-                {filteredCars.map((car) => (
+                {cars.map((car) => (
                   <tr key={car._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '8px', width: '60px' }}>
                       {car.images?.[0] ? (

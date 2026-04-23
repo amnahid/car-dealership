@@ -18,12 +18,14 @@ export async function GET(request: NextRequest) {
     const brand = searchParams.get('brand');
     const model = searchParams.get('model');
     const year = searchParams.get('year');
+    const color = searchParams.get('color');
     const status = searchParams.get('status');
 
     const query: Record<string, unknown> = {};
     if (brand) query.brand = { $regex: brand, $options: 'i' };
     if (model) query.model = { $regex: model, $options: 'i' };
     if (year) query.year = parseInt(year);
+    if (color) query.color = { $regex: color, $options: 'i' };
     if (status) query.status = status;
 
     const total = await Car.countDocuments(query);
@@ -42,6 +44,41 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Get cars error:', error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  try {
+    const auth = await getAuthPayload(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    await connectDB();
+
+    // Get unique colors from cars collection
+    const colors = await Car.distinct('color').lean();
+    const validColors = colors.filter(c => c && c.trim()).sort();
+
+    // Get year range
+    const years = await Car.distinct('year').lean();
+    const validYears = years.filter(y => y).sort((a, b) => Number(b) - Number(a));
+
+    // Get unique brands
+    const brands = await Car.distinct('brand').lean();
+    const validBrands = brands.filter(b => b && b.trim()).sort();
+
+    // Get unique models
+    const models = await Car.distinct('model').lean();
+    const validModels = models.filter(m => m && m.trim()).sort();
+
+    return NextResponse.json({
+      colors: validColors,
+      years: validYears,
+      brands: validBrands,
+      models: validModels,
+    });
+  } catch (error) {
+    console.error('Get car options error:', error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }

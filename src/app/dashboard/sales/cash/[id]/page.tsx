@@ -12,6 +12,8 @@ interface Sale {
   customerName: string;
   customerPhone: string;
   salePrice: number;
+  discountType?: 'flat' | 'percentage';
+  discountValue?: number;
   discountAmount: number;
   finalPrice: number;
   agentName?: string;
@@ -20,6 +22,14 @@ interface Sale {
   notes?: string;
   status?: string;
   invoiceUrl?: string;
+  vatRate?: number;
+  vatAmount?: number;
+  finalPriceWithVat?: number;
+  invoiceType?: 'Standard' | 'Simplified';
+  zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
+  zatcaUUID?: string;
+  zatcaQRCode?: string;
+  zatcaHash?: string;
 }
 
 export default function CashSaleDetailPage() {
@@ -142,17 +152,33 @@ export default function CashSaleDetailPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Sale Price</span>
-              <span style={{ color: '#2a3142' }}>${sale.salePrice.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {sale.salePrice.toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#9ca8b3' }}>Discount</span>
+              <span style={{ color: '#9ca8b3' }}>
+                {sale.discountType === 'percentage' && (sale.discountValue ?? 0) > 0
+                  ? `Discount (${sale.discountValue}%)`
+                  : 'Discount'}
+              </span>
               <span style={{ color: sale.discountAmount > 0 ? '#ec4561' : '#2a3142' }}>
-                {sale.discountAmount > 0 ? `-$${sale.discountAmount.toLocaleString()}` : '-'}
+                {sale.discountAmount > 0 ? `-SAR ${sale.discountAmount.toLocaleString()}` : '-'}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '12px' }}>
-              <span style={{ color: '#2a3142', fontWeight: 600 }}>Final Price</span>
-              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>${sale.finalPrice.toLocaleString()}</span>
+              <span style={{ color: '#9ca8b3', fontWeight: 600 }}>Subtotal</span>
+              <span style={{ color: '#2a3142', fontWeight: 600 }}>SAR {sale.finalPrice.toLocaleString()}</span>
+            </div>
+            {sale.vatAmount !== undefined && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>VAT ({sale.vatRate ?? 15}%)</span>
+                <span style={{ color: '#2a3142' }}>SAR {sale.vatAmount.toLocaleString()}</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '12px' }}>
+              <span style={{ color: '#2a3142', fontWeight: 600 }}>Total (incl. VAT)</span>
+              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>
+                SAR {(sale.finalPriceWithVat ?? sale.finalPrice).toLocaleString()}
+              </span>
             </div>
           </div>
         </div>
@@ -168,7 +194,7 @@ export default function CashSaleDetailPage() {
               {sale.agentCommission !== undefined && sale.agentCommission > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#9ca8b3' }}>Commission</span>
-                  <span style={{ color: '#2a3142' }}>${sale.agentCommission.toLocaleString()}</span>
+                  <span style={{ color: '#2a3142' }}>SAR {sale.agentCommission.toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -181,6 +207,38 @@ export default function CashSaleDetailPage() {
             <p style={{ color: '#525f80', margin: 0 }}>{sale.notes}</p>
           </div>
         )}
+
+        <div className="card" style={{ padding: '24px', gridColumn: '1 / -1' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>ZATCA E-Invoice</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Invoice Type</span>
+              <span style={{ color: '#2a3142', fontWeight: 500 }}>{sale.invoiceType || 'Simplified'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>ZATCA Status</span>
+              <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} />
+            </div>
+            {sale.zatcaUUID && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gridColumn: '1 / -1' }}>
+                <span style={{ color: '#9ca8b3' }}>Invoice UUID</span>
+                <span style={{ color: '#525f80', fontFamily: 'monospace', fontSize: '13px' }}>{sale.zatcaUUID}</span>
+              </div>
+            )}
+            {sale.zatcaHash && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gridColumn: '1 / -1' }}>
+                <span style={{ color: '#9ca8b3' }}>Invoice Hash</span>
+                <span style={{ color: '#525f80', fontFamily: 'monospace', fontSize: '12px', wordBreak: 'break-all', textAlign: 'right', maxWidth: '60%' }}>{sale.zatcaHash}</span>
+              </div>
+            )}
+            {sale.zatcaQRCode && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#9ca8b3', fontSize: '13px' }}>QR Code</span>
+                <img src={sale.zatcaQRCode} alt="ZATCA QR Code" style={{ width: '120px', height: '120px' }} />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
@@ -219,6 +277,44 @@ export default function CashSaleDetailPage() {
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
+  Cleared:     { bg: '#e6f4ea', color: '#2e7d32', label: 'Cleared' },
+  Reported:    { bg: '#e8f5e9', color: '#388e3c', label: 'Reported' },
+  Pending:     { bg: '#fff8e1', color: '#f57c00', label: 'Pending' },
+  Failed:      { bg: '#fce4ec', color: '#c62828', label: 'Failed' },
+  NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
+};
+
+function ZatcaStatusBadge({ status, saleId }: { status?: string; saleId: string }) {
+  const [retrying, setRetrying] = useState(false);
+  const s = status ? (ZATCA_BADGE_COLORS[status] ?? ZATCA_BADGE_COLORS['NotRequired']) : ZATCA_BADGE_COLORS['NotRequired'];
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      await fetch('/api/zatca/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referenceId: saleId, referenceType: 'CashSale' }),
+      });
+      window.location.reload();
+    } catch { /* silent */ } finally { setRetrying(false); }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, background: s.bg, color: s.color }}>
+        {s.label}
+      </span>
+      {status === 'Failed' && (
+        <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+          {retrying ? 'Retrying...' : '↺ Retry'}
+        </button>
+      )}
     </div>
   );
 }

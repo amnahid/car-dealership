@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       role: user.role,
       name: user.name,
+      passwordVersion: user.passwordVersion,
     });
 
     await logActivity({

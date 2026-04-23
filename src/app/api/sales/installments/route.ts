@@ -8,6 +8,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import { sendInstallmentConfirmationNotifications } from '@/lib/saleNotifications';
 import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '15');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
+    const customerId = searchParams.get('customer');
 
     const statusFilter = {
       $or: [
@@ -31,6 +33,10 @@ export async function GET(request: NextRequest) {
     };
 
     let query: Record<string, unknown> = { ...statusFilter };
+
+    if (customerId) {
+      query.customer = new mongoose.Types.ObjectId(customerId);
+    }
 
     if (search) {
       query = {
