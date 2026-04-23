@@ -59,7 +59,8 @@ const statColors: Record<string, { background: string; border: string; color: st
   info: { background: '#38a4f8', border: '#38a4f8', color: '#ffffff' },
 };
 
-function formatCurrency(value: number | string): string {
+function formatCurrency(value: number | string | undefined | null): string {
+  if (value === undefined || value === null) return '0';
   if (typeof value === 'string') return value;
   return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
@@ -74,7 +75,7 @@ function StatCard({
   suffix = '',
 }: {
   label: string;
-  value: number | string;
+  value: number | string | undefined | null;
   colorKey: string;
   href?: string;
   icon: React.ReactNode;
@@ -82,9 +83,7 @@ function StatCard({
   suffix?: string;
 }) {
   const colors = statColors[colorKey] || statColors.primary;
-  const displayValue = value !== undefined && value !== null 
-    ? (typeof value === 'number' ? formatCurrency(value) : String(value))
-    : '0';
+  const displayValue = formatCurrency(value);
 
   const cardStyle: React.CSSProperties = {
     position: 'relative',
