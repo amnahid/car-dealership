@@ -2,6 +2,7 @@ import { connectDB } from '@/lib/db';
 import VehicleDocument from '@/models/Document';
 import { sendExpiryAlertEmail, sendBatchExpiryAlertEmails, isEmailServiceConfigured, DocumentAlertInfo } from '@/lib/email';
 import { sendExpiryAlertSms, sendBatchExpiryAlertSms, isSmsServiceConfigured } from '@/lib/sms';
+import { logNotification } from './notificationLogger';
 
 export interface AlertResult {
   emailsSent: number;
@@ -143,6 +144,19 @@ export async function checkAndSendExpiryAlerts(): Promise<AlertResult> {
       result.emailsSent = emailResult.sent;
       result.emailsFailed = emailResult.failed;
       console.log(`Email alerts: ${emailResult.sent} sent, ${emailResult.failed} failed`);
+
+      for (const doc of allDocsNeedingAlert) {
+        await logNotification({
+          channel: 'email',
+          type: 'document_expiry',
+          recipientName: 'Admin',
+          subject: `Document Expiring: ${doc.carId} - ${doc.documentType}`,
+          content: `Document ${doc.documentType} for ${doc.carId} (${doc.brand} ${doc.model}) expires in ${doc.daysUntilExpiry} days`,
+          referenceId: doc.carId,
+          referenceType: 'Document',
+          status: 'sent',
+        });
+      }
     }
 
     // Send SMS alerts if configured
@@ -151,6 +165,19 @@ export async function checkAndSendExpiryAlerts(): Promise<AlertResult> {
       result.smsSent = smsResult.sent;
       result.smsFailed = smsResult.failed;
       console.log(`SMS alerts: ${smsResult.sent} sent, ${smsResult.failed} failed`);
+
+      for (const doc of allDocsNeedingAlert) {
+        await logNotification({
+          channel: 'sms',
+          type: 'document_expiry',
+          recipientName: 'Admin',
+          subject: `Document Expiry Alert`,
+          content: `Document ${doc.documentType} for ${doc.carId} expires in ${doc.daysUntilExpiry} days`,
+          referenceId: doc.carId,
+          referenceType: 'Document',
+          status: 'sent',
+        });
+      }
     }
 
     // Update alert flags in database

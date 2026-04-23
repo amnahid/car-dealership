@@ -55,11 +55,7 @@ const RentalSchema = new Schema<IRentalDocument>(
     vatAmount: { type: Number, default: 0, min: 0 },
     totalAmountWithVat: { type: Number, default: 0, min: 0 },
     securityDeposit: { type: Number, default: 0, min: 0 },
-    status: {
-      type: String,
-      enum: ['Active', 'Completed', 'Cancelled'],
-      default: 'Active',
-    },
+    status: { type: String, enum: ['Active', 'Completed', 'Cancelled'], default: 'Active' },
     returnDate: { type: Date },
     actualReturnDate: { type: Date },
     lateFee: { type: Number, default: 0, min: 0 },

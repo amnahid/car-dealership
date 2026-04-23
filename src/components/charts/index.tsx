@@ -47,7 +47,7 @@ export function DateRangeFilter({ onChange }: DateRangeFilterProps) {
     const now = new Date();
     const start = new Date(now.getTime() - presetRanges[preset].days * 24 * 60 * 60 * 1000);
     onChange(start.toISOString().split('T')[0], now.toISOString().split('T')[0]);
-  }, [preset, onChange]);
+  }, [preset]);
 
   const handleCustomChange = () => {
     if (customStart && customEnd) {
@@ -96,7 +96,6 @@ export function DateRangeFilter({ onChange }: DateRangeFilterProps) {
 }
 
 interface ChartData {
-  name: string;
   [key: string]: string | number;
 }
 
@@ -150,7 +149,7 @@ export function BarChartComponent({
             </>
           )}
           <Tooltip
-            formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']}
+            formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
             contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
           />
           <Legend />
@@ -192,7 +191,7 @@ export function LineChartComponent({
           <XAxis dataKey={xAxisKey} fontSize={12} />
           <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
           <Tooltip
-            formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']}
+            formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
             contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
           />
           <Legend />
@@ -236,7 +235,7 @@ export function AreaChartComponent({
           <XAxis dataKey={xAxisKey} fontSize={12} />
           <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
           <Tooltip
-            formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']}
+            formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
             contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
           />
           <Legend />
@@ -271,6 +270,15 @@ export function PieChartComponent({
   title,
   donut = false,
 }: PieChartComponentProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="card" style={{ padding: '20px' }}>
+        {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
+        <p style={{ color: '#9ca8b3', textAlign: 'center' }}>No data available</p>
+      </div>
+    );
+  }
+
   return (
     <div className="card" style={{ padding: '20px' }}>
       {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
@@ -287,12 +295,15 @@ export function PieChartComponent({
             label={!donut}
             labelLine={!donut}
           >
-            {data.map((_, index) => (
+            {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']}
+            formatter={(value) => {
+              const num = typeof value === 'number' ? value : Number(value) || 0;
+              return [`SAR ${num.toLocaleString()}`, ''];
+            }}
             contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
           />
           <Legend />
@@ -326,7 +337,7 @@ export function ComboChartComponent({
           <XAxis dataKey={xAxisKey} fontSize={12} />
           <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
           <Tooltip
-            formatter={(value: number) => [`SAR ${value.toLocaleString()}`, '']}
+            formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
             contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
           />
           <Legend />

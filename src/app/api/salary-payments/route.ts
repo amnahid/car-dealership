@@ -5,6 +5,7 @@ import Employee from '@/models/Employee';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { sendSalaryPaymentNotifications } from '@/lib/salaryNotifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -108,6 +109,32 @@ export async function POST(request: NextRequest) {
       targetId: payment._id.toString(),
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
+
+    // Send notification to employee
+    try {
+      const employeeData = await Employee.findById(employee).lean();
+      if (employeeData) {
+        await sendSalaryPaymentNotifications(
+          {
+            name: employeeData.name,
+            phone: employeeData.phone,
+            email: employeeData.email,
+          },
+          {
+            paymentId: payment.paymentId,
+            employeeId: payment.employeeId,
+            amount: payment.amount,
+            paymentDate: payment.paymentDate,
+            month: payment.month,
+            year: payment.year,
+            paymentType: payment.paymentType as 'Monthly' | 'Bonus' | 'Advance' | 'Deduction',
+            notes: payment.notes,
+          }
+        );
+      }
+    } catch (notifyError) {
+      console.error('Employee notification failed:', notifyError);
+    }
 
     return NextResponse.json({ payment }, { status: 201 });
   } catch (error) {

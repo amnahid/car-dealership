@@ -102,9 +102,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     zatcaResponse: { type: Schema.Types.Mixed },
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
-    status: {
-      default: 'Active',
-    },
+    status: { type: String, enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'], default: 'Active' },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

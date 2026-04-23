@@ -241,24 +241,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Send thank-you notifications to customer
-    try {
-      await sendSaleThankYouNotifications(
-        {
-          name: customerName,
-          phone: customerPhone,
-          email: customerData?.email,
-        },
-        {
-          saleId: sale.saleId,
-          carId: sale.carId,
-          carBrand: carData?.brand,
-          carModel: carData?.model,
-          finalPrice: sale.finalPrice,
-        }
-      );
-    } catch (notifyError) {
-      console.error('Customer notification failed:', notifyError);
-    }
+  try {
+    await sendSaleThankYouNotifications(
+      {
+        name: customerName,
+        phone: customerPhone,
+        email: customerData?.email,
+      },
+      {
+        saleId: sale.saleId,
+        carId: sale.carId,
+        carBrand: carData?.brand,
+        carModel: carData?.model,
+        salePrice: sale.salePrice,
+        discountType: sale.discountType as 'flat' | 'percentage',
+        discountValue: sale.discountValue,
+        discountAmount: sale.discountAmount,
+        finalPrice: sale.finalPrice,
+        vatRate: sale.vatRate,
+        vatAmount: sale.vatAmount,
+        finalPriceWithVat: sale.finalPriceWithVat,
+      }
+    );
+  } catch (notifyError) {
+    console.error('Customer notification failed:', notifyError);
+  }
 
     return NextResponse.json({ sale, invoiceUrl, zatcaStatus: zatcaResult?.status }, { status: 201 });
   } catch (error) {

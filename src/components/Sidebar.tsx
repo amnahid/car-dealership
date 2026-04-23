@@ -86,6 +86,7 @@ const navItems: MenuItem[] = [
     children: [
       { href: '/dashboard/users', label: 'Users', icon: '', roles: ['Admin'] },
       { href: '/dashboard/activity-logs', label: 'Activity Logs', icon: '', roles: ['Admin', 'Manager'] },
+      { href: '/dashboard/notifications', label: 'Notification Logs', icon: '', roles: ['Admin', 'Manager'] },
     ]
   },
 ];

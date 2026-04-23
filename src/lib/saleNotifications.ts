@@ -1,5 +1,6 @@
 import { sendExpirySms, SmsResult, isSmsServiceConfigured } from './sms';
 import { sendExpiryAlertEmail, isEmailServiceConfigured, sendEmail } from './email';
+import { logNotification } from './notificationLogger';
 
 export { isEmailServiceConfigured, sendEmail };
 
@@ -14,7 +15,14 @@ interface SaleInfo {
   carId: string;
   carBrand?: string;
   carModel?: string;
+  salePrice: number;
+  discountType: 'flat' | 'percentage';
+  discountValue: number;
+  discountAmount: number;
   finalPrice: number;
+  vatRate: number;
+  vatAmount: number;
+  finalPriceWithVat: number;
 }
 
 interface RentalInfo {
@@ -24,12 +32,18 @@ interface RentalInfo {
   carModel?: string;
   startDate: string;
   endDate: string;
-  totalAmount: number;
   dailyRate: number;
+  totalAmount: number;
+  vatRate: number;
+  vatAmount: number;
+  finalPriceWithVat: number;
 }
 
 function formatSaleThankYouMessage(customer: CustomerInfo, sale: SaleInfo): string {
-  return `Thank you for your purchase, ${customer.name}! Your car ${sale.carBrand || ''} ${sale.carModel || sale.carId} has been sold to you for $${sale.finalPrice.toLocaleString()}. Your invoice is available. Welcome to Car Dealership!`;
+  const discountInfo = sale.discountAmount > 0
+    ? ` (discount: $${sale.discountAmount.toLocaleString()})`
+    : '';
+  return `Thank you for your purchase, ${customer.name}! Your car ${sale.carBrand || ''} ${sale.carModel || sale.carId} sold for $${sale.finalPrice.toLocaleString()}${discountInfo}. Invoice available. Welcome to AMYAL CAR!`;
 }
 
 function formatRentalConfirmationMessage(customer: CustomerInfo, rental: RentalInfo): string {
@@ -39,6 +53,11 @@ function formatRentalConfirmationMessage(customer: CustomerInfo, rental: RentalI
 }
 
 function buildSaleThankYouEmailHtml(customer: CustomerInfo, sale: SaleInfo): string {
+  const discountLabel = sale.discountType === 'percentage'
+    ? `${sale.discountValue}%`
+    : `$${sale.discountAmount.toLocaleString()}`;
+  const hasDiscount = sale.discountAmount > 0;
+
   return `
 <!DOCTYPE html>
 <html>
@@ -74,9 +93,36 @@ function buildSaleThankYouEmailHtml(customer: CustomerInfo, sale: SaleInfo): str
                   <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">${sale.carBrand || ''} ${sale.carModel || sale.carId}</td>
                 </tr>
                 <tr style="background-color: #f9f9f9;">
-                  <td style="padding: 12px 15px; font-size: 13px; color: #666666; font-weight: 500;">Amount Paid</td>
-                  <td style="padding: 12px 15px; font-size: 13px; color: #059669; font-weight: 700;">$${sale.finalPrice.toLocaleString()}</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">Sale Price</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">$${sale.salePrice.toLocaleString()}</td>
                 </tr>
+                ${hasDiscount ? `
+                <tr>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">Discount (${discountLabel})</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #dc2626;">-$${sale.discountAmount.toLocaleString()}</td>
+                </tr>
+                <tr style="background-color: #f9f9f9;">
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">Final Price</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333; font-weight: 600;">$${sale.finalPrice.toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">VAT (${sale.vatRate}%)</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">$${sale.vatAmount.toLocaleString()}</td>
+                </tr>
+                <tr style="background-color: #f0fdf4;">
+                  <td style="padding: 12px 15px; font-size: 13px; color: #666666; font-weight: 700;">Total with VAT</td>
+                  <td style="padding: 12px 15px; font-size: 13px; color: #059669; font-weight: 700; font-size: 18px;">$${sale.finalPriceWithVat.toLocaleString()}</td>
+                </tr>
+                ` : `
+                <tr>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">VAT (${sale.vatRate}%)</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">$${sale.vatAmount.toLocaleString()}</td>
+                </tr>
+                <tr style="background-color: #f0fdf4;">
+                  <td style="padding: 12px 15px; font-size: 13px; color: #666666; font-weight: 700;">Total with VAT</td>
+                  <td style="padding: 12px 15px; font-size: 13px; color: #059669; font-weight: 700; font-size: 18px;">$${sale.finalPriceWithVat.toLocaleString()}</td>
+                </tr>
+                `}
               </table>
               <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 20px 0;">
                 Your invoice is available in your account. If you have any questions, please don't hesitate to contact us.
@@ -141,9 +187,17 @@ function buildRentalConfirmationEmailHtml(customer: CustomerInfo, rental: Rental
                   <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">Daily Rate</td>
                   <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">$${rental.dailyRate}/day</td>
                 </tr>
+                <tr style="background-color: #f9f9f9;">
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">Subtotal</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">$${rental.totalAmount.toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">VAT (${rental.vatRate}%)</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">$${rental.vatAmount.toLocaleString()}</td>
+                </tr>
                 <tr style="background-color: #f0fdf4;">
-                  <td style="padding: 12px 15px; font-size: 13px; color: #666666; font-weight: 500;">Total Amount</td>
-                  <td style="padding: 12px 15px; font-size: 13px; color: #059669; font-weight: 700;">$${rental.totalAmount.toLocaleString()}</td>
+                  <td style="padding: 12px 15px; font-size: 13px; color: #666666; font-weight: 700;">Total Amount</td>
+                  <td style="padding: 12px 15px; font-size: 13px; color: #059669; font-weight: 700; font-size: 18px;">$${rental.finalPriceWithVat.toLocaleString()}</td>
                 </tr>
               </table>
               <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 20px 0;">
@@ -219,6 +273,19 @@ export async function sendSaleThankYouNotifications(
   result.smsSent = smsResult.success;
   result.smsError = smsResult.error;
 
+  await logNotification({
+    channel: 'sms',
+    type: 'sale_thank_you',
+    recipientName: customer.name,
+    recipientPhone: customer.phone,
+    subject: 'Thank You for Your Purchase',
+    content: message,
+    referenceId: sale.saleId,
+    referenceType: 'CashSale',
+    status: smsResult.success ? 'sent' : 'failed',
+    errorMessage: smsResult.error,
+  });
+
   if (customer.email) {
     const html = buildSaleThankYouEmailHtml(customer, sale);
     const emailResult = await sendCustomerEmail(
@@ -228,6 +295,19 @@ export async function sendSaleThankYouNotifications(
     );
     result.emailSent = emailResult.success;
     result.emailError = emailResult.error;
+
+    await logNotification({
+      channel: 'email',
+      type: 'sale_thank_you',
+      recipientName: customer.name,
+      recipientEmail: customer.email,
+      subject: `Thank You for Your Purchase, ${customer.name}! - AMYAL CAR`,
+      content: html,
+      referenceId: sale.saleId,
+      referenceType: 'CashSale',
+      status: emailResult.success ? 'sent' : 'failed',
+      errorMessage: emailResult.error,
+    });
   }
 
   console.log(`Sale notifications for ${sale.saleId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
@@ -245,6 +325,19 @@ export async function sendRentalConfirmationNotifications(
   result.smsSent = smsResult.success;
   result.smsError = smsResult.error;
 
+  await logNotification({
+    channel: 'sms',
+    type: 'rental_confirmation',
+    recipientName: customer.name,
+    recipientPhone: customer.phone,
+    subject: 'Rental Confirmed',
+    content: message,
+    referenceId: rental.rentalId,
+    referenceType: 'Rental',
+    status: smsResult.success ? 'sent' : 'failed',
+    errorMessage: smsResult.error,
+  });
+
   if (customer.email) {
     const html = buildRentalConfirmationEmailHtml(customer, rental);
     const emailResult = await sendCustomerEmail(
@@ -254,6 +347,19 @@ export async function sendRentalConfirmationNotifications(
     );
     result.emailSent = emailResult.success;
     result.emailError = emailResult.error;
+
+    await logNotification({
+      channel: 'email',
+      type: 'rental_confirmation',
+      recipientName: customer.name,
+      recipientEmail: customer.email,
+      subject: `Rental Confirmed: ${rental.carBrand || ''} ${rental.carModel || rental.carId} - AMYAL CAR`,
+      content: html,
+      referenceId: rental.rentalId,
+      referenceType: 'Rental',
+      status: emailResult.success ? 'sent' : 'failed',
+      errorMessage: emailResult.error,
+    });
   }
 
   console.log(`Rental notifications for ${rental.rentalId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
@@ -269,6 +375,9 @@ interface InstallmentInfo {
   downPayment: number;
   monthlyPayment: number;
   tenureMonths: number;
+  vatRate: number;
+  vatAmount: number;
+  finalPriceWithVat: number;
   paymentSchedule: Array<{
     installmentNumber: number;
     dueDate: string;
@@ -534,6 +643,19 @@ export async function sendInstallmentConfirmationNotifications(
   result.smsSent = smsResult.success;
   result.smsError = smsResult.error;
 
+  await logNotification({
+    channel: 'sms',
+    type: 'installment_confirmation',
+    recipientName: customer.name,
+    recipientPhone: customer.phone,
+    subject: 'Installment Plan Confirmed',
+    content: message,
+    referenceId: installment.saleId,
+    referenceType: 'InstallmentSale',
+    status: smsResult.success ? 'sent' : 'failed',
+    errorMessage: smsResult.error,
+  });
+
   if (customer.email) {
     const html = buildInstallmentConfirmationEmailHtml(customer, installment);
     const emailResult = await sendCustomerEmail(
@@ -543,6 +665,19 @@ export async function sendInstallmentConfirmationNotifications(
     );
     result.emailSent = emailResult.success;
     result.emailError = emailResult.error;
+
+    await logNotification({
+      channel: 'email',
+      type: 'installment_confirmation',
+      recipientName: customer.name,
+      recipientEmail: customer.email,
+      subject: `Installment Plan Confirmed - ${installment.carBrand || ''} ${installment.carModel || installment.carId} - AMYAL CAR`,
+      content: html,
+      referenceId: installment.saleId,
+      referenceType: 'InstallmentSale',
+      status: emailResult.success ? 'sent' : 'failed',
+      errorMessage: emailResult.error,
+    });
   }
 
   console.log(`Installment confirmation for ${installment.saleId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
@@ -560,6 +695,20 @@ export async function sendPaymentReminderNotifications(
   result.smsSent = smsResult.success;
   result.smsError = smsResult.error;
 
+  await logNotification({
+    channel: 'sms',
+    type: 'payment_reminder',
+    recipientName: customer.name,
+    recipientPhone: customer.phone,
+    subject: 'Payment Reminder',
+    content: message,
+    referenceId: reminder.saleId,
+    referenceType: 'InstallmentSale',
+    status: smsResult.success ? 'sent' : 'failed',
+    errorMessage: smsResult.error,
+    metadata: { installmentNumber: reminder.installmentNumber },
+  });
+
   if (customer.email) {
     const html = buildPaymentReminderEmailHtml(customer, reminder);
     const emailResult = await sendCustomerEmail(
@@ -569,6 +718,20 @@ export async function sendPaymentReminderNotifications(
     );
     result.emailSent = emailResult.success;
     result.emailError = emailResult.error;
+
+    await logNotification({
+      channel: 'email',
+      type: 'payment_reminder',
+      recipientName: customer.name,
+      recipientEmail: customer.email,
+      subject: `Payment Reminder: Installment #${reminder.installmentNumber} Due - AMYAL CAR`,
+      content: html,
+      referenceId: reminder.saleId,
+      referenceType: 'InstallmentSale',
+      status: emailResult.success ? 'sent' : 'failed',
+      errorMessage: emailResult.error,
+      metadata: { installmentNumber: reminder.installmentNumber },
+    });
   }
 
   console.log(`Payment reminder for ${reminder.saleId}#${reminder.installmentNumber}: SMS=${result.smsSent}, Email=${result.emailSent}`);
@@ -586,6 +749,20 @@ export async function sendOverdueNoticeNotifications(
   result.smsSent = smsResult.success;
   result.smsError = smsResult.error;
 
+  await logNotification({
+    channel: 'sms',
+    type: 'payment_overdue',
+    recipientName: customer.name,
+    recipientPhone: customer.phone,
+    subject: 'Payment Overdue Notice',
+    content: message,
+    referenceId: reminder.saleId,
+    referenceType: 'InstallmentSale',
+    status: smsResult.success ? 'sent' : 'failed',
+    errorMessage: smsResult.error,
+    metadata: { installmentNumber: reminder.installmentNumber, daysOverdue: reminder.daysOverdue },
+  });
+
   if (customer.email) {
     const html = buildOverdueNoticeEmailHtml(customer, reminder);
     const emailResult = await sendCustomerEmail(
@@ -595,6 +772,20 @@ export async function sendOverdueNoticeNotifications(
     );
     result.emailSent = emailResult.success;
     result.emailError = emailResult.error;
+
+    await logNotification({
+      channel: 'email',
+      type: 'payment_overdue',
+      recipientName: customer.name,
+      recipientEmail: customer.email,
+      subject: `URGENT: Payment #${reminder.installmentNumber} Overdue - AMYAL CAR`,
+      content: html,
+      referenceId: reminder.saleId,
+      referenceType: 'InstallmentSale',
+      status: emailResult.success ? 'sent' : 'failed',
+      errorMessage: emailResult.error,
+      metadata: { installmentNumber: reminder.installmentNumber, daysOverdue: reminder.daysOverdue },
+    });
   }
 
   console.log(`Overdue notice for ${reminder.saleId}#${reminder.installmentNumber}: SMS=${result.smsSent}, Email=${result.emailSent}`);
