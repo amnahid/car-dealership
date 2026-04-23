@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    const [sales, total] = await Promise.all([
+    const [sales, total, totalRevenueAgg] = await Promise.all([
       CashSale.find(query)
         .sort({ saleDate: -1 })
         .skip(skip)
@@ -61,18 +61,16 @@ export async function GET(request: NextRequest) {
         .populate('customer', 'fullName phone profilePhoto')
         .lean(),
       CashSale.countDocuments(query),
-    ]);
-
-    // Calculate totals
-    const totalRevenue = await CashSale.aggregate([
-      { $match: query },
-      { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+      CashSale.aggregate([
+        { $match: query },
+        { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+      ]),
     ]);
 
     return NextResponse.json({
       sales,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-      totalRevenue: totalRevenue[0]?.total || 0,
+      totalRevenue: totalRevenueAgg[0]?.total || 0,
     });
   } catch (error) {
     console.error('Get cash sales error:', error);

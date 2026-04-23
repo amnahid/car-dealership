@@ -38,6 +38,7 @@ const SalaryPaymentSchema = new Schema<ISalaryPaymentDocument>(
 );
 
 SalaryPaymentSchema.index({ employee: 1 });
+SalaryPaymentSchema.index({ status: 1 });
 SalaryPaymentSchema.index({ month: 1, year: 1 });
 SalaryPaymentSchema.index({ paymentDate: -1 });
 

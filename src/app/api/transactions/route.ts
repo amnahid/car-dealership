@@ -33,20 +33,13 @@ export async function GET(request: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    const [transactions, total] = await Promise.all([
+    const [transactions, total, stats] = await Promise.all([
       Transaction.find(query).sort({ date: -1 }).skip(skip).limit(limit).lean(),
       Transaction.countDocuments(query),
-    ]);
-
-    // Get summary stats
-    const stats = await Transaction.aggregate([
-      { $match: query },
-      {
-        $group: {
-          _id: '$type',
-          total: { $sum: '$amount' },
-        },
-      },
+      Transaction.aggregate([
+        { $match: query },
+        { $group: { _id: '$type', total: { $sum: '$amount' } } },
+      ]),
     ]);
 
     const income = stats.find(s => s._id === 'Income')?.total || 0;

@@ -24,10 +24,7 @@ export async function GET(request: NextRequest) {
     const paymentType = searchParams.get('paymentType') || '';
 
     const query: Record<string, unknown> = {
-      $or: [
-        { status: 'Active' },
-        { status: { $exists: false } }
-      ]
+      status: { $ne: 'Cancelled' },
     };
 
     if (employeeId) query.employee = employeeId;
