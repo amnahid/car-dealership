@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
+import { useDebounce } from '@/hooks/useDebounce';
 import { CarStatus } from '@/types';
 import { formatCurrency } from '@/constants/currency';
 
@@ -52,6 +53,7 @@ export default function CarsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('Inventory');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
   const [modelFilter, setModelFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -97,7 +99,7 @@ export default function CarsPage() {
 
   const fetchCars = useCallback(async () => {
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
-    if (search) params.set('brand', search);
+    if (debouncedSearch) params.set('brand', debouncedSearch);
     if (statusFilter) params.set('status', statusFilter);
     if (modelFilter) params.set('model', modelFilter);
     if (yearFilter) params.set('year', yearFilter);
@@ -119,7 +121,7 @@ export default function CarsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, modelFilter, yearFilter, colorFilter]);
+  }, [page, debouncedSearch, statusFilter, modelFilter, yearFilter, colorFilter]);
 
   useEffect(() => {
     fetchCars();

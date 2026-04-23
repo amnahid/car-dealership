@@ -109,6 +109,11 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
   { timestamps: true }
 );
 
+InstallmentSaleSchema.index({ status: 1 });
+InstallmentSaleSchema.index({ car: 1 });
+InstallmentSaleSchema.index({ customer: 1 });
+InstallmentSaleSchema.index({ startDate: -1 });
+
 InstallmentSaleSchema.pre('save', async function (this: IInstallmentSaleDocument) {
   if (!this.isNew || this.saleId) return;
 

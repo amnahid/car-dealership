@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Supplier {
   _id: string;
@@ -33,9 +34,10 @@ export default function SuppliersPage() {
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [search, setSearch] = useState(searchParams.get('search') || '');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
 
-  const fetchSuppliers = async (page = 1, searchVal = search, status = statusFilter) => {
+  const fetchSuppliers = async (page = 1, searchVal = debouncedSearch, status = statusFilter) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();

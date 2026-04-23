@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import EditCustomerModal from '@/components/EditCustomerModal';
+import { useDebounce } from '@/hooks/useDebounce';
 import ImageUpload, { DocumentUpload } from '@/components/ImageUpload';
 import { uploadImage } from '@/lib/uploadClient';
 
@@ -27,6 +28,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -35,7 +37,7 @@ export default function CustomersPage() {
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
-    if (search) params.set('search', search);
+    if (debouncedSearch) params.set('search', debouncedSearch);
 
     try {
       const res = await fetch(`/api/customers?${params}`);
@@ -47,7 +49,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => {
     fetchCustomers();

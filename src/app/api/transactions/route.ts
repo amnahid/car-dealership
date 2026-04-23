@@ -21,10 +21,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
 
     const query: Record<string, unknown> = {
-      $or: [
-        { isDeleted: false },
-        { isDeleted: { $exists: false } }
-      ]
+      isDeleted: { $ne: true },
     };
 
     if (type) query.type = type;

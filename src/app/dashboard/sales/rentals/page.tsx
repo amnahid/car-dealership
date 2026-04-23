@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Rental {
   _id: string;
@@ -32,6 +33,7 @@ export default function RentalsPage() {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -45,7 +47,7 @@ export default function RentalsPage() {
   const fetchRentals = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
-    if (search) params.set('search', search);
+    if (debouncedSearch) params.set('search', debouncedSearch);
     if (statusFilter) params.set('status', statusFilter);
 
     try {
@@ -59,25 +61,23 @@ export default function RentalsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, debouncedSearch, statusFilter]);
 
   useEffect(() => {
     fetchRentals();
   }, [fetchRentals]);
 
   useEffect(() => {
-    if (showModal) {
-      Promise.all([
-        fetch('/api/cars?limit=100&status=In+Stock').then(r => r.json()),
-        fetch('/api/customers?limit=100').then(r => r.json()),
-        fetch('/api/employees?limit=100&active=true').then(r => r.json()),
-      ]).then(([carData, custData, empData]) => {
-        setCars(carData.cars || []);
-        setCustomers(custData.customers || []);
-        setEmployees(empData.employees || []);
-      });
-    }
-  }, [showModal]);
+    Promise.all([
+      fetch('/api/cars?limit=100&status=In+Stock').then(r => r.json()),
+      fetch('/api/customers?limit=100').then(r => r.json()),
+      fetch('/api/employees?limit=100&active=true').then(r => r.json()),
+    ]).then(([carData, custData, empData]) => {
+      setCars(carData.cars || []);
+      setCustomers(custData.customers || []);
+      setEmployees(empData.employees || []);
+    });
+  }, []);
 
   const handleSearch = (value: string) => {
     setSearch(value);

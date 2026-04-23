@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
+import { useDebounce } from '@/hooks/useDebounce';
 import { formatCurrency } from '@/constants/currency';
 
 interface Purchase {
@@ -35,6 +36,7 @@ export default function StockPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [stats, setStats] = useState<StockStats>({ count: 0, totalPurchase: 0, totalRepair: 0 });
@@ -42,7 +44,7 @@ export default function StockPage() {
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ limit: '15', status: 'In Stock', page: page.toString() });
-    if (search) params.set('brand', search);
+    if (debouncedSearch) params.set('brand', debouncedSearch);
 
     fetch(`/api/cars?${params}`)
       .then(res => res.json())
@@ -52,7 +54,7 @@ export default function StockPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page, search]);
+  }, [page, debouncedSearch]);
 
   useEffect(() => {
     fetch('/api/cars/stats')

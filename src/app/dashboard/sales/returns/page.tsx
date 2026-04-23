@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Sale {
   id: string;
@@ -36,6 +37,7 @@ export default function ReturnsPage() {
   const [returns, setReturns] = useState<PurchaseReturn[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState({ totalRefunds: 0, totalPenalty: 0, count: 0 });
@@ -54,7 +56,7 @@ export default function ReturnsPage() {
   const fetchReturns = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
-    if (search) params.set('search', search);
+    if (debouncedSearch) params.set('search', debouncedSearch);
     if (statusFilter) params.set('status', statusFilter);
 
     try {
@@ -67,7 +69,7 @@ export default function ReturnsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, debouncedSearch, statusFilter]);
 
   const fetchAvailableSales = async (type: string) => {
     try {

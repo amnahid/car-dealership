@@ -33,6 +33,9 @@ const EmployeeSchema = new Schema<IEmployeeDocument>(
   { timestamps: true }
 );
 
+EmployeeSchema.index({ isActive: 1 });
+EmployeeSchema.index({ department: 1 });
+
 EmployeeSchema.pre('save', async function (this: IEmployeeDocument) {
   if (!this.isNew || this.employeeId) return;
   const count = await mongoose.model('Employee').countDocuments();

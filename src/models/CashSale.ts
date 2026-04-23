@@ -69,6 +69,11 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
   { timestamps: true }
 );
 
+CashSaleSchema.index({ status: 1, saleDate: -1 });
+CashSaleSchema.index({ car: 1 });
+CashSaleSchema.index({ customer: 1 });
+CashSaleSchema.index({ saleDate: -1 });
+
 CashSaleSchema.pre('save', async function (this: ICashSaleDocument) {
   if (!this.isNew || this.saleId) return;
 

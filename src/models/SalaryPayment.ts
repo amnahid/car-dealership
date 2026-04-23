@@ -37,6 +37,10 @@ const SalaryPaymentSchema = new Schema<ISalaryPaymentDocument>(
   { timestamps: true }
 );
 
+SalaryPaymentSchema.index({ employee: 1 });
+SalaryPaymentSchema.index({ month: 1, year: 1 });
+SalaryPaymentSchema.index({ paymentDate: -1 });
+
 SalaryPaymentSchema.pre('save', async function (this: ISalaryPaymentDocument) {
   if (!this.isNew || this.paymentId) return;
   const count = await mongoose.model('SalaryPayment').countDocuments();

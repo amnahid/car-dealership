@@ -50,6 +50,11 @@ const CarSchema = new Schema(
 // Auto-generate carId before saving
 // Using 'any' due to TypeScript limitation with `model` field name conflict
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+CarSchema.index({ status: 1 });
+CarSchema.index({ createdAt: -1 });
+CarSchema.index({ brand: 1 });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 CarSchema.pre('save', async function (this: any) {
   if (!this.isNew || this.carId) return;
 

@@ -37,6 +37,11 @@ const DocumentSchema = new Schema<IDocumentDocument>(
   { timestamps: true }
 );
 
+DocumentSchema.index({ car: 1 });
+DocumentSchema.index({ carId: 1 });
+DocumentSchema.index({ expiryDate: 1 });
+DocumentSchema.index({ expiryDate: 1, alertSent30: 1 });
+
 const VehicleDocument: Model<IDocumentDocument> =
   mongoose.models.VehicleDocument ||
   mongoose.model<IDocumentDocument>('VehicleDocument', DocumentSchema);

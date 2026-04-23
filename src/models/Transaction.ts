@@ -48,6 +48,12 @@ const TransactionSchema = new Schema<ITransactionDocument>(
   { timestamps: true }
 );
 
+TransactionSchema.index({ type: 1, date: -1 });
+TransactionSchema.index({ type: 1, category: 1, date: -1 });
+TransactionSchema.index({ date: -1 });
+TransactionSchema.index({ isDeleted: 1, type: 1 });
+TransactionSchema.index({ referenceId: 1, referenceType: 1 });
+
 TransactionSchema.pre('save', async function (this: ITransactionDocument) {
   if (!this.isNew || this.transactionId) return;
   const count = await mongoose.model('Transaction').countDocuments();

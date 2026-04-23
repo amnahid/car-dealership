@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import ImageUpload from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Employee {
   _id: string;
@@ -25,6 +26,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [deptFilter, setDeptFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -35,7 +37,7 @@ export default function EmployeesPage() {
   const fetchEmployees = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
-    if (search) params.set('search', search);
+    if (debouncedSearch) params.set('search', debouncedSearch);
     if (deptFilter) params.set('department', deptFilter);
 
     try {
@@ -49,7 +51,7 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, deptFilter]);
+  }, [page, debouncedSearch, deptFilter]);
 
   useEffect(() => {
     fetchEmployees();
