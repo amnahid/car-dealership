@@ -425,3 +425,9 @@ HRM
 Administrations
 - Users
 - Activity Logs
+
+Seller Name (English)
+Seller Name (Arabic)
+Tax Registration Number (TRN)
+Address
+CSID Secret keys

@@ -17,13 +17,16 @@ export async function GET(request: NextRequest) {
     if (carId) query.car = carId;
     if (documentType) query.documentType = documentType;
 
-    const total = await VehicleDocument.countDocuments(query);
-    const documents = await VehicleDocument.find(query)
-      .sort({ expiryDate: 1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate('car', 'carId brand model')
-      .populate('createdBy', 'name');
+    const [total, documents] = await Promise.all([
+      VehicleDocument.countDocuments(query),
+      VehicleDocument.find(query)
+        .sort({ expiryDate: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('car', 'carId brand model')
+        .populate('createdBy', 'name')
+        .lean(),
+    ]);
 
     return NextResponse.json({
       documents,

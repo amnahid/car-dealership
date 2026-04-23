@@ -35,21 +35,19 @@ export async function GET(request: NextRequest) {
     if (year) query.year = year;
     if (paymentType) query.paymentType = paymentType;
 
+    const now = new Date();
     const skip = (page - 1) * limit;
-    const [payments, total, totalShownAgg] = await Promise.all([
+    const [payments, total, totalShownAgg, monthlyTotal] = await Promise.all([
       SalaryPayment.find(query).sort({ paymentDate: -1 }).skip(skip).limit(limit).lean(),
       SalaryPayment.countDocuments(query),
       SalaryPayment.aggregate([
         { $match: query },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-    ]);
-
-    // Get total paid this month
-    const now = new Date();
-    const monthlyTotal = await SalaryPayment.aggregate([
-      { $match: { month: now.getMonth() + 1, year: now.getFullYear() } },
-      { $group: { _id: null, total: { $sum: '$amount' } } },
+      SalaryPayment.aggregate([
+        { $match: { month: now.getMonth() + 1, year: now.getFullYear() } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
     ]);
 
     return NextResponse.json({

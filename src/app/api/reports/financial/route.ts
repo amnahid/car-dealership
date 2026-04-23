@@ -46,8 +46,17 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Income from sales
-    const [cashSalesIncome, installmentIncome, rentalIncome, salaryExpenses] = await Promise.all([
+    const [
+      cashSalesIncome,
+      installmentIncome,
+      rentalIncome,
+      salaryExpenses,
+      carPurchaseCosts,
+      repairCosts,
+      transactionExpenses,
+      profitPerCar,
+      salesByMonth,
+    ] = await Promise.all([
       CashSale.aggregate([
         { $match: { saleDate: dateFilter } },
         { $group: { _id: null, total: { $sum: '$finalPrice' } } },
@@ -64,78 +73,68 @@ export async function GET(request: NextRequest) {
         { $match: { paymentDate: dateFilter } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
-    ]);
-
-    // Get car purchase costs
-    const carPurchaseCosts = await Car.aggregate([
-      { $match: { createdAt: dateFilter } },
-      { $group: { _id: null, total: { $sum: '$purchasePrice' } } },
-    ]);
-
-    // Get repair costs
-    const [repairCosts, transactionExpenses] = await Promise.all([
+      Car.aggregate([
+        { $match: { createdAt: dateFilter } },
+        { $group: { _id: null, total: { $sum: '$purchasePrice' } } },
+      ]),
       Car.aggregate([
         { $match: { createdAt: dateFilter } },
         { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
       ]),
       Transaction.aggregate([
-        { $match: { type: 'Expense', date: dateFilter, category: { $ne: 'Salary Payment' }, isDeleted: false } },
+        { $match: { type: 'Expense', date: dateFilter, category: { $ne: 'Salary Payment' }, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      CashSale.aggregate([
+        { $match: { saleDate: dateFilter } },
+        {
+          $lookup: {
+            from: 'cars',
+            localField: 'car',
+            foreignField: '_id',
+            as: 'carData',
+          },
+        },
+        { $unwind: '$carData' },
+        {
+          $project: {
+            carId: 1,
+            salePrice: '$finalPrice',
+            purchasePrice: '$carData.purchasePrice',
+            repairCost: '$carData.totalRepairCost',
+          },
+        },
+        {
+          $project: {
+            carId: 1,
+            profit: { $subtract: ['$salePrice', { $add: ['$purchasePrice', { $ifNull: ['$repairCost', 0] }] }] },
+          },
+        },
+        { $group: { _id: null, avgProfit: { $avg: '$profit' }, totalProfit: { $sum: '$profit' } } },
+      ]),
+      CashSale.aggregate([
+        { $match: { saleDate: dateFilter } },
+        {
+          $group: {
+            _id: { $month: '$saleDate' },
+            count: { $sum: 1 },
+            total: { $sum: '$finalPrice' },
+          },
+        },
+        { $sort: { _id: 1 } },
       ]),
     ]);
 
-    const totalIncome = 
-      (cashSalesIncome[0]?.total || 0) + 
-      (installmentIncome[0]?.total || 0) + 
+    const totalIncome =
+      (cashSalesIncome[0]?.total || 0) +
+      (installmentIncome[0]?.total || 0) +
       (rentalIncome[0]?.total || 0);
 
-    const totalExpense = 
-      (salaryExpenses[0]?.total || 0) + 
-      (carPurchaseCosts[0]?.total || 0) + 
-      (repairCosts[0]?.total || 0) + 
+    const totalExpense =
+      (salaryExpenses[0]?.total || 0) +
+      (carPurchaseCosts[0]?.total || 0) +
+      (repairCosts[0]?.total || 0) +
       (transactionExpenses[0]?.total || 0);
-
-    // Profit per car (for sold cars)
-    const profitPerCar = await CashSale.aggregate([
-      { $match: { saleDate: dateFilter } },
-      {
-        $lookup: {
-          from: 'cars',
-          localField: 'car',
-          foreignField: '_id',
-          as: 'carData',
-        },
-      },
-      { $unwind: '$carData' },
-      {
-        $project: {
-          carId: 1,
-          salePrice: '$finalPrice',
-          purchasePrice: '$carData.purchasePrice',
-          repairCost: '$carData.totalRepairCost',
-        },
-      },
-      {
-        $project: {
-          carId: 1,
-          profit: { $subtract: ['$salePrice', { $add: ['$purchasePrice', { $ifNull: ['$repairCost', 0] }] }] },
-        },
-      },
-      { $group: { _id: null, avgProfit: { $avg: '$profit' }, totalProfit: { $sum: '$profit' } } },
-    ]);
-
-    // Sales breakdown
-    const salesByMonth = await CashSale.aggregate([
-      { $match: { saleDate: dateFilter } },
-      {
-        $group: {
-          _id: { $month: '$saleDate' },
-          count: { $sum: 1 },
-          total: { $sum: '$finalPrice' },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
 
     return NextResponse.json({
       summary: {

@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
+      .select('-documents')
       .populate('createdBy', 'name email')
       .populate('purchase', 'supplier supplierName supplierContact purchasePrice purchaseDate isNewCar conditionImages insuranceUrl insuranceExpiry registrationUrl registrationExpiry roadPermitUrl roadPermitExpiry documentUrl notes')
       .populate('purchase.supplier', 'companyName companyLogo phone email')
@@ -55,27 +56,18 @@ export async function OPTIONS(request: NextRequest) {
 
     await connectDB();
 
-    // Get unique colors from cars collection
-    const colors = await Car.distinct('color').lean();
-    const validColors = colors.filter(c => c && c.trim()).sort();
-
-    // Get year range
-    const years = await Car.distinct('year').lean();
-    const validYears = years.filter(y => y).sort((a, b) => Number(b) - Number(a));
-
-    // Get unique brands
-    const brands = await Car.distinct('brand').lean();
-    const validBrands = brands.filter(b => b && b.trim()).sort();
-
-    // Get unique models
-    const models = await Car.distinct('model').lean();
-    const validModels = models.filter(m => m && m.trim()).sort();
+    const [colors, years, brands, models] = await Promise.all([
+      Car.distinct('color'),
+      Car.distinct('year'),
+      Car.distinct('brand'),
+      Car.distinct('model'),
+    ]);
 
     return NextResponse.json({
-      colors: validColors,
-      years: validYears,
-      brands: validBrands,
-      models: validModels,
+      colors: colors.filter((c: string) => c && c.trim()).sort(),
+      years: years.filter((y: number) => y).sort((a: number, b: number) => Number(b) - Number(a)),
+      brands: brands.filter((b: string) => b && b.trim()).sort(),
+      models: models.filter((m: string) => m && m.trim()).sort(),
     });
   } catch (error) {
     console.error('Get car options error:', error);

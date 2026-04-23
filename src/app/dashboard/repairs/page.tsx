@@ -44,11 +44,14 @@ export default function RepairsPage() {
 
   useEffect(() => {
     fetchRepairs();
+  }, [fetchRepairs]);
+
+  useEffect(() => {
     fetch('/api/cars?limit=100')
       .then(res => res.json())
       .then(data => setCars(data.cars || []))
       .catch(console.error);
-  }, [fetchRepairs]);
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this repair?')) return;

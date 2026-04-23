@@ -21,20 +21,20 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
 
     const query: Record<string, unknown> = {
-      $or: [
-        { isDeleted: false },
-        { isDeleted: { $exists: false } }
-      ]
+      isDeleted: { $ne: true },
     };
     if (carId) query.car = carId;
 
-    const total = await Repair.countDocuments(query);
-    const repairs = await Repair.find(query)
-      .sort({ repairDate: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .populate('car', 'carId brand model')
-      .populate('createdBy', 'name');
+    const [total, repairs] = await Promise.all([
+      Repair.countDocuments(query),
+      Repair.find(query)
+        .sort({ repairDate: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('car', 'carId brand model')
+        .populate('createdBy', 'name')
+        .lean(),
+    ]);
 
     return NextResponse.json({
       repairs,
