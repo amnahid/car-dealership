@@ -53,6 +53,11 @@ const PurchaseReturnSchema = new Schema<IPurchaseReturnDocument>(
   { timestamps: true }
 );
 
+PurchaseReturnSchema.index({ status: 1 });
+PurchaseReturnSchema.index({ car: 1 });
+PurchaseReturnSchema.index({ customer: 1 });
+PurchaseReturnSchema.index({ returnDate: -1 });
+
 PurchaseReturnSchema.pre('save', async function (this: IPurchaseReturnDocument) {
   if (!this.isNew || this.returnId) return;
   const count = await mongoose.model('PurchaseReturn').countDocuments();

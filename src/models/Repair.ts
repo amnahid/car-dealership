@@ -42,6 +42,8 @@ const RepairSchema = new Schema<IRepairDocument>(
 RepairSchema.index({ car: 1 });
 RepairSchema.index({ status: 1 });
 RepairSchema.index({ carId: 1 });
+RepairSchema.index({ isDeleted: 1 });
+RepairSchema.index({ repairDate: -1 });
 
 // Calculate totalCost before save
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

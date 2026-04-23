@@ -37,6 +37,11 @@ const NotificationLogSchema = new Schema<INotificationLogDocument>(
   { timestamps: true }
 );
 
+NotificationLogSchema.index({ channel: 1 });
+NotificationLogSchema.index({ status: 1 });
+NotificationLogSchema.index({ createdAt: -1 });
+NotificationLogSchema.index({ referenceId: 1, referenceType: 1 });
+
 NotificationLogSchema.pre('save', async function (this: INotificationLogDocument) {
   if (!this.isNew || this.notificationId) return;
   const count = await mongoose.model('NotificationLog').countDocuments();

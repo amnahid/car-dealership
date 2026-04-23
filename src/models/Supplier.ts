@@ -51,6 +51,9 @@ const SupplierSchema = new Schema<ISupplierDocument>(
   { timestamps: true }
 );
 
+SupplierSchema.index({ status: 1 });
+SupplierSchema.index({ createdAt: -1 });
+
 SupplierSchema.pre('save', async function (this: ISupplierDocument) {
   if (!this.isNew || this.supplierId) return;
 

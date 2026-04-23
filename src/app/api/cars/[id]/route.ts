@@ -22,8 +22,10 @@ export async function GET(
       .lean();
     if (!car) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
 
-    const repairs = await Repair.find({ car: id }).sort({ repairDate: -1 });
-    const documents = await VehicleDocument.find({ car: id }).sort({ expiryDate: 1 });
+    const [repairs, documents] = await Promise.all([
+      Repair.find({ car: id }).sort({ repairDate: -1 }).lean(),
+      VehicleDocument.find({ car: id }).sort({ expiryDate: 1 }).lean(),
+    ]);
 
     return NextResponse.json({ car, repairs, documents });
   } catch (error) {
@@ -55,10 +57,12 @@ export async function PUT(
 
     if (purchase) {
       if (car.purchase) {
-        const existingPurchase = await CarPurchase.findById(car.purchase);
-        
+        const [existingPurchase, oldTransaction] = await Promise.all([
+          CarPurchase.findById(car.purchase),
+          Transaction.findOne({ referenceId: car.carId, referenceType: 'CarPurchase' }),
+        ]);
+
         if (existingPurchase && existingPurchase.purchasePrice !== purchase.purchasePrice) {
-          const oldTransaction = await Transaction.findOne({ referenceId: car.carId, referenceType: 'CarPurchase' });
           if (oldTransaction) {
             oldTransaction.amount = purchase.purchasePrice;
             oldTransaction.description = `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`;
@@ -78,7 +82,7 @@ export async function PUT(
             purchase.transactionId = transaction._id;
           }
         }
-        
+
         await CarPurchase.findByIdAndUpdate(car.purchase, purchase);
       } else {
         const transaction = await Transaction.create({

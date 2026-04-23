@@ -28,16 +28,18 @@ export async function GET(request: NextRequest) {
     if (color) query.color = { $regex: color, $options: 'i' };
     if (status) query.status = status;
 
-    const total = await Car.countDocuments(query);
-    const cars = await Car.find(query)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .select('-documents')
-      .populate('createdBy', 'name email')
-      .populate('purchase', 'supplier supplierName supplierContact purchasePrice purchaseDate isNewCar conditionImages insuranceUrl insuranceExpiry registrationUrl registrationExpiry roadPermitUrl roadPermitExpiry documentUrl notes')
-      .populate('purchase.supplier', 'companyName companyLogo phone email')
-      .lean();
+    const [total, cars] = await Promise.all([
+      Car.countDocuments(query),
+      Car.find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .select('-documents')
+        .populate('createdBy', 'name email')
+        .populate('purchase', 'supplier supplierName supplierContact purchasePrice purchaseDate isNewCar conditionImages insuranceUrl insuranceExpiry registrationUrl registrationExpiry roadPermitUrl roadPermitExpiry documentUrl notes')
+        .populate('purchase.supplier', 'companyName companyLogo phone email')
+        .lean(),
+    ]);
 
     return NextResponse.json({
       cars,

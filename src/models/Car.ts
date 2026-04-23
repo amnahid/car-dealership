@@ -53,6 +53,8 @@ const CarSchema = new Schema(
 CarSchema.index({ status: 1 });
 CarSchema.index({ createdAt: -1 });
 CarSchema.index({ brand: 1 });
+CarSchema.index({ year: 1 });
+CarSchema.index({ model: 1 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 CarSchema.pre('save', async function (this: any) {

@@ -38,15 +38,13 @@ export async function GET(request: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    const [employees, total] = await Promise.all([
+    const [employees, total, salaryStats] = await Promise.all([
       Employee.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
       Employee.countDocuments(query),
-    ]);
-
-    // Get total salary expense
-    const salaryStats = await Employee.aggregate([
-      { $match: { isActive: true } },
-      { $group: { _id: null, total: { $sum: '$baseSalary' } } },
+      Employee.aggregate([
+        { $match: { isActive: true } },
+        { $group: { _id: null, total: { $sum: '$baseSalary' } } },
+      ]),
     ]);
 
     return NextResponse.json({
