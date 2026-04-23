@@ -50,6 +50,9 @@ const CarPurchaseSchema = new Schema(
   { timestamps: true }
 );
 
+CarPurchaseSchema.index({ supplier: 1 });
+CarPurchaseSchema.index({ purchaseDate: -1 });
+
 const CarPurchase: Model<ICarPurchaseDocument> =
   mongoose.models.CarPurchase || mongoose.model('CarPurchase', CarPurchaseSchema);
 

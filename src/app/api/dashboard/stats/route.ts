@@ -21,6 +21,76 @@ export async function GET(request: NextRequest) {
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+    const quick = request.nextUrl.searchParams.get('quick') === 'true';
+
+    if (quick) {
+      // Fast path: only countDocuments + simple aggregates, no $unwind, no $lookup
+      const [
+        totalCars, carsInStock, carsUnderRepair, carsSold, carsRented, carsReserved,
+        totalCashSales, totalInstallments, activeRentals, expiringDocuments,
+        monthlyCashRevenueAgg, monthlyRentalRevenueAgg, monthlySalariesAgg,
+        installmentStatsAgg,
+      ] = await Promise.all([
+        Car.countDocuments(),
+        Car.countDocuments({ status: 'In Stock' }),
+        Car.countDocuments({ status: 'Under Repair' }),
+        Car.countDocuments({ status: 'Sold' }),
+        Car.countDocuments({ status: 'Rented' }),
+        Car.countDocuments({ status: 'Reserved' }),
+        CashSale.countDocuments(),
+        InstallmentSale.countDocuments({ status: 'Active' }),
+        Rental.countDocuments({ status: 'Active' }),
+        VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
+        CashSale.aggregate([
+          { $match: { saleDate: { $gte: startOfMonth } } },
+          { $group: { _id: null, total: { $sum: '$finalPrice' } } },
+        ]),
+        Rental.aggregate([
+          { $match: { startDate: { $gte: startOfMonth } } },
+          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        ]),
+        Transaction.aggregate([
+          { $match: { type: 'Expense', category: 'Salary Payment', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
+        ]),
+        InstallmentSale.aggregate([
+          { $match: { status: 'Active' } },
+          { $facet: {
+            overdue: [
+              { $unwind: '$paymentSchedule' },
+              { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $lt: now } } },
+              { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } },
+            ],
+            upcoming: [
+              { $unwind: '$paymentSchedule' },
+              { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $gte: now, $lte: sevenDaysFromNow } } },
+              { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } },
+            ],
+            pending: [
+              { $group: { _id: null, total: { $sum: '$remainingAmount' } } },
+            ],
+          }},
+        ]),
+      ]);
+
+      const installmentStats = installmentStatsAgg[0] || {};
+      const overdueAgg = installmentStats.overdue?.[0];
+      const upcomingAgg = installmentStats.upcoming?.[0];
+      const pendingInstallmentsAgg = installmentStats.pending?.[0];
+
+      return NextResponse.json({
+        totalCars, carsInStock, carsUnderRepair, carsSold, carsRented, carsReserved,
+        totalCashSales, totalInstallments, activeRentals, expiringDocuments,
+        monthlyRevenue: (monthlyCashRevenueAgg[0]?.total || 0) + (monthlyRentalRevenueAgg[0]?.total || 0),
+        monthlyExpenses: monthlySalariesAgg[0]?.total || 0,
+        pendingInstallments: pendingInstallmentsAgg?.total || 0,
+        overdueInstallments: overdueAgg?.count || 0,
+        overdueInstallmentsAmount: overdueAgg?.total || 0,
+        upcomingInstallments: upcomingAgg?.count || 0,
+        upcomingInstallmentsAmount: upcomingAgg?.total || 0,
+      });
+    }
+
     const [
       totalCars,
       carsInStock,
@@ -40,12 +110,9 @@ export async function GET(request: NextRequest) {
       totalRepairCostAgg,
       totalSalariesAgg,
       salesByMonth,
-      // second batch — now merged
-      overdueAgg,
-      upcomingAgg,
+      installmentStatsAgg,
       expiringDocuments,
       monthlySalariesAgg,
-      pendingInstallmentsAgg,
       recentActivity,
       expenseByCategoryAgg,
       monthlyTrendsAgg,
@@ -95,26 +162,28 @@ export async function GET(request: NextRequest) {
       // formerly second batch
       InstallmentSale.aggregate([
         { $match: { status: 'Active' } },
-        { $unwind: '$paymentSchedule' },
-        { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $lt: now } } },
-        { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
-      ]),
-      InstallmentSale.aggregate([
-        { $match: { status: 'Active' } },
-        { $unwind: '$paymentSchedule' },
-        { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $gte: now, $lte: sevenDaysFromNow } } },
-        { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } }
+        { $facet: {
+          overdue: [
+            { $unwind: '$paymentSchedule' },
+            { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $lt: now } } },
+            { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } },
+          ],
+          upcoming: [
+            { $unwind: '$paymentSchedule' },
+            { $match: { 'paymentSchedule.status': { $ne: 'Paid' }, 'paymentSchedule.dueDate': { $gte: now, $lte: sevenDaysFromNow } } },
+            { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$paymentSchedule.amount' } } },
+          ],
+          pending: [
+            { $group: { _id: null, total: { $sum: '$remainingAmount' } } },
+          ],
+        }},
       ]),
       VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
       Transaction.aggregate([
         { $match: { type: 'Expense', category: 'Salary Payment', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
-      InstallmentSale.aggregate([
-        { $match: { status: 'Active' } },
-        { $group: { _id: null, total: { $sum: '$remainingAmount' } } },
-      ]),
-      ActivityLog.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name'),
+      ActivityLog.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name').lean(),
       Transaction.aggregate([
         { $match: { type: 'Expense', isDeleted: { $ne: true } } },
         { $group: { _id: '$category', total: { $sum: '$amount' } } }
@@ -144,6 +213,11 @@ export async function GET(request: NextRequest) {
     const monthlyExpenses = monthlySalariesAgg[0]?.total || 0;
     const monthlyProfit = monthlyRevenue - monthlyExpenses;
 
+    const installmentStats = installmentStatsAgg[0] || {};
+    const overdueAgg = installmentStats.overdue?.[0];
+    const upcomingAgg = installmentStats.upcoming?.[0];
+    const pendingInstallmentsAgg = installmentStats.pending?.[0];
+
     return NextResponse.json({
       totalCars,
       carsInStock,
@@ -166,11 +240,11 @@ export async function GET(request: NextRequest) {
       cashRevenue,
       installmentPaid,
       rentalRevenue,
-      pendingInstallments: pendingInstallmentsAgg[0]?.total || 0,
-      overdueInstallments: (overdueAgg[0]?.count || 0),
-      overdueInstallmentsAmount: (overdueAgg[0]?.total || 0),
-      upcomingInstallments: (upcomingAgg[0]?.count || 0),
-      upcomingInstallmentsAmount: (upcomingAgg[0]?.total || 0),
+      pendingInstallments: pendingInstallmentsAgg?.total || 0,
+      overdueInstallments: overdueAgg?.count || 0,
+      overdueInstallmentsAmount: overdueAgg?.total || 0,
+      upcomingInstallments: upcomingAgg?.count || 0,
+      upcomingInstallmentsAmount: upcomingAgg?.total || 0,
       salesByMonth: salesByMonth.map((s: { _id: string; total: number; count: number }) => ({ month: s._id, total: s.total, count: s.count })),
       incomeByType: [
         { name: 'Cash Sale', value: cashRevenue },

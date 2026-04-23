@@ -188,6 +188,7 @@ function FinancialCard({
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [chartsLoading, setChartsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showAlertsModal, setShowAlertsModal] = useState(false);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
@@ -196,17 +197,29 @@ export default function DashboardPage() {
     const params = new URLSearchParams();
     if (dateRange.startDate) params.append('startDate', dateRange.startDate);
     if (dateRange.endDate) params.append('endDate', dateRange.endDate);
-    
+
+    // Step 1: fetch quick stats (counts only) — renders stat cards fast
+    fetch(`/api/dashboard/stats?quick=true&${params.toString()}`)
+      .then((res) => res.ok ? res.json() : Promise.reject('API Error'))
+      .then((data) => {
+        setStats((prev) => ({ ...prev, ...data } as StatsData));
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Failed to load dashboard:', err);
+        setLoading(false);
+      });
+
+    // Step 2: fetch full stats (charts + trends) — populates charts when ready
     fetch(`/api/dashboard/stats?${params.toString()}`)
       .then((res) => res.ok ? res.json() : Promise.reject('API Error'))
       .then((data) => {
         setStats(data);
       })
       .catch((err) => {
-        console.error('Failed to load dashboard:', err);
-        setStats(null);
+        console.error('Failed to load dashboard charts:', err);
       })
-      .finally(() => setLoading(false));
+      .finally(() => setChartsLoading(false));
   }, []);
 
   if (loading) {
@@ -404,7 +417,9 @@ export default function DashboardPage() {
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
           Monthly Revenue (Last 12 Months)
         </h3>
-        {stats.salesByMonth && stats.salesByMonth.length > 0 && (
+        {chartsLoading ? (
+          <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+        ) : stats.salesByMonth && stats.salesByMonth.length > 0 && (
           <BarChartComponent
             data={stats.salesByMonth.map((s) => ({
               month: s.month,
@@ -420,7 +435,9 @@ export default function DashboardPage() {
       {/* Charts Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         {/* Income Breakdown */}
-        {stats.incomeByType && stats.incomeByType.length > 0 && (
+        {chartsLoading ? (
+          <div className="card" style={{ padding: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+        ) : stats.incomeByType && stats.incomeByType.length > 0 && (
           <PieChartComponent
             data={stats.incomeByType}
             title="Income by Type"
@@ -429,7 +446,9 @@ export default function DashboardPage() {
           />
         )}
         {/* Expense Breakdown */}
-        {stats.expenseByCategory && stats.expenseByCategory.length > 0 && (
+        {chartsLoading ? (
+          <div className="card" style={{ padding: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+        ) : stats.expenseByCategory && stats.expenseByCategory.length > 0 && (
           <PieChartComponent
             data={stats.expenseByCategory}
             title="Expenses by Category"
@@ -440,7 +459,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Profit Trend */}
-      {stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
+      {chartsLoading ? (
+        <div className="card" style={{ padding: '24px', marginBottom: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+      ) : stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <LineChartComponent
             data={stats.monthlyTrends.map((t) => ({
@@ -462,7 +483,9 @@ export default function DashboardPage() {
       )}
 
       {/* Profit Area Chart */}
-      {stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
+      {chartsLoading ? (
+        <div className="card" style={{ padding: '24px', marginBottom: '24px', height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+      ) : stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <AreaChartComponent
             data={stats.monthlyTrends.map((t) => ({
@@ -482,7 +505,9 @@ export default function DashboardPage() {
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
           Recent Activity
         </h3>
-        {stats.recentActivity.length === 0 ? (
+        {chartsLoading ? (
+          <p style={{ fontSize: '14px', color: '#9ca8b3' }}>Loading activity...</p>
+        ) : !stats.recentActivity || stats.recentActivity.length === 0 ? (
           <p style={{ fontSize: '14px', color: '#9ca8b3' }}>No activity yet.</p>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
