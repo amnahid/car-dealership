@@ -5,10 +5,14 @@ import Car from '@/models/Car';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 
+import mongoose from 'mongoose';
+
 async function updateCarRepairCost(carObjectId: string) {
-  const repairs = await Repair.find({ car: carObjectId });
-  const total = repairs.reduce((sum, r) => sum + (r.totalCost || 0), 0);
-  await Car.findByIdAndUpdate(carObjectId, { totalRepairCost: total });
+  const result = await Repair.aggregate([
+    { $match: { car: new mongoose.Types.ObjectId(carObjectId) } },
+    { $group: { _id: null, total: { $sum: '$totalCost' } } },
+  ]);
+  await Car.findByIdAndUpdate(carObjectId, { totalRepairCost: result[0]?.total || 0 });
 }
 
 export async function GET(
@@ -20,7 +24,8 @@ export async function GET(
     const { id } = await params;
     const repair = await Repair.findById(id)
       .populate('car', 'carId brand model')
-      .populate('createdBy', 'name');
+      .populate('createdBy', 'name')
+      .lean();
     if (!repair) return NextResponse.json({ error: 'Repair not found' }, { status: 404 });
     return NextResponse.json({ repair });
   } catch (error) {

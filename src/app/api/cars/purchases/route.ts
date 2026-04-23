@@ -20,15 +20,17 @@ export async function GET(request: NextRequest) {
     if (carId) query.car = carId;
     if (supplierId) query.supplier = supplierId;
 
-    const total = await CarPurchase.countDocuments(query);
-    const purchases = await CarPurchase.find(query)
-      .populate('car', 'carId brand model year color images')
-      .populate('supplier', 'companyName supplierId phone')
-      .populate('createdBy', 'name email')
-      .sort({ purchaseDate: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .lean();
+    const [total, purchases] = await Promise.all([
+      CarPurchase.countDocuments(query),
+      CarPurchase.find(query)
+        .populate('car', 'carId brand model year color images')
+        .populate('supplier', 'companyName supplierId phone')
+        .populate('createdBy', 'name email')
+        .sort({ purchaseDate: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ]);
 
     return NextResponse.json({
       purchases,

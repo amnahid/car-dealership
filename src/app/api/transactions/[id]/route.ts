@@ -22,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid transaction ID' }, { status: 400 });
     }
 
-    const transaction = await Transaction.findById(id);
+    const transaction = await Transaction.findById(id).lean();
 
     if (!transaction) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });

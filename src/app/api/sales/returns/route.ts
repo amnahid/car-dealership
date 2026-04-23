@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
         .populate('customer', 'fullName phone profilePhoto')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       PurchaseReturn.countDocuments(query),
       PurchaseReturn.aggregate([
         { $match: status ? { status } : {} },

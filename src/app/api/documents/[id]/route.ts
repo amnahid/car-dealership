@@ -12,7 +12,7 @@ export async function GET(
   try {
     await connectDB();
     const { id } = await params;
-    const document = await VehicleDocument.findById(id).populate('car', 'carId brand model');
+    const document = await VehicleDocument.findById(id).populate('car', 'carId brand model').lean();
     
     if (!document) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });

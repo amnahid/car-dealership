@@ -35,6 +35,7 @@ const EmployeeSchema = new Schema<IEmployeeDocument>(
 
 EmployeeSchema.index({ isActive: 1 });
 EmployeeSchema.index({ department: 1 });
+EmployeeSchema.index({ name: 1 });
 
 EmployeeSchema.pre('save', async function (this: IEmployeeDocument) {
   if (!this.isNew || this.employeeId) return;

@@ -53,6 +53,8 @@ TransactionSchema.index({ type: 1, category: 1, date: -1 });
 TransactionSchema.index({ date: -1 });
 TransactionSchema.index({ isDeleted: 1, type: 1 });
 TransactionSchema.index({ referenceId: 1, referenceType: 1 });
+TransactionSchema.index({ type: 1, isDeleted: 1, date: -1 });
+TransactionSchema.index({ category: 1, date: -1 });
 
 TransactionSchema.pre('save', async function (this: ITransactionDocument) {
   if (!this.isNew || this.transactionId) return;

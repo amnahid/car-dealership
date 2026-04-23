@@ -21,7 +21,8 @@ export async function GET(
       .populate('car', 'carId brand model images')
       .populate('customer', 'fullName phone profilePhoto')
       .populate('createdBy', 'name')
-      .populate('approvedBy', 'name');
+      .populate('approvedBy', 'name')
+      .lean();
 
     if (!returnItem) {
       return NextResponse.json({ error: 'Return not found' }, { status: 404 });
@@ -76,7 +77,8 @@ export async function PUT(
       { new: true }
     )
       .populate('car', 'carId brand model images')
-      .populate('customer', 'fullName phone profilePhoto');
+      .populate('customer', 'fullName phone profilePhoto')
+      .lean();
 
     return NextResponse.json({ return: updated });
   } catch (error) {

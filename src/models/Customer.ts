@@ -46,6 +46,7 @@ const CustomerSchema = new Schema<ICustomerDocument>(
 CustomerSchema.index({ isDeleted: 1 });
 CustomerSchema.index({ customerType: 1 });
 CustomerSchema.index({ createdAt: -1 });
+CustomerSchema.index({ phone: 1 });
 
 CustomerSchema.pre('save', async function (this: ICustomerDocument) {
   if (!this.isNew || this.customerId) return;

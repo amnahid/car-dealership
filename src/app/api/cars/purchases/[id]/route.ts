@@ -85,9 +85,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Purchase not found' }, { status: 404 });
     }
 
-    await Car.findByIdAndUpdate(purchase.car, { purchase: null });
-
-    await CarPurchase.findByIdAndDelete(id);
+    await Promise.all([
+      Car.findByIdAndUpdate(purchase.car, { purchase: null }),
+      CarPurchase.findByIdAndDelete(id),
+    ]);
 
     await logActivity({
       userId: auth.userId,
