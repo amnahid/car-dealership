@@ -7,6 +7,7 @@ import CashSale from '@/models/CashSale';
 import InstallmentSale from '@/models/InstallmentSale';
 import Rental from '@/models/Rental';
 import Transaction from '@/models/Transaction';
+import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 
 export async function GET(request: NextRequest) {

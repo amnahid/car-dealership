@@ -7,6 +7,7 @@ import InstallmentSale from '@/models/InstallmentSale';
 import Rental from '@/models/Rental';
 import Customer from '@/models/Customer';
 import Car from '@/models/Car';
+import User from '@/models/User';
 
 export async function GET(
   request: NextRequest,

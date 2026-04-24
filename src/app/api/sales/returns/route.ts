@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import { getAuthPayload } from '@/lib/apiAuth';
 import PurchaseReturn from '@/models/PurchaseReturn';
+import Customer from '@/models/Customer';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {

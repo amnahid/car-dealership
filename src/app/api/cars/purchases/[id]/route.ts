@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import CarPurchase from '@/models/CarPurchase';
 import Car from '@/models/Car';
+import User from '@/models/User';
+import Supplier from '@/models/Supplier';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 

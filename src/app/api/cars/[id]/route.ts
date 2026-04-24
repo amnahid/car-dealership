@@ -5,6 +5,8 @@ import CarPurchase from '@/models/CarPurchase';
 import Repair from '@/models/Repair';
 import VehicleDocument from '@/models/Document';
 import Transaction from '@/models/Transaction';
+import User from '@/models/User';
+import Supplier from '@/models/Supplier';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 

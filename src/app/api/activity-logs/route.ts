@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import ActivityLog from '@/models/ActivityLog';
+import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 
 export async function GET(request: NextRequest) {

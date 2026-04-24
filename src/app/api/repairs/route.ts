@@ -3,6 +3,7 @@ import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Repair from '@/models/Repair';
 import Car from '@/models/Car';
 import Transaction from '@/models/Transaction';
+import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 
