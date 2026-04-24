@@ -35,10 +35,20 @@ export async function GET(request: NextRequest) {
     let skipped = 0;
     const errors: string[] = [];
 
+    // Batch-load all customers and cars upfront to avoid N+1 queries
+    const customerIds = [...new Set(sales.map((s) => s.customer.toString()))];
+    const carIds = [...new Set(sales.filter((s) => s.car).map((s) => s.car!.toString()))];
+    const [customers, cars] = await Promise.all([
+      Customer.find({ _id: { $in: customerIds } }).lean(),
+      carIds.length > 0 ? Car.find({ _id: { $in: carIds } }).lean() : [],
+    ]);
+    const customerMap = new Map(customers.map((c) => [c._id.toString(), c]));
+    const carMap = new Map(cars.map((c) => [c._id.toString(), c]));
+
     for (const sale of sales) {
       try {
-        const customerData = await Customer.findById(sale.customer).lean();
-        const carData = sale.car ? await Car.findById(sale.car).lean() : null;
+        const customerData = customerMap.get(sale.customer.toString());
+        const carData = sale.car ? carMap.get(sale.car.toString()) ?? null : null;
 
         if (!customerData) {
           skipped++;

@@ -82,7 +82,7 @@ export async function PUT(
       }
     }
 
-    await Supplier.findByIdAndUpdate(id, {
+    const updatedSupplier = await Supplier.findByIdAndUpdate(id, {
       ...(companyName && { companyName }),
       ...(companyLogo !== undefined && { companyLogo }),
       ...(companyNumber && { companyNumber }),
@@ -92,9 +92,7 @@ export async function PUT(
       ...(salesAgent !== undefined && { salesAgent }),
       ...(status && { status }),
       ...(notes !== undefined && { notes }),
-    });
-
-    const updatedSupplier = await Supplier.findById(id);
+    }, { new: true });
 
     return NextResponse.json({ supplier: updatedSupplier });
   } catch (error) {

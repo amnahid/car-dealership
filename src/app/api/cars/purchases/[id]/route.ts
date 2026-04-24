@@ -47,7 +47,8 @@ export async function PUT(
 
     const purchase = await CarPurchase.findByIdAndUpdate(id, body, { new: true })
       .populate('car', 'carId brand model year')
-      .populate('supplier', 'companyName supplierId');
+      .populate('supplier', 'companyName supplierId')
+      .lean();
 
     if (!purchase) {
       return NextResponse.json({ error: 'Purchase not found' }, { status: 404 });

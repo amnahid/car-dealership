@@ -12,12 +12,13 @@ export async function GET() {
       expiryDate: { $gte: now, $lte: thirtyDaysFromNow },
     })
       .sort({ expiryDate: 1 })
-      .populate('car', 'carId brand model');
+      .populate('car', 'carId brand model')
+      .lean();
 
     const documentsWithDays = documents.map((doc) => {
       const msPerDay = 24 * 60 * 60 * 1000;
-      const daysUntilExpiry = Math.ceil((doc.expiryDate.getTime() - now.getTime()) / msPerDay);
-      return { ...doc.toObject(), daysUntilExpiry };
+      const daysUntilExpiry = Math.ceil(((doc.expiryDate as Date).getTime() - now.getTime()) / msPerDay);
+      return { ...doc, daysUntilExpiry };
     });
 
     return NextResponse.json({ documents: documentsWithDays });

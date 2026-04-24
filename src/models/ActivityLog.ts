@@ -26,6 +26,7 @@ const ActivityLogSchema = new Schema<IActivityLogDocument>(
 ActivityLogSchema.set('timestamps', { createdAt: true, updatedAt: false });
 ActivityLogSchema.index({ createdAt: -1 });
 ActivityLogSchema.index({ user: 1, createdAt: -1 });
+ActivityLogSchema.index({ module: 1, createdAt: -1 });
 
 const ActivityLog: Model<IActivityLogDocument> =
   mongoose.models.ActivityLog ||

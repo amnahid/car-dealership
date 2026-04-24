@@ -80,6 +80,7 @@ RentalSchema.index({ status: 1 });
 RentalSchema.index({ car: 1 });
 RentalSchema.index({ customer: 1 });
 RentalSchema.index({ startDate: -1 });
+RentalSchema.index({ status: 1, createdAt: -1 });
 
 RentalSchema.pre('save', async function (this: IRentalDocument) {
   if (!this.isNew || this.rentalId) return;
