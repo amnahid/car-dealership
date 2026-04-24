@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import VehicleDocument from '@/models/Document';
+import Car from '@/models/Car';
 
 export async function GET() {
   try {

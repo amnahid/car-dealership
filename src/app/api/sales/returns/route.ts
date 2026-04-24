@@ -5,6 +5,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import PurchaseReturn from '@/models/PurchaseReturn';
 import Customer from '@/models/Customer';
 import User from '@/models/User';
+import Car from '@/models/Car';
 
 export async function GET(request: NextRequest) {
   try {

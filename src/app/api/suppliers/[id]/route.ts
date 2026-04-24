@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Supplier from '@/models/Supplier';
 import CarPurchase from '@/models/CarPurchase';
+import Car from '@/models/Car';
 import mongoose from 'mongoose';
 
 export async function GET(
