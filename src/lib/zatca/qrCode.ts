@@ -5,19 +5,12 @@ import QRCode from 'qrcode';
  * Each field is encoded as: [tag_byte][length_byte(s)][value_bytes]
  */
 
-function encodeTLV(tag: number, value: string): Buffer {
-  const valueBuffer = Buffer.from(value, 'utf8');
+function encodeTLVBytes(tag: number, valueBuffer: Buffer): Buffer {
   const length = valueBuffer.length;
-
   if (length <= 127) {
-    return Buffer.concat([
-      Buffer.from([tag, length]),
-      valueBuffer,
-    ]);
+    return Buffer.concat([Buffer.from([tag, length]), valueBuffer]);
   }
-
-  // Multi-byte length encoding
-  const lengthBytes = [];
+  const lengthBytes: number[] = [];
   let len = length;
   while (len > 0) {
     lengthBytes.unshift(len & 0xff);
@@ -27,6 +20,10 @@ function encodeTLV(tag: number, value: string): Buffer {
     Buffer.from([tag, 0x80 | lengthBytes.length, ...lengthBytes]),
     valueBuffer,
   ]);
+}
+
+function encodeTLV(tag: number, value: string): Buffer {
+  return encodeTLVBytes(tag, Buffer.from(value, 'utf8'));
 }
 
 export interface ZatcaQRData {
@@ -72,17 +69,20 @@ export function buildTLVBuffer(data: ZatcaQRData): Buffer {
  * Returns a data URL string (data:image/png;base64,...)
  */
 export async function generateZatcaQRCode(data: ZatcaQRData): Promise<string> {
-  const tlvBuffer = buildTLVBuffer(data);
-  const base64TLV = tlvBuffer.toString('base64');
+  const base64TLV = buildTLVBase64(data);
+  return generateZatcaQRCodeFromTLV(base64TLV);
+}
 
-  const qrDataUrl = await QRCode.toDataURL(base64TLV, {
+/**
+ * Generate QR code image from a pre-built base64 TLV string.
+ */
+export async function generateZatcaQRCodeFromTLV(tlvBase64: string): Promise<string> {
+  return QRCode.toDataURL(tlvBase64, {
     errorCorrectionLevel: 'M',
     type: 'image/png',
     width: 200,
     margin: 1,
   });
-
-  return qrDataUrl;
 }
 
 /**
@@ -90,4 +90,28 @@ export async function generateZatcaQRCode(data: ZatcaQRData): Promise<string> {
  */
 export function buildTLVBase64(data: ZatcaQRData): string {
   return buildTLVBuffer(data).toString('base64');
+}
+
+export interface ZatcaQRDataPhase2 extends ZatcaQRData {
+  xmlHashBytes: Buffer;   // raw 32-byte SHA256 digest
+  ecdsaSigBytes: Buffer;  // raw DER ECDSA signature bytes
+  publicKeyBytes: Buffer; // raw DER SubjectPublicKeyInfo bytes
+}
+
+/**
+ * Build Phase 2 TLV with tags 1–8.
+ * Tags 6–8 are raw binary (not UTF-8) per ZATCA Phase 2 QR spec.
+ */
+export function buildTLVBase64Phase2(data: ZatcaQRDataPhase2): string {
+  const parts: Buffer[] = [
+    encodeTLV(1, data.sellerName),
+    encodeTLV(2, data.sellerTrn),
+    encodeTLV(3, data.issueTimestamp),
+    encodeTLV(4, data.totalWithVat),
+    encodeTLV(5, data.vatTotal),
+    encodeTLVBytes(6, data.xmlHashBytes),
+    encodeTLVBytes(7, data.ecdsaSigBytes),
+    encodeTLVBytes(8, data.publicKeyBytes),
+  ];
+  return Buffer.concat(parts).toString('base64');
 }

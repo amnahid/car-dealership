@@ -43,6 +43,7 @@ interface Sale {
   invoiceType?: 'Standard' | 'Simplified';
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   zatcaUUID?: string;
+  zatcaErrorMessage?: string;
   zatcaQRCode?: string;
   zatcaHash?: string;
 }
@@ -286,7 +287,7 @@ export default function InstallmentSaleDetailPage() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: '#9ca8b3' }}>ZATCA Status</span>
-            <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} />
+            <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} errorMessage={sale.zatcaErrorMessage} />
           </div>
           {sale.zatcaUUID && (
             <div style={{ display: 'flex', justifyContent: 'space-between', gridColumn: '1 / -1' }}>
@@ -320,21 +321,39 @@ const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: str
   NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
 };
 
-function ZatcaStatusBadge({ status, saleId }: { status?: string; saleId: string }) {
+function ZatcaStatusBadge({ status, saleId, errorMessage }: { status?: string; saleId: string; errorMessage?: string }) {
   const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState('');
   const s = status ? (ZATCA_BADGE_COLORS[status] ?? ZATCA_BADGE_COLORS['NotRequired']) : ZATCA_BADGE_COLORS['NotRequired'];
 
   const handleRetry = async () => {
     setRetrying(true);
+    setRetryError('');
     try {
-      await fetch('/api/zatca/retry', {
+      const res = await fetch('/api/zatca/retry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ referenceId: saleId, referenceType: 'InstallmentSale' }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setRetryError(data.error || `Server error ${res.status}`);
+        return;
+      }
+      const failed = data.results?.find((r: { success: boolean; error?: string }) => !r.success);
+      if (failed) {
+        setRetryError(failed.error || 'ZATCA rejected the invoice');
+        return;
+      }
       window.location.reload();
-    } catch { /* silent */ } finally { setRetrying(false); }
+    } catch (e) {
+      setRetryError(e instanceof Error ? e.message : 'Network error');
+    } finally {
+      setRetrying(false);
+    }
   };
+
+  const displayError = retryError || errorMessage;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
@@ -342,9 +361,16 @@ function ZatcaStatusBadge({ status, saleId }: { status?: string; saleId: string 
         {s.label}
       </span>
       {status === 'Failed' && (
-        <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          {retrying ? 'Retrying...' : '↺ Retry'}
-        </button>
+        <>
+          <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            {retrying ? 'Retrying...' : '↺ Retry'}
+          </button>
+          {displayError && (
+            <span style={{ fontSize: '11px', color: '#c62828', maxWidth: '260px', textAlign: 'right', wordBreak: 'break-word', lineHeight: '1.4' }}>
+              {displayError}
+            </span>
+          )}
+        </>
       )}
     </div>
   );

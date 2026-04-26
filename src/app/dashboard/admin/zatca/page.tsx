@@ -19,6 +19,7 @@ interface ZatcaConfig {
   complianceCsid?: string;
   productionCsid?: string;
   publicKey?: string;
+  certificate?: string;
   pih?: string;
   isActive?: boolean;
 }
@@ -46,6 +47,7 @@ export default function ZatcaSettingsPage() {
   const [activeTab, setActiveTab] = useState<'config' | 'onboarding' | 'status'>('config');
   const [onboardAction, setOnboardAction] = useState('');
   const [onboardInput, setOnboardInput] = useState('');
+  const [otpInput, setOtpInput] = useState('');
   const [onboardResult, setOnboardResult] = useState<string>('');
   const [onboardLoading, setOnboardLoading] = useState(false);
 
@@ -96,7 +98,13 @@ export default function ZatcaSettingsPage() {
     setOnboardResult('');
     try {
       const body: Record<string, string> = { action };
-      if (action === 'request_compliance_csid') body.csr = onboardInput;
+      if (action === 'auto_onboard') {
+        body.otp = otpInput;
+      }
+      if (action === 'request_compliance_csid') {
+        body.csr = onboardInput;
+        if (otpInput) body.otp = otpInput;
+      }
       if (action === 'request_production_csid') body.complianceRequestId = onboardInput;
 
       const res = await fetch('/api/zatca/onboard', {
@@ -107,6 +115,10 @@ export default function ZatcaSettingsPage() {
       const data = await res.json();
       setOnboardResult(JSON.stringify(data, null, 2));
       if (res.ok) await fetchConfig();
+      if (data.csrB64 && action === 'generate_csr') {
+        setOnboardInput(data.csrB64);
+        setMessage({ type: 'success', text: 'CSR generated! Pasted into Step 2 input — click Step 2 to continue.' });
+      }
     } catch (err) {
       setOnboardResult(`Error: ${err}`);
     } finally {
@@ -273,22 +285,73 @@ export default function ZatcaSettingsPage() {
             </ol>
           </div>
 
+          {/* Quick path: steps 1 + 1.5 + 2 in one click */}
+          <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+            <h3 className="font-semibold text-teal-800 mb-1">Quick Onboard — Steps 1–2 automated</h3>
+            <p className="text-xs text-teal-700 mb-3">Generates keys + CSR + requests Compliance CSID in one go. Only requires your OTP from the ZATCA Fatoora portal.</p>
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                OTP <span className="text-red-500">*</span>{' '}
+                <span className="text-gray-400 font-normal">(ZATCA Fatoora portal → Onboard new device)</span>
+              </label>
+              <input
+                type="text"
+                value={otpInput}
+                onChange={e => setOtpInput(e.target.value)}
+                placeholder="e.g. 123456"
+                maxLength={6}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-teal-400 outline-none"
+              />
+            </div>
+            <button
+              onClick={() => { setOnboardAction('auto_onboard'); handleOnboardAction('auto_onboard'); }}
+              disabled={onboardLoading || !otpInput}
+              className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
+            >
+              {onboardLoading && onboardAction === 'auto_onboard' ? 'Processing…' : '⚡ Auto-Onboard'}
+            </button>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4">
+            <p className="text-xs text-gray-400 mb-3">Manual steps (advanced)</p>
+          </div>
+
           {[
             { action: 'generate_keys', label: 'Step 1: Generate EC Key Pair', needsInput: false },
-            { action: 'request_compliance_csid', label: 'Step 2: Request Compliance CSID', needsInput: true, placeholder: 'Paste base64-encoded CSR here' },
+            { action: 'generate_csr', label: 'Step 1.5: Generate CSR (Automated)', needsInput: false },
+            { action: 'request_compliance_csid', label: 'Step 2: Request Compliance CSID', needsInput: true, placeholder: 'Paste base64-encoded CSR here (or click Step 1.5 to auto-generate)' },
             { action: 'compliance_check', label: 'Step 3: Run Compliance Check', needsInput: false },
             { action: 'request_production_csid', label: 'Step 4: Request Production CSID', needsInput: true, placeholder: 'Enter compliance requestId from Step 2 result' },
           ].map(step => (
             <div key={step.action} className="bg-white border border-gray-200 rounded-xl p-4">
               <h3 className="font-medium text-gray-700 mb-3">{step.label}</h3>
               {step.needsInput && (
-                <textarea
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono mb-3 focus:ring-2 focus:ring-teal-400 outline-none"
-                  placeholder={step.placeholder}
-                  value={onboardAction === step.action ? onboardInput : ''}
-                  onChange={e => { setOnboardAction(step.action); setOnboardInput(e.target.value); }}
-                />
+                <>
+                  {step.action === 'request_compliance_csid' && (
+                    <div className="mb-2">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        OTP <span className="text-red-500">*</span>{' '}
+                        <span className="text-gray-400 font-normal">(required — from ZATCA Fatoora portal → Onboard new device)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={otpInput}
+                        onChange={e => setOtpInput(e.target.value)}
+                        placeholder="e.g. 123456"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-teal-400 outline-none"
+                        maxLength={6}
+                        required
+                      />
+                    </div>
+                  )}
+                  <textarea
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs font-mono mb-3 focus:ring-2 focus:ring-teal-400 outline-none"
+                    placeholder={step.placeholder}
+                    value={onboardAction === step.action ? onboardInput : ''}
+                    onChange={e => { setOnboardAction(step.action); setOnboardInput(e.target.value); }}
+                  />
+                </>
               )}
               <button
                 onClick={() => { setOnboardAction(step.action); handleOnboardAction(step.action); }}
@@ -316,9 +379,9 @@ export default function ZatcaSettingsPage() {
             <h2 className="text-base font-semibold text-gray-700 mb-4">ZATCA Configuration Status</h2>
             <div className="space-y-3 text-sm">
               <StatusRow label="Environment" value={config.environment} />
-              <StatusRow label="Compliance CSID" value={config.complianceCsid ? '✓ Configured' : '✗ Not configured'} ok={!!config.complianceCsid} />
-              <StatusRow label="Production CSID" value={config.productionCsid ? '✓ Configured' : '✗ Not configured'} ok={!!config.productionCsid} />
-              <StatusRow label="Public Key" value={config.publicKey ? '✓ Generated' : '✗ Not generated'} ok={!!config.publicKey} />
+              <TokenRow label="Compliance CSID (binarySecurityToken)" value={config.complianceCsid} />
+              <TokenRow label="Production CSID (binarySecurityToken)" value={config.productionCsid} />
+              <TokenRow label="Public Key" value={config.publicKey} />
               {config.pih && (
                 <div>
                   <span className="text-gray-500">Previous Invoice Hash (PIH):</span>
@@ -353,6 +416,53 @@ function StatusRow({ label, value, ok }: { label: string; value: string; ok?: bo
     <div className="flex items-center justify-between py-1 border-b border-gray-100">
       <span className="text-gray-500">{label}</span>
       <span className={ok === undefined ? 'text-gray-700' : ok ? 'text-green-600 font-medium' : 'text-red-500'}>{value}</span>
+    </div>
+  );
+}
+
+function TokenRow({ label, value }: { label: string; value?: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  if (!value) {
+    return (
+      <div className="flex items-center justify-between py-1 border-b border-gray-100">
+        <span className="text-gray-500">{label}</span>
+        <span className="text-red-500">✗ Not configured</span>
+      </div>
+    );
+  }
+
+  const preview = value.length > 32 ? `${value.slice(0, 16)}…${value.slice(-12)}` : value;
+
+  async function copy() {
+    await navigator.clipboard.writeText(value!);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="py-2 border-b border-gray-100">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-gray-500">{label}</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setRevealed(r => !r)}
+            className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+          >
+            {revealed ? 'Hide' : 'Show'}
+          </button>
+          <button
+            onClick={copy}
+            className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+          >
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+      </div>
+      <code className="block text-[11px] bg-gray-100 px-2 py-1.5 rounded font-mono break-all text-gray-700 max-h-40 overflow-auto">
+        {revealed ? value : preview}
+      </code>
     </div>
   );
 }

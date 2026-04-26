@@ -32,11 +32,26 @@ export interface IZatcaConfigDocument extends Document {
 
 const ZatcaAddressSchema = new Schema<IZatcaAddress>(
   {
-    buildingNumber: { type: String, required: true },
-    streetName: { type: String, required: true },
-    district: { type: String, required: true },
-    city: { type: String, required: true },
-    postalCode: { type: String, required: true },
+    buildingNumber: {
+      type: String, required: true, trim: true,
+      validate: { validator: (v: string) => v.trim().length > 0, message: 'Building number is required' },
+    },
+    streetName: {
+      type: String, required: true, trim: true,
+      validate: { validator: (v: string) => v.trim().length > 0, message: 'Street name is required' },
+    },
+    district: {
+      type: String, required: true, trim: true,
+      validate: { validator: (v: string) => v.trim().length > 0, message: 'District is required' },
+    },
+    city: {
+      type: String, required: true, trim: true,
+      validate: { validator: (v: string) => v.trim().length > 0, message: 'City is required' },
+    },
+    postalCode: {
+      type: String, required: true, trim: true,
+      validate: { validator: (v: string) => v.trim().length > 0, message: 'Postal code is required' },
+    },
     countryCode: { type: String, default: 'SA' },
   },
   { _id: false }
@@ -46,7 +61,12 @@ const ZatcaConfigSchema = new Schema<IZatcaConfigDocument>(
   {
     sellerName: { type: String, required: true, trim: true },
     sellerNameAr: { type: String, required: true, trim: true },
-    trn: { type: String, required: true, trim: true, minlength: 15, maxlength: 15 },
+    trn: {
+      type: String, required: true, trim: true,
+      minlength: 15, maxlength: 15,
+      unique: true,
+      validate: { validator: (v: string) => /^\d{15}$/.test(v), message: 'TRN must be exactly 15 digits' },
+    },
     address: { type: ZatcaAddressSchema, required: true },
     environment: { type: String, enum: ['sandbox', 'production'], default: 'sandbox' },
     complianceCsid: { type: String },
@@ -56,13 +76,14 @@ const ZatcaConfigSchema = new Schema<IZatcaConfigDocument>(
     privateKey: { type: String },
     publicKey: { type: String },
     certificate: { type: String },
-    // ZATCA-specified initial PIH value
     pih: { type: String, default: 'NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjOTljMmYxN2ZiNTVkMzRlYzYzMDMzNjE5YTM0ZGY4YjEwNw==' },
-    isActive: { type: Boolean, default: true },
+    isActive: { type: Boolean, default: true, index: true },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 );
+
+
 
 const ZatcaConfig: Model<IZatcaConfigDocument> =
   mongoose.models.ZatcaConfig || mongoose.model<IZatcaConfigDocument>('ZatcaConfig', ZatcaConfigSchema);

@@ -76,27 +76,43 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const {
-      sellerName, sellerNameAr, trn, address, environment,
-      complianceCsid, complianceCsidSecret,
-      productionCsid, productionCsidSecret,
-      privateKey, publicKey, certificate,
-    } = body;
+const body = await request.json();
+  const {
+    sellerName, sellerNameAr, trn, address, environment,
+    complianceCsid, complianceCsidSecret,
+    productionCsid, productionCsidSecret,
+    privateKey, publicKey, certificate,
+  } = body;
 
-    const update: Record<string, unknown> = { updatedBy: user.userId };
-    if (sellerName) update.sellerName = sellerName;
-    if (sellerNameAr) update.sellerNameAr = sellerNameAr;
-    if (trn) update.trn = trn;
-    if (address) update.address = address;
-    if (environment) update.environment = environment;
-    if (complianceCsid) update.complianceCsid = complianceCsid;
-    if (complianceCsidSecret) update.complianceCsidSecret = complianceCsidSecret;
-    if (productionCsid) update.productionCsid = productionCsid;
-    if (productionCsidSecret) update.productionCsidSecret = productionCsidSecret;
-    if (privateKey) update.privateKey = privateKey;
-    if (publicKey) update.publicKey = publicKey;
-    if (certificate) update.certificate = certificate;
+  const trimmedTrn = trn?.trim() ?? '';
+
+  if (trn && trimmedTrn.length !== 15) {
+    return NextResponse.json(
+      { error: 'TRN must be exactly 15 digits', received: `${trimmedTrn.length} chars` },
+      { status: 400 }
+    );
+  }
+
+  if (trimmedTrn && !/^\d{15}$/.test(trimmedTrn)) {
+    return NextResponse.json(
+      { error: 'TRN must contain only digits (15 digits required)' },
+      { status: 400 }
+    );
+  }
+
+  const update: Record<string, unknown> = { updatedBy: user.userId };
+  if (sellerName) update.sellerName = sellerName.trim();
+  if (sellerNameAr) update.sellerNameAr = sellerNameAr.trim();
+  if (trimmedTrn) update.trn = trimmedTrn;
+  if (address) update.address = address;
+  if (environment) update.environment = environment;
+  if (complianceCsid) update.complianceCsid = complianceCsid;
+  if (complianceCsidSecret) update.complianceCsidSecret = complianceCsidSecret;
+  if (productionCsid) update.productionCsid = productionCsid;
+  if (productionCsidSecret) update.productionCsidSecret = productionCsidSecret;
+  if (privateKey) update.privateKey = privateKey;
+  if (publicKey) update.publicKey = publicKey;
+  if (certificate) update.certificate = certificate;
 
     const config = await ZatcaConfig.findOneAndUpdate(
       { isActive: true },
@@ -112,6 +128,12 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     if (error instanceof DatabaseConnectionError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    if (error instanceof Error) {
+      console.error('ZATCA config PUT error:', error.message);
+      if (error.name === 'ValidationError' || error.name === 'CastError') {
+        return NextResponse.json({ error: `Validation error: ${error.message}` }, { status: 400 });
+      }
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

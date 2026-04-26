@@ -24,21 +24,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ZATCA config not found' }, { status: 400 });
     }
 
-    const hasPhase2 = !!(
-      (config.environment === 'production' ? config.productionCsid : config.complianceCsid) &&
-      config.privateKey
-    );
-
-    if (!hasPhase2) {
-      return NextResponse.json({ error: 'ZATCA Phase 2 not configured (CSID missing).' }, { status: 400 });
+    // Clearance/reporting endpoints require the production CSID.
+    // The compliance CSID only works with /compliance/invoices (Step 3 in onboarding).
+    if (!config.productionCsid) {
+      return NextResponse.json({
+        error: 'Production CSID not yet configured. Complete ZATCA onboarding Steps 3 and 4 first, then retry.',
+      }, { status: 400 });
+    }
+    if (!config.privateKey) {
+      return NextResponse.json({ error: 'Private key missing from ZATCA config.' }, { status: 400 });
     }
 
-    const csid = config.environment === 'production'
-      ? config.productionCsid!
-      : config.complianceCsid!;
-    const csidSecret = config.environment === 'production'
-      ? (config.productionCsidSecret || '')
-      : (config.complianceCsidSecret || '');
+    const csid = config.productionCsid;
+    const csidSecret = config.productionCsidSecret || '';
 
     const credentials = { csid, csidSecret, environment: config.environment };
 
@@ -83,10 +81,11 @@ export async function POST(request: NextRequest) {
           }
         );
 
-        // Update the source sale record
+        // Update the source sale record — clear any previous error on success
         const statusUpdate = {
           zatcaStatus: status,
           zatcaResponse,
+          zatcaErrorMessage: undefined,
         };
 
         if (invoice.referenceType === 'CashSale') {
@@ -104,6 +103,15 @@ export async function POST(request: NextRequest) {
           { _id: invoice._id },
           { $set: { errorMessage } }
         );
+        // Write error back to the sale so it surfaces in the detail page
+        const failUpdate = { zatcaStatus: 'Failed', zatcaErrorMessage: errorMessage };
+        if (invoice.referenceType === 'CashSale') {
+          await CashSale.updateOne({ _id: invoice.referenceId }, { $set: failUpdate });
+        } else if (invoice.referenceType === 'InstallmentSale') {
+          await InstallmentSale.updateOne({ _id: invoice.referenceId }, { $set: failUpdate });
+        } else if (invoice.referenceType === 'Rental') {
+          await Rental.updateOne({ _id: invoice.referenceId }, { $set: failUpdate });
+        }
         results.push({ uuid: invoice.uuid, status: 'Failed', success: false, error: errorMessage });
       }
     }

@@ -222,6 +222,7 @@ export async function POST(request: NextRequest) {
         zatcaHash: zatcaResult.xmlHash,
         zatcaStatus: zatcaResult.status,
         zatcaResponse: zatcaResult.zatcaResponse,
+        ...(zatcaResult.errorMessage && { zatcaErrorMessage: zatcaResult.errorMessage }),
       });
     } catch (zatcaError) {
       console.error('ZATCA processing failed:', zatcaError);

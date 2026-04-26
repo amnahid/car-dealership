@@ -11,17 +11,23 @@ function basicAuth(csid: string, secret: string): string {
 /**
  * Request Compliance CSID from ZATCA sandbox.
  * Used during onboarding to get an initial certificate.
+ * OTP is mandatory per ZATCA developer-portal spec — POST /compliance.
  */
 export async function requestComplianceCsid(
   csr: string,
-  environment: string = 'sandbox'
-): Promise<{ csid: string; secret: string; requestId: string; binarySecurityToken: string }> {
+  environment: string = 'sandbox',
+  otp: string
+): Promise<{ csid: string; secret: string; requestId: number; binarySecurityToken: string }> {
+  if (!otp) {
+    throw new Error('OTP is required for ZATCA compliance CSID request.');
+  }
   const url = `${getBaseUrl(environment)}/compliance`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Accept-Version': 'V2',
       'Content-Type': 'application/json',
+      'OTP': otp,
     },
     body: JSON.stringify({ csr }),
   });
@@ -32,10 +38,10 @@ export async function requestComplianceCsid(
   }
 
   const data = await response.json() as {
-    requestID: string;
+    requestID: number;
+    dispositionMessage: string;
     binarySecurityToken: string;
     secret: string;
-    tokenType: string;
   };
 
   return {

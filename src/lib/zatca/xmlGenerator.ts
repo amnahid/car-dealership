@@ -33,7 +33,7 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
           'xmlns:sbc': 'urn:oasis:names:specification:ubl:schema:xsd:SignatureBasicComponents-2',
         })
           .ele('sac:SignatureInformation')
-            .ele('cbc:ID').txt('urn:oasis:names:specification:ubl:signature:Invoice').up()
+            .ele('cbc:ID').txt('urn:oasis:names:specification:ubl:signature:1').up()
             .ele('sbc:ReferencedSignatureID').txt('urn:oasis:names:specification:ubl:signature:Invoice').up()
           .up()
         .up()
@@ -85,8 +85,8 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
     .ele('cbc:ID', { schemeID: 'CRN' }).txt(data.seller.trn).up()
   .up();
   supplier.ele('cac:PostalAddress')
-    .ele('cbc:BuildingNumber').txt(data.seller.buildingNumber).up()
     .ele('cbc:StreetName').txt(data.seller.streetName).up()
+    .ele('cbc:BuildingNumber').txt(data.seller.buildingNumber).up()
     .ele('cbc:CityName').txt(data.seller.city).up()
     .ele('cbc:PostalZone').txt(data.seller.postalCode).up()
     .ele('cbc:CountrySubentity').txt(data.seller.district).up()
@@ -170,7 +170,7 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
     .up();
   });
 
-  return root.end({ prettyPrint: true });
+  return root.end({ prettyPrint: false });
 }
 
 function formatDate(date: Date): string {

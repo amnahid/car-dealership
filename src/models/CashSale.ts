@@ -31,6 +31,7 @@ export interface ICashSaleDocument extends Document {
   zatcaStatus: ZatcaStatus;
   zatcaHash?: string;
   zatcaResponse?: object;
+  zatcaErrorMessage?: string;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -63,6 +64,7 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     zatcaStatus: { type: String, enum: ['Pending', 'Cleared', 'Reported', 'Failed', 'NotRequired'], default: 'Pending' },
     zatcaHash: { type: String },
     zatcaResponse: { type: Schema.Types.Mixed },
+    zatcaErrorMessage: { type: String },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

@@ -32,6 +32,7 @@ export interface IRentalDocument extends Document {
   zatcaStatus: ZatcaStatus;
   zatcaHash?: string;
   zatcaResponse?: object;
+  zatcaErrorMessage?: string;
   agentName?: string;
   agentCommission?: number;
   invoiceUrl?: string;
@@ -67,6 +68,7 @@ const RentalSchema = new Schema<IRentalDocument>(
     zatcaStatus: { type: String, enum: ['Pending', 'Cleared', 'Reported', 'Failed', 'NotRequired'], default: 'Pending' },
     zatcaHash: { type: String },
     zatcaResponse: { type: Schema.Types.Mixed },
+    zatcaErrorMessage: { type: String },
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
     invoiceUrl: { type: String },

@@ -19,6 +19,21 @@ export interface ICarRaw {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  gpsProvider?: 'WhatsGPS' | 'iTrack' | 'Mock';
+  gpsImei?: string;
+  gpsApiKey?: string;
+  gpsApiSecret?: string;
+  gpsCachedPosition?: {
+    latitude: number;
+    longitude: number;
+    speed: number;
+    heading: number;
+    timestamp: Date;
+    ignitionStatus?: 'ON' | 'OFF' | 'UNKNOWN';
+    positionType?: 'GPS' | 'LBS' | 'WIFI';
+    isStale?: boolean;
+  };
+  gpsLastUpdate?: Date;
 }
 
 export type ICarDocument = mongoose.HydratedDocument<ICarRaw>;
@@ -43,6 +58,24 @@ const CarSchema = new Schema(
     totalRepairCost: { type: Number, default: 0 },
     purchase: { type: Schema.Types.ObjectId, ref: 'CarPurchase' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    gpsProvider: {
+      type: String,
+      enum: ['WhatsGPS', 'iTrack', 'Mock'],
+    },
+    gpsImei: { type: String },
+    gpsApiKey: { type: String },
+    gpsApiSecret: { type: String },
+    gpsCachedPosition: {
+      latitude: { type: Number },
+      longitude: { type: Number },
+      speed: { type: Number },
+      heading: { type: Number },
+      timestamp: { type: Date },
+      ignitionStatus: { type: String },
+      positionType: { type: String },
+      isStale: { type: Boolean },
+    },
+    gpsLastUpdate: { type: Date },
   },
   { timestamps: true }
 );

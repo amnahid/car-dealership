@@ -62,7 +62,7 @@ export interface ZatcaProcessResult {
   newPih: string;         // Updated PIH for next invoice
 }
 
-export const ZATCA_SANDBOX_BASE_URL = 'https://gw-fatoorah.zatca.gov.sa/e-invoicing/developer-portal';
-export const ZATCA_PRODUCTION_BASE_URL = 'https://gw-fatoorah.zatca.gov.sa/e-invoicing/core';
+export const ZATCA_SANDBOX_BASE_URL = 'https://gw-fatoora.zatca.gov.sa/e-invoicing/developer-portal';
+export const ZATCA_PRODUCTION_BASE_URL = 'https://gw-fatoora.zatca.gov.sa/e-invoicing/core';
 export const ZATCA_VAT_RATE = 15;
 export const ZATCA_INITIAL_PIH = 'NWZlY2ViNjZmZmM4NmYzOGQ5NTI3ODZjNmQ2OTZjOTljMmYxN2ZiNTVkMzRlYzYzMDMzNjE5YTM0ZGY4YjEwNw==';

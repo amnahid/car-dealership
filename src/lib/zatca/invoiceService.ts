@@ -1,10 +1,10 @@
 import { connectDB } from '@/lib/db';
 import ZatcaConfig from '@/models/ZatcaConfig';
 import ZatcaInvoice from '@/models/ZatcaInvoice';
-import { buildTLVBase64, generateZatcaQRCode, ZatcaQRData } from './qrCode';
+import { buildTLVBase64, buildTLVBase64Phase2, generateZatcaQRCodeFromTLV, ZatcaQRData } from './qrCode';
 import { generateZatcaXML } from './xmlGenerator';
 import { hashInvoiceXML, generateInvoiceUUID } from './invoiceHash';
-import { signInvoiceHash, embedSignatureInXML } from './cryptoSigning';
+import { signInvoiceHash, embedSignatureInXML, parseCertificate } from './cryptoSigning';
 import { clearInvoice, reportInvoice } from './zatcaApi';
 import {
   ZatcaInvoiceData,
@@ -102,32 +102,47 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
       vatTotal: input.vatTotal.toFixed(2),
     };
 
-    // Phase 2: Add signature data to QR if available
     let signedXml = '';
     let xmlHash = '';
 
-    const hasPhase2 = !!(
-      (config.environment === 'production' ? config.productionCsid : config.complianceCsid) &&
-      config.privateKey
-    );
+    // Only auto-submit when the production CSID is available.
+    const hasPhase2 = !!(config.productionCsid && config.privateKey);
 
+    // Step 1: generate XML with a basic 5-tag QR placeholder
     const tlvBase64 = buildTLVBase64(qrData);
     const xml = generateZatcaXML(invoiceData, tlvBase64);
+
+    // Step 2: hash with QR value cleared (ZATCA spec)
     xmlHash = hashInvoiceXML(xml);
     signedXml = xml;
 
-    if (hasPhase2 && config.privateKey && config.certificate) {
-      // Sign the invoice (Phase 2)
-      const signature = signInvoiceHash(xmlHash, config.privateKey);
-      signedXml = embedSignatureInXML(xml, signature, config.certificate, xmlHash);
+    let qrTlvFull = tlvBase64; // will be replaced with 8-tag version when signing
 
-      // Update QR with Phase 2 signature data
-      qrData.xmlHash = xmlHash;
-      qrData.ecdsa = signature;
-      qrData.publicKey = config.publicKey || '';
+    if (hasPhase2 && config.privateKey && config.certificate) {
+      // Step 3: sign
+      const signature = signInvoiceHash(xmlHash, config.privateKey);
+
+      // Step 4: build Phase 2 QR with binary tags 6-8
+      const certInfo = parseCertificate(config.certificate);
+      qrTlvFull = buildTLVBase64Phase2({
+        ...qrData,
+        xmlHashBytes: Buffer.from(xmlHash, 'base64'),
+        ecdsaSigBytes: Buffer.from(signature, 'base64'),
+        publicKeyBytes: certInfo.publicKeyDer,
+      });
+
+      // Step 5: replace placeholder QR in XML with full Phase 2 QR
+      const xmlWithQR = xml.replace(
+        /(<cbc:ID>QR<\/cbc:ID>[\s\S]*?<cbc:EmbeddedDocumentBinaryObject[^>]*>)[^<]*(<\/cbc:EmbeddedDocumentBinaryObject>)/,
+        `$1${qrTlvFull}$2`
+      );
+
+      // Step 6: embed signature
+      signedXml = embedSignatureInXML(xmlWithQR, signature, config.certificate, xmlHash);
     }
 
-    const qrCode = await generateZatcaQRCode(qrData);
+    // QR data URL for display — use the full Phase 2 TLV when available
+    const qrCode = await generateZatcaQRCodeFromTLV(qrTlvFull);
     const newPih = xmlHash;
 
     // Default status

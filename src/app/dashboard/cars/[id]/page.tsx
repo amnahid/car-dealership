@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
+import GpsMap from '@/components/GpsMap';
 import { CarStatus } from '@/types';
 
 interface Repair {
@@ -239,6 +240,8 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
           </div>
         )}
       </div>
+
+      <GpsMap carId={car._id} carName={`${car.brand} ${car.model}`} />
 
       {car.notes && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">

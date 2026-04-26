@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@mailerlite/mailerlite-nodejs": "^1.5.0",
+    "@types/leaflet": "^1.9.21",
     "@vercel/blob": "^2.3.3",
+    "@xmldom/xmldom": "^0.9.10",
     "bcryptjs": "^3.0.3",
     "browser-image-compression": "^2.0.2",
     "canonicalize": "^3.0.0",
@@ -23,6 +25,7 @@
     "jose": "^6.2.1",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
+    "leaflet": "^1.9.4",
     "mongoose": "^9.3.1",
     "multer": "^2.1.1",
     "next": "16.1.7",
@@ -34,6 +37,7 @@
     "recharts": "^3.8.1",
     "resend": "^6.12.2",
     "twilio": "^5.13.1",
+    "xml-crypto": "^6.1.2",
     "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {

@@ -194,6 +194,7 @@ export async function POST(request: NextRequest) {
       sale.zatcaStatus = zatcaResult.status as 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
       sale.zatcaHash = zatcaResult.xmlHash;
       sale.zatcaResponse = zatcaResult.zatcaResponse;
+      if (zatcaResult.errorMessage) sale.zatcaErrorMessage = zatcaResult.errorMessage;
       await sale.save();
     } catch (zatcaError) {
       console.error('ZATCA processing failed:', zatcaError);
