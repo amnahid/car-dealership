@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Supplier from '@/models/Supplier';
 import CarPurchase from '@/models/CarPurchase';

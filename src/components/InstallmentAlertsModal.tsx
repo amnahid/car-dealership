@@ -172,7 +172,7 @@ export default function InstallmentAlertsModal({ isOpen, onClose, onPaymentPaid 
                           background: activeTab === 'overdue' ? '#ec4561' : '#f8b425',
                           color: '#ffffff',
                         }}>
-                          {activeTab === 'overdue' ? t('daysOverdue', { days: payment.daysOverdue }) : t('dueInDays', { days: payment.daysUntilDue })}
+                          {activeTab === 'overdue' ? t('daysOverdue', { days: payment.daysOverdue ?? 0 }) : t('dueInDays', { days: payment.daysUntilDue ?? 0 })}
                         </span>
                       </td>
                       <td style={{ padding: '10px' }}>
