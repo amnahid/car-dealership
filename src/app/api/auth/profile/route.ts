@@ -3,6 +3,7 @@ import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { normalizeRole } from '@/lib/rbac';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function PUT(request: NextRequest) {
   try {

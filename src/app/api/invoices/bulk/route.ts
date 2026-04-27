@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function POST(request: NextRequest) {
   try {

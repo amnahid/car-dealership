@@ -4,6 +4,7 @@ import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Supplier from '@/models/Supplier';
 import CarPurchase from '@/models/CarPurchase';
 import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET(request: NextRequest) {
   try {

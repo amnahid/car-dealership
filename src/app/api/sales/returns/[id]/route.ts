@@ -6,6 +6,7 @@ import PurchaseReturn from '@/models/PurchaseReturn';
 import Customer from '@/models/Customer';
 import User from '@/models/User';
 import Car from '@/models/Car';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET(
   request: NextRequest,

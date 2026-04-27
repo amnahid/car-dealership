@@ -4,6 +4,7 @@ import VehicleDocument from '@/models/Document';
 import Car from '@/models/Car';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { sendDocumentRenewalNotifications } from '@/lib/documentNotifications';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET(
   request: NextRequest,

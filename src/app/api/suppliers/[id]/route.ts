@@ -5,6 +5,7 @@ import CarPurchase from '@/models/CarPurchase';
 import Car from '@/models/Car';
 import mongoose from 'mongoose';
 import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function GET(
   request: NextRequest,

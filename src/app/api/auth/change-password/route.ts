@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
+import { logActivity } from '@/lib/activityLogger';
 
 export async function POST(request: NextRequest) {
   try {
