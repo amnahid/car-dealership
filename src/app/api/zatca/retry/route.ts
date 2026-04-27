@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
         if (invoice.invoiceType === 'Standard') {
           zatcaResponse = await client.clearanceExistingInvoice(invoice.xml, invoice.xmlHash);
           status = 'Cleared';
-          if (zatcaResponse.clearedInvoice) {
-            clearedXml = Buffer.from(zatcaResponse.clearedInvoice, 'base64').toString('utf8');
+          if (zatcaResponse && typeof zatcaResponse === 'object' && 'clearedInvoice' in zatcaResponse) {
+            clearedXml = Buffer.from(zatcaResponse.clearedInvoice as string, 'base64').toString('utf8');
           }
         } else {
           zatcaResponse = await client.reportExistingInvoice(invoice.xml, invoice.xmlHash);
