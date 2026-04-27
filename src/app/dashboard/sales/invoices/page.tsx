@@ -268,7 +268,7 @@ export default function InvoicesPage() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowSendModal(false)}>
           <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', width: '400px', textAlign: isRtl ? 'right' : 'left' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{t('sendInvoiceEmail')}</h3>
-            <p style={{ fontSize: '14px', color: '#525f80', marginBottom: '16px' }}>{t('sendInvoiceTo', { id: sendingInvoice?.saleId })}</p>
+            <p style={{ fontSize: '14px', color: '#525f80', marginBottom: '16px' }}>{t('sendInvoiceTo', { id: sendingInvoice?.saleId || '' })}</p>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>{t('customerEmail')}</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="customer@email.com" style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
