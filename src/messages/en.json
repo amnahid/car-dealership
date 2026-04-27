@@ -111,15 +111,30 @@
     "totalEarnings": "Total Earnings",
     "totalCommission": "Total Commission",
     "active": "Active",
-    "inactive": "Inactive"
-  },
-  "Employees": {
+    "saleType": "Sale Type",
+    "searchPlaceholder": "Search by return ID, customer...",
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "completed": "Completed"
+    }
+    },
+    "Employees": {
     "title": "Employees",
     "addNew": "Add Employee",
     "totalEmployees": "Total Employees",
     "monthlySalaryExpense": "Monthly Salary Expense",
     "searchPlaceholder": "Search by name, phone, ID...",
     "allDepartments": "All Departments",
+    "departments": {
+      "sales": "Sales",
+      "service": "Service",
+      "accounts": "Accounts",
+      "admin": "Admin",
+      "management": "Management",
+      "operations": "Operations"
+    },
     "noEmployees": "No employees found.",
     "id": "ID",
     "photo": "Photo",

@@ -111,15 +111,30 @@
     "totalEarnings": "إجمالي المستحقات",
     "totalCommission": "إجمالي العمولات",
     "active": "نشط",
-    "inactive": "غير نشط"
-  },
-  "Employees": {
+    "saleType": "نوع البيع",
+    "searchPlaceholder": "بحث بمعرف الإرجاع، العميل...",
+    "statuses": {
+      "pending": "قيد الانتظار",
+      "approved": "تمت الموافقة",
+      "rejected": "تم الرفض",
+      "completed": "مكتمل"
+    }
+    },
+    "Employees": {
     "title": "الموظفين",
     "addNew": "إضافة موظف",
     "totalEmployees": "إجمالي الموظفين",
     "monthlySalaryExpense": "مصاريف الرواتب الشهرية",
     "searchPlaceholder": "بحث بالاسم، الهاتف، المعرف...",
     "allDepartments": "جميع الأقسام",
+    "departments": {
+      "sales": "المبيعات",
+      "service": "الخدمة",
+      "accounts": "الحسابات",
+      "admin": "الإدارة",
+      "management": "الإدارة العليا",
+      "operations": "العمليات"
+    },
     "noEmployees": "لم يتم العثور على موظفين.",
     "id": "المعرف",
     "photo": "الصورة",
