@@ -1,10 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import VehicleDocument from '@/models/Document';
-import Car from '@/models/Car';
+import { getAuthPayload } from '@/lib/apiAuth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!['Admin', 'Car Manager', 'Sales Person'].includes(auth.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);

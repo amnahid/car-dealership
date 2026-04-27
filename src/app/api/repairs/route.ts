@@ -19,6 +19,13 @@ async function updateCarRepairCost(carId: string) {
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!['Admin', 'Car Manager', 'Accountant', 'Finance Manager'].includes(auth.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
     const { searchParams } = new URL(request.url);
     const carId = searchParams.get('carId');
@@ -60,6 +67,10 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     await connectDB();
     const body = await request.json();

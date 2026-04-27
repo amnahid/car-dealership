@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Transaction from '@/models/Transaction';
+import { getAuthPayload } from '@/lib/apiAuth';
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getAuthPayload(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');

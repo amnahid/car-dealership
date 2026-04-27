@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
+import { canAccessApiPath, canAccessDashboardPath, normalizeRole } from '@/lib/rbac';
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -15,34 +16,49 @@ function getSecret(): Uint8Array {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth-token')?.value;
+  const isDashboardPath = pathname.startsWith('/dashboard');
+  const isProtectedApiPath = pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/') && pathname !== '/api/seed';
 
-  // Protect dashboard routes
-  if (pathname.startsWith('/dashboard')) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
-    }
-    try {
-      await jwtVerify(token, getSecret());
-      return NextResponse.next();
-    } catch {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
-    }
+  if (!isDashboardPath && !isProtectedApiPath) {
+    return NextResponse.next();
   }
 
-  // Protect API routes (except /api/auth/* and /api/seed)
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/') && pathname !== '/api/seed') {
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!token) {
+    if (isDashboardPath) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
     }
-    try {
-      await jwtVerify(token, getSecret());
-      return NextResponse.next();
-    } catch {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  return NextResponse.next();
+  try {
+    const { payload } = await jwtVerify(token, getSecret());
+    const normalizedRole = normalizeRole(payload.role as string | undefined);
+
+    if (!normalizedRole) {
+      if (isDashboardPath) {
+        return NextResponse.redirect(new URL('/auth/login', request.url));
+      }
+
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    if (isDashboardPath && !canAccessDashboardPath(normalizedRole, pathname)) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    if (isProtectedApiPath && !canAccessApiPath(normalizedRole, pathname, request.method)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    return NextResponse.next();
+  } catch {
+    if (isDashboardPath) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
 }
 
 export const config = {

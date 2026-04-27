@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!['Admin', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const cars = await Car.aggregate([
       // Join with CarPurchase to get purchasePrice
       {

@@ -17,6 +17,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -48,6 +52,10 @@ export async function PUT(
     const user = await getAuthPayload(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await connectDB();
@@ -113,6 +121,10 @@ export async function DELETE(
     const user = await getAuthPayload(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await connectDB();

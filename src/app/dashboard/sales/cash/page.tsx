@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Car {
   _id: string;
@@ -19,6 +20,8 @@ interface Customer {
   fullName: string;
   phone: string;
   profilePhoto?: string;
+  customerType?: string;
+  vatRegistrationNumber?: string;
 }
 
 interface Sale {
@@ -49,6 +52,11 @@ interface Sale {
 }
 
 export default function CashSalesPage() {
+  const t = useTranslations('CashSales');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const searchParams = useSearchParams();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,22 +68,8 @@ export default function CashSalesPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
 
-  useEffect(() => {
-    const editId = searchParams.get('edit');
-    if (editId) {
-      fetch(`/api/sales/cash/${editId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.sale) {
-            setEditingSale(data.sale);
-          }
-        });
-    }
-  }, [searchParams]);
-
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number }[]>([]);
-  const [customers, setCustomers] = useState<{ _id: string; fullName: string; phone: string }[]>([]);
+  const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number; purchasePrice?: number }[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [employees, setEmployees] = useState<{ _id: string; name: string; designation: string; commissionRate: number }[]>([]);
 
   const fetchSales = useCallback(async () => {
@@ -117,12 +111,8 @@ export default function CashSalesPage() {
     setPage(1);
   };
 
-  const handleEdit = (sale: Sale) => {
-    setEditingSale(sale);
-  };
-
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel this sale?')) return;
+    if (!confirm(t('cancelConfirm'))) return;
     try {
       const res = await fetch(`/api/sales/cash/${id}`, { method: 'DELETE' });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
@@ -141,56 +131,62 @@ export default function CashSalesPage() {
     fetchSales();
   };
 
+  const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
+
   return (
-    <div style={{ marginBottom: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h2 className="page-title">Cash Sales</h2>
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <h2 className="page-title">{t('title')}</h2>
         <button
           onClick={() => setShowModal(true)}
           style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}
         >
-          + New Cash Sale
+          + {t('addNew')}
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #28aaa9' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Sales</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #28aaa9', borderRight: isRtl ? '4px solid #28aaa9' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalSales')}</p>
           <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{sales.length}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #42ca7f' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Revenue</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>SAR{totalRevenue.toLocaleString()}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #42ca7f', borderRight: isRtl ? '4px solid #42ca7f' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalRevenue')}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(totalRevenue)}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #f5a623' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Avg per Sale</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0' }}>SAR{sales.length ? Math.round(totalRevenue / sales.length).toLocaleString() : 0}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #f5a623', borderRight: isRtl ? '4px solid #f5a623' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('avgPerSale')}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sales.length ? Math.round(totalRevenue / sales.length) : 0)}</p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <input
           type="text"
-          placeholder="Search by customer, car ID..."
+          placeholder={t('searchPlaceholder')}
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
-          style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}
+          style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}
         />
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : sales.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No sales found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noSales')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '800px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Car', 'Sale ID', 'Customer', 'Amount', 'Date', 'ZATCA', 'Actions'].map((h) => (
-                    <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('car')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('saleId')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('amount')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('date')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('zatca')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                 </tr>
               </thead>
               <tbody style={{ borderBottom: '1px solid #eee' }}>
@@ -207,7 +203,7 @@ export default function CashSalesPage() {
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{sale.saleId}</td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {sale.customer?.profilePhoto ? (
                           <img src={sale.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%' }} />
                         ) : (
@@ -215,23 +211,23 @@ export default function CashSalesPage() {
                             {sale.customerName?.[0] || '?'}
                           </div>
                         )}
-                        <div>
+                        <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
                           <div>{sale.customerName}</div>
                           <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{sale.customerPhone}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px', fontWeight: 600 }}>SAR{sale.finalPrice.toLocaleString()}</td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{new Date(sale.saleDate).toLocaleDateString()}</td>
+                    <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.finalPrice)}</td>
+                    <td style={{ padding: '12px', color: '#525f80' }}>{new Date(sale.saleDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                     <td style={{ padding: '12px' }}>
-                      <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} saleType="CashSale" />
+                      <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} saleType="CashSale" t={t} />
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <Link href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
-                        <Link href={`/dashboard/sales/cash/${sale._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>Edit</Link>
+                      <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                        <Link href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</Link>
+                        <Link href={`/dashboard/sales/cash/${sale._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>{commonT('edit')}</Link>
                         {sale.status === 'Active' && (
-                          <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Cancel</button>
+                          <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('cancelSale')}</button>
                         )}
                       </div>
                     </td>
@@ -244,10 +240,10 @@ export default function CashSalesPage() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>Prev</button>
-          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>Page {page} of {totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>Next</button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>{commonT('prev')}</button>
+          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>{commonT('page', { page, total: totalPages })}</span>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>{commonT('next')}</button>
         </div>
       )}
 
@@ -257,7 +253,12 @@ export default function CashSalesPage() {
   );
 }
 
-function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; onClose: () => void; onSave: () => void }) {
+function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: Customer[]; employees: any[]; onClose: () => void; onSave: () => void }) {
+  const t = useTranslations('CashSales');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', salePrice: '', discountType: 'flat' as 'flat' | 'percentage', discountValue: '0', agentName: '', agentCommission: '', saleDate: new Date().toISOString().split('T')[0], notes: '', invoiceType: 'Simplified', buyerTrn: '' });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -286,7 +287,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
 
   const handleAddCustomer = async () => {
     if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.address) {
-      alert('Please fill in required fields');
+      alert(commonT('fillRequired'));
       return;
     }
     setLoading(true);
@@ -297,8 +298,9 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
         body: JSON.stringify(newCustomer),
       });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
-      const created = await res.json();
-      setForm({ ...form, customer: created.customer?._id || created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
+      const data = await res.json();
+      const created = data.customer || data;
+      setForm({ ...form, customer: created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
       setShowCustomerModal(false);
       setNewCustomer({ fullName: '', phone: '', email: '', address: '' });
       onSave();
@@ -320,118 +322,136 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: '40px',
+    fontSize: '14px',
+    borderRadius: '0',
+    padding: '0 12px',
+    border: '1px solid #ced4da',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    marginBottom: '4px',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>New Cash Sale</h3>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%', textAlign: isRtl ? 'right' : 'left' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('newSale')}</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
             <SearchableSelect
-              label="Select Car *"
+              label={`${t('selectCar')} *`}
               value={form.carId}
               onChange={handleCarChange}
               options={cars.map(c => ({ value: c.carId, label: `${c.carId} - ${c.brand} ${c.model}` }))}
-              placeholder="Search car..."
+              placeholder={t('searchCar')}
             />
           </div>
           <div style={{ marginBottom: '16px' }}>
             <SearchableSelect
-              label="Select Customer *"
+              label={`${t('selectCustomer')} *`}
               value={form.customer}
               onChange={handleCustomerChange}
               options={[
-                { value: '__new__', label: '+ Add New Customer' },
+                { value: '__new__', label: t('addNewCustomer') },
                 ...customers.map(c => ({ value: c._id, label: `${c.fullName} - ${c.phone}` }))
               ]}
-              placeholder="Search customer..."
+              placeholder={t('searchCustomer')}
             />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Sale Price *</label>
-              <input required type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <label style={labelStyle}>{t('salePrice')} *</label>
+              <input required type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Discount</label>
-              <div style={{ display: 'flex', border: '1px solid #ced4da' }}>
-                <button type="button" onClick={() => setForm({ ...form, discountType: 'flat' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'flat' ? '#28aaa9' : '#ffffff', color: form.discountType === 'flat' ? '#ffffff' : '#525f80', border: 'none', borderRight: '1px solid #ced4da', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>SAR</button>
-                <button type="button" onClick={() => setForm({ ...form, discountType: 'percentage' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'percentage' ? '#28aaa9' : '#ffffff', color: form.discountType === 'percentage' ? '#ffffff' : '#525f80', border: 'none', borderRight: '1px solid #ced4da', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>%</button>
-                <input type="number" value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} style={{ flex: 1, height: '40px', fontSize: '14px', padding: '0 12px', border: 'none', outline: 'none' }} />
+              <label style={labelStyle}>{t('discount')}</label>
+              <div style={{ display: 'flex', border: '1px solid #ced4da', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                <button type="button" onClick={() => setForm({ ...form, discountType: 'flat' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'flat' ? '#28aaa9' : '#ffffff', color: form.discountType === 'flat' ? '#ffffff' : '#525f80', border: 'none', borderRight: isRtl ? 'none' : '1px solid #ced4da', borderLeft: isRtl ? '1px solid #ced4da' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>SAR</button>
+                <button type="button" onClick={() => setForm({ ...form, discountType: 'percentage' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'percentage' ? '#28aaa9' : '#ffffff', color: form.discountType === 'percentage' ? '#ffffff' : '#525f80', border: 'none', borderRight: isRtl ? 'none' : '1px solid #ced4da', borderLeft: isRtl ? '1px solid #ced4da' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>%</button>
+                <input type="number" value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} style={{ flex: 1, height: '40px', fontSize: '14px', padding: '0 12px', border: 'none', outline: 'none', textAlign: isRtl ? 'right' : 'left' }} />
               </div>
               {form.discountType === 'percentage' && Number(form.discountValue) > 0 && Number(form.salePrice) > 0 && (
                 <span style={{ fontSize: '12px', color: '#525f80' }}>= SAR {(Math.round(Number(form.salePrice) * Number(form.discountValue) / 100 * 100) / 100).toLocaleString()}</span>
               )}
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Sale Date *</label>
-              <input required type="date" value={form.saleDate} onChange={(e) => setForm({ ...form, saleDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <label style={labelStyle}>{t('saleDate')} *</label>
+              <input required type="date" value={form.saleDate} onChange={(e) => setForm({ ...form, saleDate: e.target.value })} style={inputStyle} />
             </div>
             <div>
               <SearchableSelect
-                label="Sales Agent"
+                label={t('salesAgent')}
                 value={agentId}
                 onChange={handleAgentChange}
                 options={[
-                  { value: '', label: 'None' },
+                  { value: '', label: t('none') },
                   ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                 ]}
-                placeholder="Select agent..."
+                placeholder={t('selectAgent')}
               />
               {agentId && (
-                <span style={{ fontSize: '12px', color: '#525f80' }}>Commission: {employees.find(e => e._id === agentId)?.commissionRate || 0}%</span>
+                <span style={{ fontSize: '12px', color: '#525f80' }}>{t('commission')}: {employees.find(e => e._id === agentId)?.commissionRate || 0}%</span>
               )}
             </div>
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>ZATCA / Tax Invoice</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>{t('taxInvoice')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Invoice Type</label>
-                <select value={form.invoiceType} onChange={(e) => setForm({ ...form, invoiceType: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-                  <option value="Simplified">Simplified (B2C)</option>
-                  <option value="Standard">Standard (B2B)</option>
+                <label style={labelStyle}>{t('invoiceType')}</label>
+                <select value={form.invoiceType} onChange={(e) => setForm({ ...form, invoiceType: e.target.value })} style={inputStyle}>
+                  <option value="Simplified">{t('simplified')}</option>
+                  <option value="Standard">{t('standard')}</option>
                 </select>
               </div>
               {form.invoiceType === 'Standard' && (
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Buyer TRN</label>
-                  <input value={form.buyerTrn} onChange={(e) => setForm({ ...form, buyerTrn: e.target.value })} placeholder="15-digit VAT number" style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+                  <label style={labelStyle}>{t('buyerTrn')}</label>
+                  <input value={form.buyerTrn} onChange={(e) => setForm({ ...form, buyerTrn: e.target.value })} placeholder={t('vatPlaceholder')} style={inputStyle} />
                 </div>
               )}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Create Sale'}</button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('cancel')}</button>
+            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : t('createSale')}</button>
           </div>
         </form>
       </div>
       
       {showCustomerModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1001 }}>
-          <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Add Customer</h3>
+          <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%', textAlign: isRtl ? 'right' : 'left' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('addCustomer')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Full Name *</label>
-                <input required value={newCustomer.fullName} onChange={(e) => setNewCustomer({ ...newCustomer, fullName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Full Name" />
+                <label style={labelStyle}>{commonT('fullName')} *</label>
+                <input required value={newCustomer.fullName} onChange={(e) => setNewCustomer({ ...newCustomer, fullName: e.target.value })} style={inputStyle} placeholder={commonT('fullName')} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Phone *</label>
-                <input required value={newCustomer.phone} onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Phone" />
+                <label style={labelStyle}>{commonT('phone')} *</label>
+                <input required value={newCustomer.phone} onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })} style={inputStyle} placeholder={commonT('phone')} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Email</label>
-                <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Email" />
+                <label style={labelStyle}>{commonT('email')}</label>
+                <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={inputStyle} placeholder={commonT('email')} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Address *</label>
-                <input required value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Address" />
+                <label style={labelStyle}>{commonT('address')} *</label>
+                <input required value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} style={inputStyle} placeholder={commonT('address')} />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Cancel</button>
-              <button type="button" onClick={handleAddCustomer} disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Add Customer'}</button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+              <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('cancel')}</button>
+              <button type="button" onClick={handleAddCustomer} disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : t('addCustomer')}</button>
             </div>
           </div>
         </div>
@@ -441,6 +461,11 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
 }
 
 function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; employees: any[]; onClose: () => void; onSave: (id: string, data: any) => void }) {
+  const t = useTranslations('CashSales');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [form, setForm] = useState({
     salePrice: sale.salePrice.toString(),
     discountType: (sale.discountType || 'flat') as 'flat' | 'percentage',
@@ -467,73 +492,87 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: '40px',
+    fontSize: '14px',
+    borderRadius: '0',
+    padding: '0 12px',
+    border: '1px solid #ced4da',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    marginBottom: '4px',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Edit Cash Sale - {sale.saleId}</h3>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%', textAlign: isRtl ? 'right' : 'left' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('editSale', { id: sale.saleId })}</h3>
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Sale Price</label>
-              <input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <label style={labelStyle}>{t('salePrice')}</label>
+              <input type="number" value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Discount</label>
-              <div style={{ display: 'flex', border: '1px solid #ced4da' }}>
-                <button type="button" onClick={() => setForm({ ...form, discountType: 'flat' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'flat' ? '#28aaa9' : '#ffffff', color: form.discountType === 'flat' ? '#ffffff' : '#525f80', border: 'none', borderRight: '1px solid #ced4da', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>SAR</button>
-                <button type="button" onClick={() => setForm({ ...form, discountType: 'percentage' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'percentage' ? '#28aaa9' : '#ffffff', color: form.discountType === 'percentage' ? '#ffffff' : '#525f80', border: 'none', borderRight: '1px solid #ced4da', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>%</button>
-                <input type="number" value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} style={{ flex: 1, height: '40px', fontSize: '14px', padding: '0 12px', border: 'none', outline: 'none' }} />
+              <label style={labelStyle}>{t('discount')}</label>
+              <div style={{ display: 'flex', border: '1px solid #ced4da', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                <button type="button" onClick={() => setForm({ ...form, discountType: 'flat' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'flat' ? '#28aaa9' : '#ffffff', color: form.discountType === 'flat' ? '#ffffff' : '#525f80', border: 'none', borderRight: isRtl ? 'none' : '1px solid #ced4da', borderLeft: isRtl ? '1px solid #ced4da' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>SAR</button>
+                <button type="button" onClick={() => setForm({ ...form, discountType: 'percentage' })} style={{ padding: '0 12px', height: '40px', background: form.discountType === 'percentage' ? '#28aaa9' : '#ffffff', color: form.discountType === 'percentage' ? '#ffffff' : '#525f80', border: 'none', borderRight: isRtl ? 'none' : '1px solid #ced4da', borderLeft: isRtl ? '1px solid #ced4da' : 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>%</button>
+                <input type="number" value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} style={{ flex: 1, height: '40px', fontSize: '14px', padding: '0 12px', border: 'none', outline: 'none', textAlign: isRtl ? 'right' : 'left' }} />
               </div>
-              {form.discountType === 'percentage' && Number(form.discountValue) > 0 && Number(form.salePrice) > 0 && (
-                <span style={{ fontSize: '12px', color: '#525f80' }}>= SAR {(Math.round(Number(form.salePrice) * Number(form.discountValue) / 100 * 100) / 100).toLocaleString()}</span>
-              )}
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Sale Date</label>
-              <input type="date" value={form.saleDate} onChange={(e) => setForm({ ...form, saleDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <label style={labelStyle}>{t('saleDate')}</label>
+              <input type="date" value={form.saleDate} onChange={(e) => setForm({ ...form, saleDate: e.target.value })} style={inputStyle} />
             </div>
             <div>
               <SearchableSelect
-                label="Sales Agent"
+                label={t('salesAgent')}
                 value={agentId}
                 onChange={handleAgentChange}
                 options={[
-                  { value: '', label: 'None' },
+                  { value: '', label: t('none') },
                   ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                 ]}
-                placeholder="Select agent..."
+                placeholder={t('selectAgent')}
               />
-              {agentId && (
-                <span style={{ fontSize: '12px', color: '#525f80' }}>Commission: {employees.find(e => e._id === agentId)?.commissionRate || 0}%</span>
-              )}
             </div>
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', height: '80px', fontSize: '14px', borderRadius: '0', padding: '12px', border: '1px solid #ced4da' }} />
+            <label style={labelStyle}>{commonT('description')}</label>
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ ...inputStyle, height: '80px', padding: '12px' }} />
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             {sale.status !== 'Cancelled' && (
-              <button type="button" onClick={async () => { if (confirm('Cancel this sale?')) { try { await onSave(sale._id, { status: 'Cancelled' }); onClose(); } catch (e) { /* error already shown */ } } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>Cancel Sale</button>
+              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { try { await onSave(sale._id, { status: 'Cancelled' }); onClose(); } catch (e) { /* error already shown */ } } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
             )}
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>Close</button>
-            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Save Changes'}</button>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('close')}</button>
+            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : commonT('save')}</button>
           </div>
         </form>
       </div>
     </div>
   );
 }
-const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-  Cleared:     { bg: '#e6f4ea', color: '#2e7d32', label: 'Cleared' },
-  Reported:    { bg: '#e8f5e9', color: '#388e3c', label: 'Reported' },
-  Pending:     { bg: '#fff8e1', color: '#f57c00', label: 'Pending' },
-  Failed:      { bg: '#fce4ec', color: '#c62828', label: 'Failed' },
-  NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
-};
 
-function ZatcaStatusBadge({ status, saleId, saleType }: { status?: string; saleId: string; saleType: string }) {
+function ZatcaStatusBadge({ status, saleId, saleType, t }: { status?: string; saleId: string; saleType: string; t: any }) {
   const [retrying, setRetrying] = useState(false);
+  
+  const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
+    Cleared:     { bg: '#e6f4ea', color: '#2e7d32', label: 'Cleared' },
+    Reported:    { bg: '#e8f5e9', color: '#388e3c', label: 'Reported' },
+    Pending:     { bg: '#fff8e1', color: '#f57c00', label: 'Pending' },
+    Failed:      { bg: '#fce4ec', color: '#c62828', label: 'Failed' },
+    NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
+  };
+  
   const s = status ? ZATCA_BADGE_COLORS[status] : ZATCA_BADGE_COLORS['NotRequired'];
 
   const handleRetry = async () => {

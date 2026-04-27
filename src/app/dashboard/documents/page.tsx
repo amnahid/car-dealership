@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface VehicleDoc {
   _id: string;
@@ -24,6 +25,11 @@ function getExpiryStyle(expiryDate: string): React.CSSProperties {
 }
 
 export default function DocumentsPage() {
+  const t = useTranslations('Documents');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [documents, setDocuments] = useState<VehicleDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -31,7 +37,7 @@ export default function DocumentsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this document?')) return;
+    if (!confirm(t('deleteConfirm'))) return;
     setDeleting(id);
     try {
       const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
@@ -75,9 +81,10 @@ export default function DocumentsPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: '24px',
+          flexDirection: isRtl ? 'row-reverse' : 'row'
         }}
       >
-        <h2 className="page-title">Documents</h2>
+        <h2 className="page-title">{t('title')}</h2>
         <Link
           href="/dashboard/documents/new"
           style={{
@@ -91,35 +98,26 @@ export default function DocumentsPage() {
             border: '1px solid #28aaa9',
           }}
         >
-          + Add Document
+          + {t('addNew')}
         </Link>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : documents.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No documents found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noDocumentsFound')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
-                {['Car ID', 'Type', 'Issue Date', 'Expiry Date', 'File'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: '#525f80',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('documentType')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('issueDate')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('expiryDate')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('file')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
               </tr>
             </thead>
             <tbody style={{ borderBottom: '1px solid #eee' }}>
@@ -130,25 +128,25 @@ export default function DocumentsPage() {
                   <tr key={doc._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{doc.carId}</td>
                     <td style={{ padding: '12px' }}>{doc.documentType}</td>
-                    <td style={{ padding: '12px' }}>{new Date(doc.issueDate).toLocaleDateString()}</td>
+                    <td style={{ padding: '12px' }}>{new Date(doc.issueDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                     <td style={{ padding: '12px', ...expiryStyle }}>
-                      {new Date(doc.expiryDate).toLocaleDateString()}
+                      {new Date(doc.expiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}
                       {daysLeft <= 30 && daysLeft >= 0 && (
-                        <span style={{ marginLeft: '4px', fontSize: '11px' }}>({daysLeft}d left)</span>
+                        <span style={{ marginLeft: isRtl ? '0' : '4px', marginRight: isRtl ? '4px' : '0', fontSize: '11px' }}>({t('daysLeft', { days: daysLeft })})</span>
                       )}
-                      {daysLeft < 0 && <span style={{ marginLeft: '4px', fontSize: '11px' }}>(Expired)</span>}
+                      {daysLeft < 0 && <span style={{ marginLeft: isRtl ? '0' : '4px', marginRight: isRtl ? '4px' : '0', fontSize: '11px' }}>({t('expired')})</span>}
                     </td>
                     <td style={{ padding: '12px', color: '#525f80', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {doc.fileName || '-'}
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <Link href={`/dashboard/documents/${doc._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
-                        <Link href={`/dashboard/documents/${doc._id}/edit`} style={{ color: '#525f80', textDecoration: 'none' }}>Edit</Link>
+                      <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                        <Link href={`/dashboard/documents/${doc._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</Link>
+                        <Link href={`/dashboard/documents/${doc._id}/edit`} style={{ color: '#525f80', textDecoration: 'none' }}>{commonT('edit')}</Link>
                         {doc.fileUrl && (
-                          <button onClick={() => handleDownload(doc.fileUrl, doc.fileName)} style={{ background: 'none', border: 'none', color: '#28aaa9', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Download</button>
+                          <button onClick={() => handleDownload(doc.fileUrl, doc.fileName)} style={{ background: 'none', border: 'none', color: '#28aaa9', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('download')}</button>
                         )}
-                        <button onClick={() => handleDelete(doc._id)} disabled={deleting === doc._id} style={{ background: 'none', border: 'none', color: '#ec4561', cursor: 'pointer', padding: 0, fontSize: '14px', opacity: deleting === doc._id ? 0.5 : 1 }}>Delete</button>
+                        <button onClick={() => handleDelete(doc._id)} disabled={deleting === doc._id} style={{ background: 'none', border: 'none', color: '#ec4561', cursor: 'pointer', padding: 0, fontSize: '14px', opacity: deleting === doc._id ? 0.5 : 1 }}>{commonT('delete')}</button>
                       </div>
                     </td>
                   </tr>
@@ -161,7 +159,7 @@ export default function DocumentsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
@@ -175,10 +173,10 @@ export default function DocumentsPage() {
               opacity: page === 1 ? 0.5 : 1,
             }}
           >
-            Prev
+            {commonT('prev')}
           </button>
           <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
-            Page {page} of {totalPages}
+            {commonT('page', { page, total: totalPages })}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -193,7 +191,7 @@ export default function DocumentsPage() {
               opacity: page === totalPages ? 0.5 : 1,
             }}
           >
-            Next
+            {commonT('next')}
           </button>
         </div>
       )}

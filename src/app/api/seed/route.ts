@@ -18,14 +18,15 @@ interface SeedUser {
   name: string;
   email: string;
   password: string;
-  role: 'Admin' | 'Manager' | 'Accounts Officer' | 'Sales Agent';
+  role: 'Admin' | 'Sales Person' | 'Car Manager' | 'Accountant' | 'Finance Manager';
 }
 
 const DEFAULT_USERS: SeedUser[] = [
   { name: 'System Admin', email: 'admin@amyalcar.com', password: 'Admin@123', role: 'Admin' },
-  { name: 'Manager User', email: 'manager@amyalcar.com', password: 'Manager@123', role: 'Manager' },
-  { name: 'Accounts Officer', email: 'accounts@amyalcar.com', password: 'Accounts@123', role: 'Accounts Officer' },
-  { name: 'Sales Agent', email: 'agent@amyalcar.com', password: 'Agent@123', role: 'Sales Agent' },
+  { name: 'Car Manager User', email: 'car-manager@amyalcar.com', password: 'CarManager@123', role: 'Car Manager' },
+  { name: 'Accountant User', email: 'accountant@amyalcar.com', password: 'Accountant@123', role: 'Accountant' },
+  { name: 'Finance Manager User', email: 'finance-manager@amyalcar.com', password: 'FinanceManager@123', role: 'Finance Manager' },
+  { name: 'Sales Person User', email: 'sales-person@amyalcar.com', password: 'SalesPerson@123', role: 'Sales Person' },
 ];
 
 const SAMPLE_CARS = [
@@ -585,9 +586,10 @@ const { created: usersCreated, existing: usersExisting } = await seedUsers(force
       },
       defaultCredentials: {
         admin: { email: 'admin@amyalcar.com', password: 'Admin@123' },
-        manager: { email: 'manager@amyalcar.com', password: 'Manager@123' },
-        accounts: { email: 'accounts@amyalcar.com', password: 'Accounts@123' },
-        agent: { email: 'agent@amyalcar.com', password: 'Agent@123' },
+        carManager: { email: 'car-manager@amyalcar.com', password: 'CarManager@123' },
+        accountant: { email: 'accountant@amyalcar.com', password: 'Accountant@123' },
+        financeManager: { email: 'finance-manager@amyalcar.com', password: 'FinanceManager@123' },
+        salesPerson: { email: 'sales-person@amyalcar.com', password: 'SalesPerson@123' },
       },
       hint: 'Use ?force=true to clear and reseed everything',
     }, { status: 201 });

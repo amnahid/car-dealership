@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { RepairStatus } from '@/types';
 import { MultiImageUpload } from '@/components/ImageUpload';
 import { uploadImage, deleteFile } from '@/lib/uploadClient';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface RepairFormData {
   car: string;
@@ -33,6 +34,11 @@ interface RepairFormProps {
 }
 
 export default function RepairForm({ initialData, mode, defaultCarId }: RepairFormProps) {
+  const t = useTranslations('RepairForm');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -72,8 +78,6 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
         }
       })
       .catch(console.error);
-  // initialData._id used as stable dependency for edit mode; defaultCarId for pre-selection
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultCarId, initialData?._id]);
 
   const handleChange = (
@@ -86,38 +90,6 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
-  };
-
-  const handleImageUpload = (field: 'beforeImages' | 'afterImages') => async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    setUploading(true);
-    setUploadStatus(`Uploading ${field === 'beforeImages' ? 'before' : 'after'} images...`);
-
-    const newImages: string[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const result = await uploadImage(files[i], 'repairs');
-      if (result.url) {
-        newImages.push(result.url);
-      } else {
-        alert(`Failed to upload image: ${result.error}`);
-      }
-      setUploadStatus(`Uploading ${field === 'beforeImages' ? 'before' : 'after'} images... ${i + 1}/${files.length}`);
-    }
-
-    setForm((prev) => ({ ...prev, [field]: [...prev[field], ...newImages] }));
-    setUploading(false);
-    setUploadStatus('');
-  };
-
-  const removeImage = async (field: 'beforeImages' | 'afterImages', index: number) => {
-    const imageUrl = form[field][index];
-    if (imageUrl.startsWith('/uploads/')) {
-      await deleteFile(imageUrl);
-    }
-    setForm((prev) => ({ ...prev, [field]: prev[field].filter((_, i) => i !== index) }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,7 +122,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
       router.push('/dashboard/repairs');
       router.refresh();
     } catch {
-      setError('Network error. Please try again.');
+      setError(commonT('errors.networkError'));
     } finally {
       setLoading(false);
     }
@@ -164,6 +136,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
     padding: '0.375rem 1rem',
     border: '1px solid #ced4da',
     background: '#ffffff',
+    textAlign: isRtl ? 'right' : 'left'
   };
 
   const labelStyle: React.CSSProperties = {
@@ -172,27 +145,20 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
     fontWeight: 500,
     color: '#2a3142',
     marginBottom: '4px',
+    textAlign: isRtl ? 'right' : 'left'
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
       {error && (
-        <div
-          style={{
-            background: 'rgba(236, 69, 97, 0.1)',
-            border: '1px solid #ec4561',
-            borderRadius: '3px',
-            padding: '12px',
-            marginBottom: '20px',
-          }}
-        >
+        <div style={{ background: 'rgba(236, 69, 97, 0.1)', border: '1px solid #ec4561', borderRadius: '3px', padding: '12px', marginBottom: '20px', textAlign: isRtl ? 'right' : 'left' }}>
           <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
         <div>
-          <label style={labelStyle}>Car *</label>
+          <label style={labelStyle}>{t('car')} *</label>
           <select
             name="car"
             required
@@ -200,7 +166,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
             onChange={handleChange}
             style={inputStyle}
           >
-            <option value="">Select a car</option>
+            <option value="">{t('selectCar')}</option>
             {cars.map((car) => (
               <option key={car._id} value={car._id}>
                 {car.carId} - {car.brand} {car.model}
@@ -209,7 +175,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
           </select>
         </div>
         <div>
-          <label style={labelStyle}>Repair Date *</label>
+          <label style={labelStyle}>{t('repairDate')} *</label>
           <input
             name="repairDate"
             type="date"
@@ -220,7 +186,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
           />
         </div>
         <div>
-          <label style={labelStyle}>Labor Cost ($)</label>
+          <label style={labelStyle}>{t('laborCost')}</label>
           <input
             name="laborCost"
             type="number"
@@ -232,7 +198,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
           />
         </div>
         <div>
-          <label style={labelStyle}>Parts/Repair Cost ($)</label>
+          <label style={labelStyle}>{t('repairCost')}</label>
           <input
             name="repairCost"
             type="number"
@@ -244,7 +210,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
           />
         </div>
         <div>
-          <label style={labelStyle}>Status</label>
+          <label style={labelStyle}>{t('status')}</label>
           <select
             name="status"
             value={form.status}
@@ -258,8 +224,8 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <label style={labelStyle}>Repair Description *</label>
+      <div style={{ marginBottom: '20px', textAlign: isRtl ? 'right' : 'left' }}>
+        <label style={labelStyle}>{t('description')} *</label>
         <textarea
           name="repairDescription"
           required
@@ -270,8 +236,8 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
         />
       </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <label style={labelStyle}>Parts Replaced</label>
+      <div style={{ marginBottom: '20px', textAlign: isRtl ? 'right' : 'left' }}>
+        <label style={labelStyle}>{t('partsReplaced')}</label>
         <textarea
           name="partsReplaced"
           value={form.partsReplaced}
@@ -281,30 +247,26 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
         <div>
           <MultiImageUpload
-            label="Before Images"
+            label={t('beforeImages')}
             value={form.beforeImages}
             onChange={(imgs) => setForm(prev => ({ ...prev, beforeImages: imgs }))}
             folder="repairs/before"
-            maxCount={5}
-            gridSize={100}
           />
         </div>
         <div>
           <MultiImageUpload
-            label="After Images"
+            label={t('afterImages')}
             value={form.afterImages}
             onChange={(imgs) => setForm(prev => ({ ...prev, afterImages: imgs }))}
             folder="repairs/after"
-            maxCount={5}
-            gridSize={100}
           />
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <button
           type="button"
           onClick={() => router.back()}
@@ -319,7 +281,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
             cursor: 'pointer',
           }}
         >
-          Cancel
+          {commonT('cancel')}
         </button>
         <button
           type="submit"
@@ -336,7 +298,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
             opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? 'Saving...' : mode === 'edit' ? 'Update Repair' : 'Add Repair'}
+          {loading ? commonT('loading') : mode === 'edit' ? t('updateRepair') : t('addRepair')}
         </button>
       </div>
     </form>

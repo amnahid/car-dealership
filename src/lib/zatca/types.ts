@@ -31,6 +31,7 @@ export interface ZatcaLineItem {
 
 export interface ZatcaInvoiceData {
   uuid: string;
+  invoiceNumber?: string; // Sequential invoice ID (BT-1)
   invoiceType: ZatcaInvoiceType;
   issueDate: Date;
   seller: ZatcaSellerInfo;

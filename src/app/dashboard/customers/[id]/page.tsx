@@ -285,7 +285,7 @@ export default function CustomerDetailPage() {
                         <tr key={sale._id as string} style={{ borderBottom: '1px solid #f5f5f5' }}>
                           <td style={{ padding: '12px' }}>{new Date(sale.saleDate as string).toLocaleDateString()}</td>
                           <td style={{ padding: '12px' }}>{String(carData?.brand || '')} {String(carData?.model || '')}</td>
-                          <td style={{ padding: '12px', fontWeight: 600, color: '#42ca7f' }}>SAR {Number(sale.finalPrice).toLocaleString()}</td>
+                          <td style={{ padding: '12px', fontWeight: 600, color: '#42ca7f' }}>SAR {(Number(sale.finalPrice) || 0).toLocaleString()}</td>
                           <td style={{ padding: '12px' }}><span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', background: sale.status === 'Cancelled' ? '#ec456120' : '#42ca7f20', color: sale.status === 'Cancelled' ? '#ec4561' : '#42ca7f' }}>{sale.status === 'Cancelled' ? 'Cancelled' : 'Completed'}</span></td>
                         </tr>);
                       })}
@@ -311,7 +311,7 @@ export default function CustomerDetailPage() {
                         <tr key={rental._id as string} style={{ borderBottom: '1px solid #f5f5f5' }}>
                           <td style={{ padding: '12px' }}>{new Date(rental.startDate as string).toLocaleDateString()}</td>
                           <td style={{ padding: '12px' }}>{String(carData?.brand || '')} {String(carData?.model || '')}</td>
-                          <td style={{ padding: '12px', fontWeight: 600, color: '#42ca7f' }}>SAR {Number(rental.totalAmount).toLocaleString()}</td>
+                          <td style={{ padding: '12px', fontWeight: 600, color: '#42ca7f' }}>SAR {(Number(rental.totalAmount) || 0).toLocaleString()}</td>
                           <td style={{ padding: '12px' }}><span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', background: rental.status === 'Cancelled' ? '#ec456120' : '#42ca7f20', color: rental.status === 'Cancelled' ? '#ec4561' : '#42ca7f' }}>{String(rental.status) || 'Active'}</span></td>
                         </tr>);
                       })}
@@ -332,8 +332,8 @@ export default function CustomerDetailPage() {
                   <div key={inst._id as string} style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #eee' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
                       <div><span style={{ color: '#9ca8b3', fontSize: '12px' }}>Car</span><p style={{ margin: '4px 0', fontWeight: 500 }}>{String(carData?.brand || '')} {String(carData?.model || '')}</p></div>
-                      <div><span style={{ color: '#9ca8b3', fontSize: '12px' }}>Total</span><p style={{ margin: '4px 0', fontWeight: 600 }}>SAR {Number(inst.totalPrice || 0).toLocaleString()}</p></div>
-                      <div><span style={{ color: '#9ca8b3', fontSize: '12px' }}>Outstanding</span><p style={{ margin: '4px 0', fontWeight: 600, color: outstanding > 0 ? '#ec4561' : '#42ca7f' }}>SAR {outstanding.toLocaleString()}</p></div>
+                      <div><span style={{ color: '#9ca8b3', fontSize: '12px' }}>Total</span><p style={{ margin: '4px 0', fontWeight: 600 }}>SAR {(Number(inst.totalPrice) || 0).toLocaleString()}</p></div>
+                      <div><span style={{ color: '#9ca8b3', fontSize: '12px' }}>Outstanding</span><p style={{ margin: '4px 0', fontWeight: 600, color: outstanding > 0 ? '#ec4561' : '#42ca7f' }}>SAR {(outstanding || 0).toLocaleString()}</p></div>
                     </div>
                   </div>);
                 })}

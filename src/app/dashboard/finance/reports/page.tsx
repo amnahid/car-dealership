@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Car {
   _id: string;
@@ -45,6 +46,12 @@ interface Breakdown {
 }
 
 function ReportsContent() {
+  const t = useTranslations('Reports');
+  const commonT = useTranslations('Common');
+  const expensesT = useTranslations('Expenses');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [carsLoading, setCarsLoading] = useState(true);
@@ -151,16 +158,16 @@ function ReportsContent() {
   };
 
   const incomeVsExpense = [
-    { name: 'Income', amount: summary.totalIncome },
-    { name: 'Expense', amount: summary.totalExpense },
-    { name: 'Profit', amount: summary.netProfit },
+    { name: commonT('income'), amount: summary.totalIncome },
+    { name: commonT('expense'), amount: summary.totalExpense },
+    { name: t('profit'), amount: summary.netProfit },
   ];
 
   const expenseBreakdown = [
-    { name: 'Car Purchases', amount: breakdown.carPurchaseCosts },
-    { name: 'Repairs', amount: breakdown.repairCosts },
-    { name: 'Salaries', amount: breakdown.salaryExpenses },
-    { name: 'Other', amount: breakdown.otherExpenses },
+    { name: t('cost'), amount: breakdown.carPurchaseCosts },
+    { name: commonT('repairs'), amount: breakdown.repairCosts },
+    { name: commonT('salaries'), amount: breakdown.salaryExpenses },
+    { name: commonT('other'), amount: breakdown.otherExpenses },
   ].filter(d => d.amount > 0);
 
   const handlePrint = () => window.print();
@@ -176,52 +183,38 @@ function ReportsContent() {
     a.click();
   };
 
-  const handleExportExcel = () => {
-    const xml = '<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?>';
-    const workbook = `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-      <Worksheet ss:Name="Car Profit"><Table>
-        <Row><Cell><Data ss:Type="String">Car ID</Data></Cell><Cell><Data ss:Type="String">Brand</Data></Cell><Cell><Data ss:Type="String">Model</Data></Cell><Cell><Data ss:Type="String">Year</Data></Cell><Cell><Data ss:Type="String">Status</Data></Cell><Cell><Data ss:Type="String">Purchase Price</Data></Cell><Cell><Data ss:Type="String">Repair Cost</Data></Cell><Cell><Data ss:Type="String">Total Cost</Data></Cell><Cell><Data ss:Type="String">Revenue</Data></Cell><Cell><Data ss:Type="String">Profit</Data></Cell></Row>
-        ${cars.map(c => `<Row><Cell><Data ss:Type="String">${c.carId}</Data></Cell><Cell><Data ss:Type="String">${c.brand}</Data></Cell><Cell><Data ss:Type="String">${c.model}</Data></Cell><Cell><Data ss:Type="Number">${c.year}</Data></Cell><Cell><Data ss:Type="String">${c.status}</Data></Cell><Cell><Data ss:Type="Number">${c.purchasePrice}</Data></Cell><Cell><Data ss:Type="Number">${c.repairCost}</Data></Cell><Cell><Data ss:Type="Number">${c.totalCost}</Data></Cell><Cell><Data ss:Type="Number">${c.revenue}</Data></Cell><Cell><Data ss:Type="Number">${c.profit}</Data></Cell></Row>`).join('')}
-      </Table></Worksheet></Workbook>`;
-    const blob = new Blob([xml + workbook], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'car-profit-report.xls';
-    a.click();
-  };
+  const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
 
   return (
-    <div style={{ marginBottom: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h2 className="page-title">Financial Reports</h2>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={handlePrint} style={{ background: '#5b6be7', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Print</button>
-          <button onClick={handleExportCSV} style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>CSV</button>
-          <button onClick={handleExportExcel} style={{ background: '#28aaa9', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Excel</button>
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <h2 className="page-title">{t('title')}</h2>
+        <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <button onClick={handlePrint} style={{ background: '#5b6be7', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{expensesT('export.print')}</button>
+          <button onClick={handleExportCSV} style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{expensesT('export.csv')}</button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #42ca7f' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Income</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>SAR {summary.totalIncome.toLocaleString()}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #42ca7f', borderRight: isRtl ? '4px solid #42ca7f' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalIncome')}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(summary.totalIncome)}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #ec4561' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Expenses</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#ec4561', margin: '4px 0 0' }}>SAR {summary.totalExpense.toLocaleString()}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #ec4561', borderRight: isRtl ? '4px solid #ec4561' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalExpenses')}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#ec4561', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(summary.totalExpense)}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #28aaa9' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Net Profit</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>SAR {summary.netProfit.toLocaleString()}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #28aaa9', borderRight: isRtl ? '4px solid #28aaa9' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('netProfit')}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(summary.netProfit)}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #f8b425' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Profit Margin</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f8b425', margin: '4px 0 0' }}>{summary.profitMargin}%</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #f8b425', borderRight: isRtl ? '4px solid #f8b425' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('profitMargin')}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f8b425', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{summary.profitMargin}%</p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         {['day', 'week', 'month', 'year'].map(p => (
           <button
             key={p}
@@ -236,32 +229,50 @@ function ReportsContent() {
               cursor: 'pointer',
             }}
           >
-            {p === 'day' ? 'Today' : p === 'week' ? 'This Week' : p === 'month' ? 'This Month' : 'This Year'}
+            {t(`presets.${p}`)}
           </button>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '20px' }}>
-          <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#525f80' }}>Income vs Expense</h4>
+          <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#525f80' }}>{t('incomeVsExpense')}</h4>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={incomeVsExpense}>
+            <BarChart data={incomeVsExpense} layout={isRtl ? 'vertical' : 'horizontal'}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-              <XAxis dataKey="name" fontSize={12} />
-              <YAxis fontSize={12} />
-              <Tooltip formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, 'Amount']} />
+              {isRtl ? (
+                <>
+                  <XAxis type="number" fontSize={12} orientation="top" />
+                  <YAxis dataKey="name" type="category" fontSize={12} orientation="right" />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis fontSize={12} />
+                </>
+              )}
+              <Tooltip formatter={(value) => [formatCurrency(Number(value)), commonT('amount')]} contentStyle={{ textAlign: isRtl ? 'right' : 'left' }} />
               <Bar dataKey="amount" fill="#28aaa9" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="card" style={{ padding: '20px' }}>
-          <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#525f80' }}>Expense Breakdown</h4>
+          <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#525f80' }}>{t('expenseBreakdown')}</h4>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={expenseBreakdown} layout="vertical">
+            <BarChart data={expenseBreakdown} layout={isRtl ? 'horizontal' : 'vertical'}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-              <XAxis type="number" fontSize={12} />
-              <YAxis dataKey="name" type="category" width={100} fontSize={12} />
-              <Tooltip formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, 'Amount']} />
+              {!isRtl ? (
+                <>
+                  <XAxis type="number" fontSize={12} />
+                  <YAxis dataKey="name" type="category" width={100} fontSize={12} />
+                </>
+              ) : (
+                <>
+                  <XAxis dataKey="name" fontSize={12} orientation="top" />
+                  <YAxis type="number" fontSize={12} orientation="right" />
+                </>
+              )}
+              <Tooltip formatter={(value) => [formatCurrency(Number(value)), commonT('amount')]} contentStyle={{ textAlign: isRtl ? 'right' : 'left' }} />
               <Bar dataKey="amount" fill="#ec4561" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -269,41 +280,48 @@ function ReportsContent() {
       </div>
 
       <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
-        <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#525f80' }}>Car Profit Summary</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+        <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#525f80' }}>{t('carProfitSummary')}</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '4px' }}>
-            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>Sold Cars ({profitSummary.soldCars})</p>
-            <p style={{ fontSize: '20px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>SAR {profitSummary.totalProfit.toLocaleString()}</p>
+            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>{t('soldCars')} ({profitSummary.soldCars})</p>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(profitSummary.totalProfit)}</p>
           </div>
           <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '4px' }}>
-            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>Avg Profit / Car</p>
-            <p style={{ fontSize: '20px', fontWeight: 700, color: profitSummary.avgProfit >= 0 ? '#28aaa9' : '#ec4561', margin: '4px 0 0' }}>SAR {profitSummary.avgProfit.toLocaleString()}</p>
+            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>{t('avgProfitPerCar')}</p>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: profitSummary.avgProfit >= 0 ? '#28aaa9' : '#ec4561', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(profitSummary.avgProfit)}</p>
           </div>
           <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '4px' }}>
-            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>Total Revenue</p>
-            <p style={{ fontSize: '20px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>SAR {profitSummary.totalRevenue.toLocaleString()}</p>
+            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>{t('revenue')}</p>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(profitSummary.totalRevenue)}</p>
           </div>
           <div style={{ padding: '16px', background: '#f8f9fa', borderRadius: '4px' }}>
-            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>Total Cost</p>
-            <p style={{ fontSize: '20px', fontWeight: 700, color: '#ec4561', margin: '4px 0 0' }}>SAR {profitSummary.totalCost.toLocaleString()}</p>
+            <p style={{ fontSize: '12px', color: '#9ca8b3', margin: 0 }}>{t('cost')}</p>
+            <p style={{ fontSize: '20px', fontWeight: 700, color: '#ec4561', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(profitSummary.totalCost)}</p>
           </div>
         </div>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <h4 style={{ marginTop: 0, marginBottom: '16px', padding: '20px', color: '#525f80' }}>All Cars - Profit Report</h4>
+        <h4 style={{ marginTop: 0, marginBottom: '16px', padding: '20px', color: '#525f80' }}>{t('allCarsProfitReport')}</h4>
         {carsLoading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : cars.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No cars found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('noData')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '900px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '900px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Car ID', 'Brand', 'Model', 'Year', 'Status', 'Purchase Price', 'Repair Cost', 'Total Cost', 'Revenue', 'Profit'].map(h => (
-                    <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('brand')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('model')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('year')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('status')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('price')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('repairs')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('cost')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('revenue')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('profit')}</th>
                 </tr>
               </thead>
               <tbody style={{ borderBottom: '1px solid #eee' }}>
@@ -316,12 +334,12 @@ function ReportsContent() {
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: car.status === 'Sold' ? '#42ca7f20' : '#ec456120', color: car.status === 'Sold' ? '#42ca7f' : '#ec4561' }}>{car.status}</span>
                     </td>
-                    <td style={{ padding: '12px' }}>SAR {car.purchasePrice.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>SAR {car.repairCost.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>SAR {car.totalCost.toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>SAR {car.revenue.toLocaleString()}</td>
-                    <td style={{ padding: '12px', fontWeight: 600, color: car.profit >= 0 ? '#42ca7f' : '#ec4561' }}>
-                      {car.profit >= 0 ? '+' : ''}SAR {car.profit.toLocaleString()}
+                    <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(car.purchasePrice)}</td>
+                    <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(car.repairCost)}</td>
+                    <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(car.totalCost)}</td>
+                    <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(car.revenue)}</td>
+                    <td style={{ padding: '12px', fontWeight: 600, color: car.profit >= 0 ? '#42ca7f' : '#ec4561', textAlign: isRtl ? 'left' : 'right' }}>
+                      {car.profit >= 0 ? '+' : ''}{formatCurrency(car.profit)}
                     </td>
                   </tr>
                 ))}

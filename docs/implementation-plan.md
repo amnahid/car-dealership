@@ -28,8 +28,8 @@ This document outlines the implementation plan to address critical gaps in the C
 ### ✅ Fixed - Low Priority
 8. ✅ TypeScript/lint errors present in codebase - **Fixed in Phase 5**
 
-### ⚠️ Out of Scope (Medium Priority)
-9. ⚠️ Role-based access control not enforced - Not implemented (only UI menu filtering exists)
+### ✅ Fixed - Medium Priority
+9. ✅ Role-based access control enforced - Implemented via centralized RBAC and route protection
 
 ---
 
@@ -43,16 +43,17 @@ This document outlines the implementation plan to address critical gaps in the C
 
 | File | Change |
 |------|--------|
-| `src/app/api/seed/route.ts` | Update to create all 4 role users by default |
+| `src/app/api/seed/route.ts` | Update to create all 5 role users by default |
 
 #### Default Users Created by Seed Script
 
 | Role | Email | Password |
 |------|-------|---------|
 | Admin | admin@amyalcar.com | Admin@123 |
-| Manager | manager@amyalcar.com | Manager@123 |
-| Accounts Officer | accounts@amyalcar.com | Accounts@123 |
-| Sales Agent | agent@amyalcar.com | Agent@123 |
+| Car Manager | car-manager@amyalcar.com | CarManager@123 |
+| Accountant | accountant@amyalcar.com | Accountant@123 |
+| Finance Manager | finance-manager@amyalcar.com | FinanceManager@123 |
+| Sales Person | sales-person@amyalcar.com | SalesPerson@123 |
 
 ---
 
@@ -267,7 +268,7 @@ Compression: 1MB max, 1920px max dimensions
 
 ## Testing Checklist
 
-- [ ] Seed script creates all 4 users successfully
+- [ ] Seed script creates all 5 users successfully
 - [ ] Non-Admin users can log in with correct credentials
 - [ ] Admin can create new user with email credentials sent
 - [ ] Admin can reset user password
@@ -290,7 +291,7 @@ Compression: 1MB max, 1920px max dimensions
 ## Files Changed
 
 ### Phase 1 - Authentication & Seed
-- `src/app/api/seed/route.ts` - Creates all 4 role users
+- `src/app/api/seed/route.ts` - Creates all 5 role users
 
 ### Phase 2 - User Management
 - `src/lib/userCredentialsEmail.ts` - New file for credential emails

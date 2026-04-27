@@ -16,6 +16,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {

@@ -3,8 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 
 export default function LoginForm() {
+  const t = useTranslations('Auth.login');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+  
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,14 +31,14 @@ export default function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Login failed');
+        setError(data.error || t('errors.loginFailed'));
         return;
       }
 
       router.push('/dashboard');
       router.refresh();
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('errors.networkError'));
     } finally {
       setLoading(false);
     }
@@ -42,20 +47,13 @@ export default function LoginForm() {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     height: '50px',
-    fontFamily: '"Karla", sans-serif',
     fontSize: '14px',
     background: '#f5f5f5',
     border: '1px solid #efefef',
     borderRadius: '0',
-    padding: '0 15px 0 50px',
+    padding: isRtl ? '0 50px 0 15px' : '0 15px 0 50px',
     outline: 'none',
     transition: 'all 0.3s ease',
-  };
-
-  const inputFocusStyle: React.CSSProperties = {
-    ...inputStyle,
-    borderColor: '#28aaa9',
-    boxShadow: '0 0 0 2px rgba(40, 170, 170, 0.1)',
   };
 
   return (
@@ -78,7 +76,8 @@ export default function LoginForm() {
         <div
           style={{
             position: 'absolute',
-            left: '15px',
+            left: isRtl ? 'auto' : '15px',
+            right: isRtl ? '15px' : 'auto',
             top: '50%',
             transform: 'translateY(-50%)',
             fontSize: '18px',
@@ -98,7 +97,7 @@ export default function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email address"
+          placeholder={t('email')}
           style={inputStyle}
         />
       </div>
@@ -107,7 +106,8 @@ export default function LoginForm() {
         <div
           style={{
             position: 'absolute',
-            left: '15px',
+            left: isRtl ? 'auto' : '15px',
+            right: isRtl ? '15px' : 'auto',
             top: '50%',
             transform: 'translateY(-50%)',
             fontSize: '18px',
@@ -127,7 +127,7 @@ export default function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
+          placeholder={t('password')}
           style={inputStyle}
         />
       </div>
@@ -150,15 +150,15 @@ export default function LoginForm() {
           transition: 'all 0.3s ease',
         }}
       >
-        {loading ? 'Signing in...' : 'Sign in'}
+        {loading ? t('signingIn') : t('signIn')}
       </button>
 
-      <p style={{ textAlign: 'right', marginTop: '12px' }}>
+      <p style={{ textAlign: isRtl ? 'left' : 'right', marginTop: '12px' }}>
         <Link
           href="/auth/forgot-password"
           style={{ color: '#28aaa9', fontSize: '13px', textDecoration: 'none' }}
         >
-          Forgot your password?
+          {t('forgotPassword')}
         </Link>
       </p>
     </form>

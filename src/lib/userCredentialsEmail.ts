@@ -19,7 +19,6 @@ export async function sendUserCredentialsEmail(
   }
 
   const html = formatCredentialsEmailHtml(user, password);
-  const roleDisplay = user.role === 'Accounts Officer' ? 'Accounts Officer' : user.role;
 
   try {
     const result = await sendEmail({
@@ -44,7 +43,7 @@ export function formatCredentialsEmailHtml(
   user: UserCredentials,
   password: string
 ): string {
-  const roleDisplay = user.role === 'Accounts Officer' ? 'Accounts Officer' : user.role;
+  const roleDisplay = user.role;
 
   return `
 <!DOCTYPE html>

@@ -14,6 +14,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!['Admin', 'Sales Person', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
 
     const now = new Date();
@@ -113,6 +117,10 @@ export async function POST(request: NextRequest) {
     const user = await getAuthPayload(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!['Admin', 'Sales Person', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     await connectDB();

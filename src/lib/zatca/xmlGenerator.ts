@@ -3,10 +3,6 @@ import { ZatcaInvoiceData } from './types';
 
 /**
  * Generate ZATCA-compliant UBL 2.1 XML invoice.
- * Standard (B2B): InvoiceTypeCode 388 with subtype 0100000
- * Simplified (B2C): InvoiceTypeCode 388 with subtype 0200000
- *
- * Reference: ZATCA e-invoicing standard v3.x
  */
 export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): string {
   const isSimplified = data.invoiceType === 'Simplified';
@@ -22,7 +18,7 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
       'xmlns:ext': 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2',
     });
 
-  // UBL Extensions placeholder (for Phase 2 signature)
+  // 1. UBL Extensions placeholder
   root.ele('ext:UBLExtensions')
     .ele('ext:UBLExtension')
       .ele('ext:ExtensionURI').txt('urn:oasis:names:specification:ubl:dsig:enveloped:xades').up()
@@ -41,16 +37,22 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
     .up()
   .up();
 
+  // 2-9. Basic Info
   root.ele('cbc:ProfileID').txt('reporting:1.0').up();
-  root.ele('cbc:ID').txt(data.uuid).up();
+  root.ele('cbc:ID').txt(data.invoiceNumber || 'INV-1').up();
   root.ele('cbc:UUID').txt(data.uuid).up();
   root.ele('cbc:IssueDate').txt(issueDateStr).up();
   root.ele('cbc:IssueTime').txt(issueTimeStr).up();
   root.ele('cbc:InvoiceTypeCode', { name: invoiceSubtype }).txt('388').up();
-  root.ele('cbc:DocumentCurrencyCode').txt(data.currency).up();
-  root.ele('cbc:TaxCurrencyCode').txt(data.currency).up();
+  
+  if (data.notes) {
+    root.ele('cbc:Note').txt(data.notes).up();
+  }
 
-  // Previous Invoice Hash
+  root.ele('cbc:DocumentCurrencyCode').txt(data.currency).up();
+  root.ele('cbc:TaxCurrencyCode').txt('SAR').up();
+
+  // 10. Additional Document References
   root.ele('cac:AdditionalDocumentReference')
     .ele('cbc:ID').txt('ICV').up()
     .ele('cbc:UUID').txt('1').up()
@@ -63,7 +65,6 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
     .up()
   .up();
 
-  // QR code (simplified invoice only)
   if (isSimplified && tlvBase64) {
     root.ele('cac:AdditionalDocumentReference')
       .ele('cbc:ID').txt('QR').up()
@@ -73,23 +74,24 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
     .up();
   }
 
-  // Signature placeholder
+  // 11. Signature placeholder
   root.ele('cac:Signature')
     .ele('cbc:ID').txt('urn:oasis:names:specification:ubl:signature:Invoice').up()
     .ele('cbc:SignatureMethod').txt('urn:oasis:names:specification:ubl:dsig:enveloped:xades').up()
   .up();
 
-  // Seller (AccountingSupplierParty)
+  // 12. Seller
   const supplier = root.ele('cac:AccountingSupplierParty').ele('cac:Party');
   supplier.ele('cac:PartyIdentification')
-    .ele('cbc:ID', { schemeID: 'CRN' }).txt(data.seller.trn).up()
+    .ele('cbc:ID', { schemeID: 'OTH' }).txt(data.seller.trn).up()
   .up();
+  
   supplier.ele('cac:PostalAddress')
     .ele('cbc:StreetName').txt(data.seller.streetName).up()
     .ele('cbc:BuildingNumber').txt(data.seller.buildingNumber).up()
+    .ele('cbc:CitySubdivisionName').txt(data.seller.district).up()
     .ele('cbc:CityName').txt(data.seller.city).up()
     .ele('cbc:PostalZone').txt(data.seller.postalCode).up()
-    .ele('cbc:CountrySubentity').txt(data.seller.district).up()
     .ele('cac:Country').ele('cbc:IdentificationCode').txt(data.seller.countryCode).up().up()
   .up();
   supplier.ele('cac:PartyTaxScheme')
@@ -99,10 +101,16 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
   supplier.ele('cac:PartyLegalEntity')
     .ele('cbc:RegistrationName').txt(data.seller.nameAr).up()
   .up();
-  root.up(); // AccountingSupplierParty
 
-  // Buyer (AccountingCustomerParty)
+  // 13. Buyer
   const customer = root.ele('cac:AccountingCustomerParty').ele('cac:Party');
+  if (data.buyer.address) {
+    customer.ele('cac:PostalAddress')
+      .ele('cbc:StreetName').txt(data.buyer.address).up()
+      .ele('cbc:CityName').txt(data.buyer.city || '').up()
+      .ele('cac:Country').ele('cbc:IdentificationCode').txt('SA').up().up()
+    .up();
+  }
   if (data.buyer.trn) {
     customer.ele('cac:PartyTaxScheme')
       .ele('cbc:CompanyID').txt(data.buyer.trn).up()
@@ -112,16 +120,8 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
   customer.ele('cac:PartyLegalEntity')
     .ele('cbc:RegistrationName').txt(data.buyer.name).up()
   .up();
-  if (data.buyer.address) {
-    customer.ele('cac:PostalAddress')
-      .ele('cbc:StreetName').txt(data.buyer.address).up()
-      .ele('cbc:CityName').txt(data.buyer.city || '').up()
-      .ele('cac:Country').ele('cbc:IdentificationCode').txt('SA').up().up()
-    .up();
-  }
-  root.up(); // AccountingCustomerParty
 
-  // Tax Total
+  // 14. Tax Total
   root.ele('cac:TaxTotal')
     .ele('cbc:TaxAmount', { currencyID: data.currency })
       .txt(data.vatTotal.toFixed(2))
@@ -137,7 +137,11 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
     .up()
   .up();
 
-  // Legal Monetary Total
+  root.ele('cac:TaxTotal')
+    .ele('cbc:TaxAmount', { currencyID: 'SAR' }).txt(data.vatTotal.toFixed(2)).up()
+  .up();
+
+  // 15. Legal Monetary Total
   root.ele('cac:LegalMonetaryTotal')
     .ele('cbc:LineExtensionAmount', { currencyID: data.currency }).txt(data.subtotal.toFixed(2)).up()
     .ele('cbc:TaxExclusiveAmount', { currencyID: data.currency }).txt(data.subtotal.toFixed(2)).up()
@@ -146,7 +150,7 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
     .ele('cbc:PayableAmount', { currencyID: data.currency }).txt(data.totalWithVat.toFixed(2)).up()
   .up();
 
-  // Invoice Lines
+  // 16. Invoice Lines
   data.lineItems.forEach((item, idx) => {
     root.ele('cac:InvoiceLine')
       .ele('cbc:ID').txt(String(idx + 1)).up()
@@ -154,13 +158,13 @@ export function generateZatcaXML(data: ZatcaInvoiceData, tlvBase64: string): str
       .ele('cbc:LineExtensionAmount', { currencyID: data.currency }).txt(item.unitPrice.toFixed(2)).up()
       .ele('cac:TaxTotal')
         .ele('cbc:TaxAmount', { currencyID: data.currency }).txt(item.vatAmount.toFixed(2)).up()
-        .ele('cbc:RoundingAmount', { currencyID: data.currency }).txt(item.totalAmount.toFixed(2)).up()
+        .ele('cbc:RoundingAmount', { currencyID: data.currency }).txt((item.unitPrice + item.vatAmount).toFixed(2)).up()
       .up()
       .ele('cac:Item')
         .ele('cbc:Name').txt(item.name).up()
         .ele('cac:ClassifiedTaxCategory')
           .ele('cbc:ID').txt('S').up()
-          .ele('cbc:Percent').txt(String(item.vatRate)).up()
+          .ele('cbc:Percent').txt(item.vatRate.toFixed(2)).up()
           .ele('cac:TaxScheme').ele('cbc:ID').txt('VAT').up().up()
         .up()
       .up()
@@ -178,5 +182,12 @@ function formatDate(date: Date): string {
 }
 
 function formatTime(date: Date): string {
-  return date.toISOString().split('T')[1].split('.')[0] + 'Z';
+  const iso = date.toISOString();
+  return iso.split('T')[1].split('.')[0];
 }
+
+export function getZatcaTimestamp(date: Date): string {
+  const iso = date.toISOString();
+  return iso.split('.')[0];
+}
+// hmr test generator

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB, DatabaseConnectionError } from '@/lib/db';
+import { connectDB } from '@/lib/db';
 import ZatcaConfig from '@/models/ZatcaConfig';
 import { getAuthPayload } from '@/lib/apiAuth';
-import { generateZatcaXML } from '@/lib/zatca/xmlGenerator';
-import { hashInvoiceXML, hashInvoiceXMLString, hashInvoiceXMLVariant, getCanonicalForm, stripForHash, stripForHashVariant, generateInvoiceUUID } from '@/lib/zatca/invoiceHash';
-import { signInvoiceHash, embedSignatureInXML, parseCertificate } from '@/lib/zatca/cryptoSigning';
+import { generateZatcaXML, getZatcaTimestamp } from '@/lib/zatca/xmlGenerator';
+import { hashInvoiceXML, generateInvoiceUUID } from '@/lib/zatca/invoiceHash';
+import { embedSignatureInXML, parseCertificate } from '@/lib/zatca/cryptoSigning';
 import { buildTLVBase64, buildTLVBase64Phase2 } from '@/lib/zatca/qrCode';
 import { ZATCA_INITIAL_PIH } from '@/lib/zatca/types';
 import { generateZatcaKeyPair, ZatcaCsrOptions, getOpensslCsrConfig } from '@/lib/zatca/onboarding';
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const user = await getAuthPayload(request);
-    if (!user || user.role !== 'Admin') {
+    if (!user || user.normalizedRole !== 'Admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'generate_keys') {
-      // Step 1: Generate EC key pair + get openssl command for CSR
       const csrOptions: ZatcaCsrOptions = {
         commonName: config.sellerName,
         organizationName: config.sellerName,
@@ -46,7 +45,6 @@ export async function POST(request: NextRequest) {
 
       const result = generateZatcaKeyPair(csrOptions);
 
-      // Save keys to config (privateKey is sensitive — store securely)
       await ZatcaConfig.updateOne(
         { _id: config._id },
         { $set: { privateKey: result.privateKey, publicKey: result.publicKey } }
@@ -62,10 +60,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'generate_csr') {
       if (!config.privateKey) {
-        return NextResponse.json(
-          { error: 'No private key found. Run Step 1 first.' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: 'No private key found. Run Step 1 first.' }, { status: 400 });
       }
       const csrB64 = generateCsr({
         privateKey: config.privateKey!,
@@ -77,33 +72,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         message: 'CSR generated successfully.',
         csrB64,
-        note: 'Use the csrB64 value in Step 2: Request Compliance CSID.',
       });
     }
 
     if (action === 'auto_onboard') {
-      // One-shot: generate keys → CSR → compliance CSID. Only requires OTP.
       const { otp } = body;
-      if (!otp) {
-        return NextResponse.json(
-          { error: 'OTP is required (get it from the ZATCA Fatoora portal → "Onboard new solution unit/device")' },
-          { status: 400 }
-        );
-      }
-      if (!config.sellerName || !config.trn) {
-        return NextResponse.json(
-          { error: 'Company name and TRN are required. Fill in the Config tab first.' },
-          { status: 400 }
-        );
-      }
-      if (!config.address?.streetName || !config.address?.city) {
-        return NextResponse.json(
-          { error: 'Street name and city are required. Fill in the address fields in the Config tab first.' },
-          { status: 400 }
-        );
-      }
+      if (!otp) return NextResponse.json({ error: 'OTP is required' }, { status: 400 });
 
-      // Step 1: generate EC key pair
       const { privateKey, publicKey } = generateZatcaKeyPair({
         commonName: config.sellerName,
         organizationName: config.sellerName,
@@ -115,12 +90,8 @@ export async function POST(request: NextRequest) {
         businessCategory: 'Motor Vehicle Dealers',
         environment: config.environment,
       });
-      await ZatcaConfig.updateOne(
-        { _id: config._id },
-        { $set: { privateKey, publicKey } }
-      );
+      await ZatcaConfig.updateOne({ _id: config._id }, { $set: { privateKey, publicKey } });
 
-      // Step 1.5: generate CSR using the fresh private key
       const csrB64 = generateCsr({
         privateKey,
         sellerName: config.sellerName,
@@ -129,7 +100,6 @@ export async function POST(request: NextRequest) {
         environment: config.environment,
       });
 
-      // Step 2: request compliance CSID
       const result = await requestComplianceCsid(csrB64, config.environment, otp);
       await ZatcaConfig.updateOne(
         { _id: config._id },
@@ -143,23 +113,16 @@ export async function POST(request: NextRequest) {
       );
 
       return NextResponse.json({
-        message: 'Auto-onboarding complete. Compliance CSID obtained.',
+        message: 'Auto-onboarding complete.',
         requestId: result.requestId,
         csid: result.csid,
+        dispositionMessage: result.dispositionMessage,
       });
     }
 
     if (action === 'request_compliance_csid') {
       const { csr, otp } = body;
-      if (!csr) {
-        return NextResponse.json({ error: 'CSR is required' }, { status: 400 });
-      }
-      if (!otp) {
-        return NextResponse.json(
-          { error: 'OTP is required (get it from the ZATCA Fatoora portal — "Onboard new solution unit/device")' },
-          { status: 400 }
-        );
-      }
+      if (!csr || !otp) return NextResponse.json({ error: 'CSR and OTP required' }, { status: 400 });
 
       const result = await requestComplianceCsid(csr, config.environment, otp);
 
@@ -178,21 +141,19 @@ export async function POST(request: NextRequest) {
         message: 'Compliance CSID obtained.',
         requestId: result.requestId,
         csid: result.csid,
+        dispositionMessage: result.dispositionMessage,
       });
     }
 
     if (action === 'compliance_check') {
-      if (!config.complianceCsid || !config.complianceCsidSecret) {
-        return NextResponse.json({ error: 'Compliance CSID not yet obtained.' }, { status: 400 });
-      }
-      if (!config.privateKey || !config.certificate) {
-        return NextResponse.json({ error: 'Private key or certificate missing — re-run Auto-Onboard.' }, { status: 400 });
+      if (!config.complianceCsid || !config.privateKey || !config.certificate) {
+        return NextResponse.json({ error: 'Configuration incomplete — run onboarding first.' }, { status: 400 });
       }
 
-      // Always generate a fresh synthetic invoice so the hash is computed with
-      // the current algorithm (stale DB records may have hashes from an older approach).
       const uuid = generateInvoiceUUID();
-      const issueTimestamp = new Date().toISOString();
+      const now = new Date();
+      const issueTimestamp = getZatcaTimestamp(now);
+      
       const qrData = {
         sellerName: config.sellerNameAr || config.sellerName,
         sellerTrn: config.trn,
@@ -205,15 +166,16 @@ export async function POST(request: NextRequest) {
       const tlvBasic = buildTLVBase64(qrData);
       const rawXml = generateZatcaXML({
         uuid,
+        invoiceNumber: 'INV-14',
         invoiceType: 'Simplified',
-        issueDate: new Date(),
+        issueDate: now,
         seller: {
           name: config.sellerName,
           nameAr: config.sellerNameAr || config.sellerName,
           trn: config.trn,
           buildingNumber: config.address?.buildingNumber || '1234',
-          streetName: config.address?.streetName || 'Test Street',
-          district: config.address?.district || 'Test District',
+          streetName: config.address?.streetName || 'Street',
+          district: config.address?.district || 'District',
           city: config.address?.city || 'Riyadh',
           postalCode: config.address?.postalCode || '12345',
           countryCode: 'SA',
@@ -234,84 +196,64 @@ export async function POST(request: NextRequest) {
         pih: ZATCA_INITIAL_PIH,
       }, tlvBasic);
 
-      // Step 2: compute hash per ZATCA spec (C14N11, remove entire QR element)
-      const c14nHash    = hashInvoiceXML(rawXml);
-      const stringHash  = hashInvoiceXMLString(rawXml);
-      const variantHash = hashInvoiceXMLVariant(rawXml);
-      const canonicalForm = getCanonicalForm(rawXml);
-      const strippedForm  = stripForHash(rawXml);
-      const variantForm   = stripForHashVariant(rawXml);
+      // Step 2: compute hash
+      const xmlHash = hashInvoiceXML(rawXml);
 
-      // Primary: C14N hash (spec-compliant — no decl, no xmlns:ext, entire QR element removed)
-      const xmlHash = c14nHash;
+      // Step 3: Embed signature and get raw signature bytes for QR
+      const { signedXml: xmlWithoutFinalQR, signatureValueRaw } = embedSignatureInXML(
+        rawXml,
+        config.privateKey,
+        config.certificate,
+        xmlHash
+      );
 
-      // Step 3: sign
-      const signature = signInvoiceHash(xmlHash, config.privateKey);
-
-      // Step 4: build Phase 2 QR (tags 1-8 with binary hash, sig, pubkey)
+      // Step 4: build Phase 2 QR (tags 1-9)
       const certInfo = parseCertificate(config.certificate);
       const tlvFull = buildTLVBase64Phase2({
         ...qrData,
         xmlHashBytes: Buffer.from(xmlHash, 'base64'),
-        ecdsaSigBytes: Buffer.from(signature, 'base64'),
-        publicKeyBytes: certInfo.publicKeyDer,
+        ecdsaSigBytes: signatureValueRaw,
+        publicKeyBytes: certInfo.publicKeyRaw,
+        certSignatureBytes: certInfo.certSignatureRaw,
       });
 
-      // Step 5: replace QR placeholder in XML with full Phase 2 QR
-      const xmlWithQR = rawXml.replace(
+      // Step 5: replace QR placeholder with full Phase 2 QR
+      const xml = xmlWithoutFinalQR.replace(
         /(<cbc:ID>QR<\/cbc:ID>[\s\S]*?<cbc:EmbeddedDocumentBinaryObject[^>]*>)[^<]*(<\/cbc:EmbeddedDocumentBinaryObject>)/,
         `$1${tlvFull}$2`
       );
 
-      // Step 6: embed signature into UBLExtensions
-      const xml = embedSignatureInXML(xmlWithQR, signature, config.certificate, xmlHash);
-
-      let result;
+      let result: unknown;
       try {
         result = await checkInvoiceCompliance(xml, xmlHash, uuid, {
-          csid: config.complianceCsid,
-          csidSecret: config.complianceCsidSecret,
+          csid: config.complianceCsid || '',
+          csidSecret: config.complianceCsidSecret || '',
           environment: config.environment,
         });
       } catch (err) {
-        // Return full stripped XML so we can see the ENTIRE document being hashed
         return NextResponse.json({
-          message: 'Compliance check failed — see debug.',
+          message: 'Compliance check failed.',
           error: err instanceof Error ? err.message : String(err),
-          debug: {
-            submittedHash: xmlHash,
-            c14nHash,
-            stringHash,
-            variantHash,
-            strippedFull: strippedForm,
-            variantFull: variantForm,
-          },
+          debug: { submittedHash: xmlHash },
         });
       }
 
       return NextResponse.json({
         message: 'Compliance check completed.',
         result,
-        debug: { submittedHash: xmlHash, c14nHash, stringHash, variantHash },
+        debug: { submittedHash: xmlHash },
       });
     }
 
     if (action === 'request_production_csid') {
-      // Step 4: Get production CSID
-      if (!config.complianceCsid || !config.complianceCsidSecret) {
-        return NextResponse.json({ error: 'Compliance CSID required first.' }, { status: 400 });
-      }
-
       const { complianceRequestId } = body;
-      if (!complianceRequestId) {
-        return NextResponse.json({ error: 'complianceRequestId is required' }, { status: 400 });
-      }
+      if (!complianceRequestId) return NextResponse.json({ error: 'complianceRequestId required' }, { status: 400 });
 
       const result = await requestProductionCsid(
-        config.complianceCsid,
-        config.complianceCsidSecret,
+        config.complianceCsid!,
+        config.complianceCsidSecret!,
         complianceRequestId,
-        'production'
+        config.environment
       );
 
       await ZatcaConfig.updateOne(
@@ -326,7 +268,7 @@ export async function POST(request: NextRequest) {
       );
 
       return NextResponse.json({
-        message: 'Production CSID obtained. Environment switched to production.',
+        message: 'Production CSID obtained.',
         csid: result.csid,
       });
     }
@@ -334,9 +276,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error) {
     console.error('ZATCA onboarding error:', error);
-    if (error instanceof DatabaseConnectionError) {
-      return NextResponse.json({ error: error.message }, { status: error.statusCode });
-    }
     const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ error: message }, { status: 500 });
   }

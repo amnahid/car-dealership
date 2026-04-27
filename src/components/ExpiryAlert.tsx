@@ -1,3 +1,7 @@
+'use client';
+
+import { useTranslations, useLocale } from 'next-intl';
+
 interface ExpiryAlertProps {
   daysUntilExpiry: number;
   documentType: string;
@@ -5,6 +9,10 @@ interface ExpiryAlertProps {
 }
 
 export default function ExpiryAlert({ daysUntilExpiry, documentType, carId }: ExpiryAlertProps) {
+  const t = useTranslations('ExpiryAlert');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   let background = '#fff3cd';
   let border = '#f8b425';
   let color = '#856404';
@@ -19,7 +27,8 @@ export default function ExpiryAlert({ daysUntilExpiry, documentType, carId }: Ex
     display: 'inline-block',
     width: '16px',
     height: '16px',
-    marginRight: '8px',
+    marginLeft: isRtl ? '8px' : '0',
+    marginRight: isRtl ? '0' : '8px',
     verticalAlign: 'middle',
   };
 
@@ -30,6 +39,8 @@ export default function ExpiryAlert({ daysUntilExpiry, documentType, carId }: Ex
         border: `1px solid ${border}`,
         borderRadius: '3px',
         padding: '12px',
+        textAlign: isRtl ? 'right' : 'left',
+        direction: isRtl ? 'rtl' : 'ltr'
       }}
     >
       <p style={{ fontSize: '14px', fontWeight: 500, color, margin: 0 }}>
@@ -46,8 +57,10 @@ export default function ExpiryAlert({ daysUntilExpiry, documentType, carId }: Ex
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
         )}
-        {documentType} for car {carId} expires in {daysUntilExpiry} day
-        {daysUntilExpiry !== 1 ? 's' : ''}
+        {daysUntilExpiry < 0 
+          ? t('expired', { type: documentType, carId })
+          : t('message', { type: documentType, carId, days: daysUntilExpiry })
+        }
       </p>
     </div>
   );

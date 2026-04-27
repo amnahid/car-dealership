@@ -150,15 +150,15 @@ export default function RepairDetailPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Labor Cost</span>
-              <span style={{ color: '#2a3142' }}>${repair.laborCost?.toLocaleString() || 0}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(repair.laborCost || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Parts Cost</span>
-              <span style={{ color: '#2a3142' }}>${repair.repairCost?.toLocaleString() || 0}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(repair.repairCost || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3', fontWeight: 600 }}>Total Cost</span>
-              <span style={{ color: '#2a3142', fontWeight: 600 }}>${repair.totalCost?.toLocaleString() || 0}</span>
+              <span style={{ color: '#2a3142', fontWeight: 600 }}>SAR {(repair.totalCost || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>

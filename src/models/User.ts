@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import { LEGACY_USER_ROLES, USER_ROLES, type KnownUserRole } from '@/lib/rbac';
 
 export interface IUserDocument extends Document {
   name: string;
@@ -6,7 +7,7 @@ export interface IUserDocument extends Document {
   password: string;
   phone?: string;
   avatar?: string;
-  role: 'Admin' | 'Manager' | 'Accounts Officer' | 'Sales Agent';
+  role: KnownUserRole;
   isActive: boolean;
   resetToken?: string;
   resetTokenExpiry?: Date;
@@ -23,8 +24,8 @@ const UserSchema = new Schema<IUserDocument>(
     avatar: { type: String, trim: true },
     role: {
       type: String,
-      enum: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'],
-      default: 'Sales Agent',
+      enum: [...USER_ROLES, ...LEGACY_USER_ROLES],
+      default: 'Sales Person',
     },
     isActive: { type: Boolean, default: true },
     resetToken: { type: String },

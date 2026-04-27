@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Supplier from '@/models/Supplier';
 import CarPurchase from '@/models/CarPurchase';
-import mongoose from 'mongoose';
+import { getAuthPayload } from '@/lib/apiAuth';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const { searchParams } = new URL(request.url);
@@ -86,6 +91,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const body = await request.json();
@@ -116,22 +126,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cookieStore = await import('next/headers').then(m => m.cookies());
-    const token = cookieStore.get('auth-token')?.value;
-
-    let userId;
-    if (token) {
-      try {
-        const { verifyToken } = await import('@/lib/auth');
-        const decoded = verifyToken(token);
-        userId = decoded.userId;
-      } catch {
-        userId = new mongoose.Types.ObjectId();
-      }
-    } else {
-      userId = new mongoose.Types.ObjectId();
-    }
-
     const supplier = await Supplier.create({
       companyName,
       companyLogo,
@@ -142,7 +136,7 @@ export async function POST(request: NextRequest) {
       salesAgent,
       status: status || 'active',
       notes,
-      createdBy: userId,
+      createdBy: auth.userId,
     });
 
     return NextResponse.json({ supplier }, { status: 201 });

@@ -4,12 +4,18 @@ import Supplier from '@/models/Supplier';
 import CarPurchase from '@/models/CarPurchase';
 import Car from '@/models/Car';
 import mongoose from 'mongoose';
+import { getAuthPayload } from '@/lib/apiAuth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 
@@ -52,6 +58,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 
@@ -112,6 +123,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
     const { id } = await params;
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Option {
   value: string;
@@ -23,16 +24,22 @@ export default function SearchableSelect({
   value,
   onChange,
   options,
-  placeholder = 'Select an option',
+  placeholder,
   required = false,
   disabled = false,
   error,
 }: SearchableSelectProps) {
+  const t = useTranslations('SearchableSelect');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const displayPlaceholder = placeholder || t('placeholder');
 
   const filteredOptions = options.filter((opt) =>
     opt.label.toLowerCase().includes(search.toLowerCase())
@@ -107,15 +114,23 @@ export default function SearchableSelect({
     height: '40px',
     fontSize: '14px',
     borderRadius: '0',
-    padding: '0 12px',
+    padding: isRtl ? '0 30px 0 12px' : '0 12px 0 30px',
     border: error ? '1px solid #dc3545' : `1px solid ${isOpen ? '#28aaa9' : '#ced4da'}`,
     background: '#fff',
     cursor: disabled ? 'not-allowed' : 'pointer',
     outline: 'none',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
+  // Re-adjust padding because of icons
+  const finalInputStyle: React.CSSProperties = {
+    ...inputStyle,
+    paddingLeft: isRtl ? '12px' : '12px', 
+    paddingRight: isRtl ? '30px' : '30px',
   };
 
   return (
-    <div style={{ position: 'relative' }} ref={containerRef}>
+    <div style={{ position: 'relative', textAlign: isRtl ? 'right' : 'left' }} ref={containerRef}>
       {label && (
         <label
           style={{
@@ -156,11 +171,10 @@ export default function SearchableSelect({
             !disabled && setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder={isOpen ? placeholder : (selectedOption?.label || placeholder)}
+          placeholder={isOpen ? displayPlaceholder : (selectedOption?.label || displayPlaceholder)}
           disabled={disabled}
           style={{
-            ...inputStyle,
-            paddingRight: '30px',
+            ...finalInputStyle,
             color: selectedOption && !isOpen ? '#333' : '#999',
           }}
           autoComplete="off"
@@ -169,7 +183,8 @@ export default function SearchableSelect({
         <div
           style={{
             position: 'absolute',
-            right: '10px',
+            right: isRtl ? 'auto' : '10px',
+            left: isRtl ? '10px' : 'auto',
             top: '50%',
             transform: 'translateY(-50%)',
             pointerEvents: 'none',
@@ -202,6 +217,8 @@ export default function SearchableSelect({
             borderTop: 'none',
             zIndex: 1000,
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            textAlign: isRtl ? 'right' : 'left',
+            direction: isRtl ? 'rtl' : 'ltr'
           }}
         >
           {filteredOptions.length === 0 ? (
@@ -213,7 +230,7 @@ export default function SearchableSelect({
                 fontSize: '14px',
               }}
             >
-              No results found
+              {t('noResults')}
             </div>
           ) : (
             filteredOptions.map((option, index) => (

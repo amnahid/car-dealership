@@ -2,8 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations('Auth.forgotPassword');
+  const loginT = useTranslations('Auth.login');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -23,13 +31,13 @@ export default function ForgotPasswordPage() {
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || 'Something went wrong');
+        setError(data.error || t('errors.somethingWentWrong'));
         return;
       }
 
       setSubmitted(true);
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('errors.networkError'));
     } finally {
       setLoading(false);
     }
@@ -41,6 +49,7 @@ export default function ForgotPasswordPage() {
     alignItems: 'center',
     justifyContent: 'center',
     background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)',
+    position: 'relative',
   };
 
   const containerStyle: React.CSSProperties = {
@@ -57,12 +66,11 @@ export default function ForgotPasswordPage() {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     height: '50px',
-    fontFamily: '"Karla", sans-serif',
     fontSize: '14px',
     background: '#f5f5f5',
     border: '1px solid #efefef',
     borderRadius: '0',
-    padding: '0 15px 0 50px',
+    padding: isRtl ? '0 50px 0 15px' : '0 15px 0 50px',
     outline: 'none',
     transition: 'all 0.3s ease',
     boxSizing: 'border-box',
@@ -71,22 +79,25 @@ export default function ForgotPasswordPage() {
   if (submitted) {
     return (
       <div style={pageStyle}>
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+          <LanguageSwitcher />
+        </div>
         <div style={containerStyle}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <h1 style={{ fontFamily: '"Sarabun", sans-serif', fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>
-              AMYAL CAR
+            <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>
+              {commonT('appName')}
             </h1>
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>✉️</div>
-            <h2 style={{ fontFamily: '"Sarabun", sans-serif', fontSize: '20px', fontWeight: 600, color: '#2b2d5d', marginBottom: '12px' }}>
-              Check your email
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#2b2d5d', marginBottom: '12px' }}>
+              {t('success.title')}
             </h2>
             <p style={{ color: '#555555', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' }}>
-              If an account with <strong>{email}</strong> exists, we've sent a password reset link. Check your inbox and spam folder.
+              {t('success.description', { email })}
             </p>
             <Link href="/auth/login" style={{ color: '#28aaa9', fontSize: '14px', textDecoration: 'none', fontWeight: 500 }}>
-              ← Back to Sign In
+              {isRtl ? '←' : '←'} {t('backToSignIn')}
             </Link>
           </div>
         </div>
@@ -96,21 +107,24 @@ export default function ForgotPasswordPage() {
 
   return (
     <div style={pageStyle}>
+      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+        <LanguageSwitcher />
+      </div>
       <div style={containerStyle}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <h1 style={{ fontFamily: '"Sarabun", sans-serif', fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>
-            AMYAL CAR
+          <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>
+            {commonT('appName')}
           </h1>
-          <p style={{ fontFamily: '"Sarabun", sans-serif', fontSize: '14px', color: '#9ca8b3', marginTop: '8px' }}>
-            Car Dealership & Rental Management
+          <p style={{ fontSize: '14px', color: '#9ca8b3', marginTop: '8px' }}>
+            {loginT('subtitle')}
           </p>
         </div>
 
-        <h2 style={{ fontFamily: '"Sarabun", sans-serif', fontSize: '20px', fontWeight: 600, color: '#2b2d5d', marginBottom: '8px' }}>
-          Forgot your password?
+        <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#2b2d5d', marginBottom: '8px' }}>
+          {t('title')}
         </h2>
         <p style={{ color: '#9ca8b3', fontSize: '14px', marginBottom: '24px' }}>
-          Enter your email and we'll send you a reset link.
+          {t('description')}
         </p>
 
         {error && (
@@ -121,7 +135,15 @@ export default function ForgotPasswordPage() {
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px', position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#9ca8b3', zIndex: 1 }}>
+            <div style={{ 
+              position: 'absolute', 
+              left: isRtl ? 'auto' : '15px', 
+              right: isRtl ? '15px' : 'auto',
+              top: '50%', 
+              transform: 'translateY(-50%)', 
+              color: '#9ca8b3', 
+              zIndex: 1 
+            }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                 <polyline points="22,6 12,13 2,6"></polyline>
@@ -132,7 +154,7 @@ export default function ForgotPasswordPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email address"
+              placeholder={loginT('email')}
               style={inputStyle}
             />
           </div>
@@ -155,13 +177,13 @@ export default function ForgotPasswordPage() {
               transition: 'all 0.3s ease',
             }}
           >
-            {loading ? 'Sending...' : 'Send Reset Link'}
+            {loading ? t('sending') : t('sendLink')}
           </button>
         </form>
 
         <p style={{ textAlign: 'center', marginTop: '20px' }}>
           <Link href="/auth/login" style={{ color: '#28aaa9', fontSize: '14px', textDecoration: 'none', fontWeight: 500 }}>
-            ← Back to Sign In
+            {isRtl ? '←' : '←'} {t('backToSignIn')}
           </Link>
         </p>
       </div>

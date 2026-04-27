@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface ZatcaConfig {
   _id?: string;
@@ -40,6 +41,11 @@ const defaultConfig: ZatcaConfig = {
 };
 
 export default function ZatcaSettingsPage() {
+  const t = useTranslations('Zatca');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [config, setConfig] = useState<ZatcaConfig>(defaultConfig);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -81,13 +87,13 @@ export default function ZatcaSettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setMessage({ type: 'error', text: data.error || 'Save failed' });
+        setMessage({ type: 'error', text: data.error || t('errorSave') });
         return;
       }
       setConfig(data.config);
-      setMessage({ type: 'success', text: 'ZATCA configuration saved successfully.' });
+      setMessage({ type: 'success', text: t('successSave') });
     } catch {
-      setMessage({ type: 'error', text: 'Network error' });
+      setMessage({ type: 'error', text: commonT('errors.networkError') });
     } finally {
       setSaving(false);
     }
@@ -140,14 +146,14 @@ export default function ZatcaSettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className={`max-w-4xl mx-auto p-6 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">ZATCA E-Invoicing Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">إعدادات منظومة الفوترة الإلكترونية — هيئة الزكاة والضريبة والجمارك</p>
+          <h1 className="text-2xl font-bold text-gray-800">{t('title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('subtitle')}</p>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColor[config.environment]}`}>
-          {config.environment === 'sandbox' ? 'Sandbox (Dev)' : 'Production'}
+          {config.environment === 'sandbox' ? t('sandbox') : t('production')}
         </span>
       </div>
 
@@ -159,14 +165,14 @@ export default function ZatcaSettingsPage() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
-        <nav className="flex -mb-px space-x-6">
+        <nav className={`flex -mb-px ${isRtl ? 'space-x-reverse space-x-6' : 'space-x-6'}`}>
           {(['config', 'onboarding', 'status'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-2 text-sm font-medium capitalize border-b-2 transition-colors ${activeTab === tab ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              className={`pb-2 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
             >
-              {tab === 'config' ? 'Company Config' : tab === 'onboarding' ? 'Onboarding / CSID' : 'Status & PIH'}
+              {t(`tabs.${tab}`)}
             </button>
           ))}
         </nav>
@@ -176,10 +182,10 @@ export default function ZatcaSettingsPage() {
       {activeTab === 'config' && (
         <div className="space-y-6">
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-base font-semibold text-gray-700 mb-4">Seller Information</h2>
+            <h2 className="text-base font-semibold text-gray-700 mb-4">{t('sellerInfo')}</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Company Name (English)</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('companyNameEn')}</label>
                 <input
                   type="text"
                   value={config.sellerName}
@@ -189,7 +195,7 @@ export default function ZatcaSettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Company Name (Arabic) / اسم الشركة</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('companyNameAr')}</label>
                 <input
                   type="text"
                   dir="rtl"
@@ -201,7 +207,7 @@ export default function ZatcaSettingsPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Tax Registration Number (TRN) — 15 digits
+                  {t('trn')}
                 </label>
                 <input
                   type="text"
@@ -213,28 +219,28 @@ export default function ZatcaSettingsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Environment</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('environment')}</label>
                 <select
                   value={config.environment}
                   onChange={e => setConfig({ ...config, environment: e.target.value as 'sandbox' | 'production' })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-400 outline-none"
                 >
-                  <option value="sandbox">Sandbox (Development)</option>
-                  <option value="production">Production</option>
+                  <option value="sandbox">{t('sandbox')}</option>
+                  <option value="production">{t('production')}</option>
                 </select>
               </div>
             </div>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-base font-semibold text-gray-700 mb-4">Business Address</h2>
+            <h2 className="text-base font-semibold text-gray-700 mb-4">{t('businessAddress')}</h2>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { key: 'buildingNumber', label: 'Building Number' },
-                { key: 'streetName', label: 'Street Name' },
-                { key: 'district', label: 'District / Neighborhood' },
-                { key: 'city', label: 'City' },
-                { key: 'postalCode', label: 'Postal Code' },
+                { key: 'buildingNumber', label: t('buildingNumber') },
+                { key: 'streetName', label: t('streetName') },
+                { key: 'district', label: t('district') },
+                { key: 'city', label: t('city') },
+                { key: 'postalCode', label: t('postalCode') },
               ].map(({ key, label }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
@@ -250,7 +256,7 @@ export default function ZatcaSettingsPage() {
                 </div>
               ))}
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Country Code</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('countryCode')}</label>
                 <input
                   type="text"
                   value="SA"
@@ -266,7 +272,7 @@ export default function ZatcaSettingsPage() {
             disabled={saving}
             className="w-full bg-teal-500 hover:bg-teal-600 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition-colors"
           >
-            {saving ? 'Saving...' : 'Save Configuration'}
+            {saving ? commonT('saving') : t('saveConfig')}
           </button>
         </div>
       )}
@@ -274,25 +280,25 @@ export default function ZatcaSettingsPage() {
       {/* Onboarding Tab */}
       {activeTab === 'onboarding' && (
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-            <strong>Phase 2 Onboarding Steps:</strong>
-            <ol className="list-decimal ml-4 mt-2 space-y-1">
-              <li>Generate EC key pair (Step 1)</li>
-              <li>Use the openssl command to generate a ZATCA-compliant CSR</li>
-              <li>Submit CSR to ZATCA → get Compliance CSID (Step 2)</li>
-              <li>Run compliance check with test invoices (Step 3)</li>
-              <li>Request Production CSID (Step 4)</li>
+          <div className={`bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800`}>
+            <strong>{t('onboardingSteps.title')}</strong>
+            <ol className={`list-decimal ${isRtl ? 'mr-4' : 'ml-4'} mt-2 space-y-1`}>
+              <li>{t('onboardingSteps.step1')}</li>
+              <li>{t('onboardingSteps.step2')}</li>
+              <li>{t('onboardingSteps.step3')}</li>
+              <li>{t('onboardingSteps.step4')}</li>
+              <li>{t('onboardingSteps.step5')}</li>
             </ol>
           </div>
 
           {/* Quick path: steps 1 + 1.5 + 2 in one click */}
           <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-            <h3 className="font-semibold text-teal-800 mb-1">Quick Onboard — Steps 1–2 automated</h3>
-            <p className="text-xs text-teal-700 mb-3">Generates keys + CSR + requests Compliance CSID in one go. Only requires your OTP from the ZATCA Fatoora portal.</p>
+            <h3 className="font-semibold text-teal-800 mb-1">{t('quickOnboard')}</h3>
+            <p className="text-xs text-teal-700 mb-3">{t('quickOnboardDesc')}</p>
             <div className="mb-3">
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                OTP <span className="text-red-500">*</span>{' '}
-                <span className="text-gray-400 font-normal">(ZATCA Fatoora portal → Onboard new device)</span>
+                {t('otp')} <span className="text-red-500">*</span>{' '}
+                <span className="text-gray-400 font-normal">{t('otpHint')}</span>
               </label>
               <input
                 type="text"
@@ -308,12 +314,12 @@ export default function ZatcaSettingsPage() {
               disabled={onboardLoading || !otpInput}
               className="bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors"
             >
-              {onboardLoading && onboardAction === 'auto_onboard' ? 'Processing…' : '⚡ Auto-Onboard'}
+              {onboardLoading && onboardAction === 'auto_onboard' ? commonT('loading') : `⚡ ${t('autoOnboardBtn')}`}
             </button>
           </div>
 
           <div className="border-t border-gray-200 pt-4">
-            <p className="text-xs text-gray-400 mb-3">Manual steps (advanced)</p>
+            <p className="text-xs text-gray-400 mb-3">{t('manualSteps')}</p>
           </div>
 
           {[
@@ -330,8 +336,8 @@ export default function ZatcaSettingsPage() {
                   {step.action === 'request_compliance_csid' && (
                     <div className="mb-2">
                       <label className="block text-xs font-medium text-gray-500 mb-1">
-                        OTP <span className="text-red-500">*</span>{' '}
-                        <span className="text-gray-400 font-normal">(required — from ZATCA Fatoora portal → Onboard new device)</span>
+                        {t('otp')} <span className="text-red-500">*</span>{' '}
+                        <span className="text-gray-400 font-normal">{t('otpHint')}</span>
                       </label>
                       <input
                         type="text"
@@ -358,7 +364,7 @@ export default function ZatcaSettingsPage() {
                 disabled={onboardLoading}
                 className="bg-teal-500 hover:bg-teal-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               >
-                {onboardLoading && onboardAction === step.action ? 'Processing...' : 'Execute'}
+                {onboardLoading && onboardAction === step.action ? commonT('loading') : commonT('save')}
               </button>
             </div>
           ))}
@@ -366,7 +372,7 @@ export default function ZatcaSettingsPage() {
           {onboardResult && (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
               <h3 className="text-xs font-medium text-gray-500 mb-2">Result:</h3>
-              <pre className="text-xs text-gray-700 whitespace-pre-wrap overflow-auto max-h-64">{onboardResult}</pre>
+              <pre className={`text-xs text-gray-700 whitespace-pre-wrap overflow-auto max-h-64 ${isRtl ? 'text-left' : 'text-left'}`} dir="ltr">{onboardResult}</pre>
             </div>
           )}
         </div>
@@ -376,24 +382,24 @@ export default function ZatcaSettingsPage() {
       {activeTab === 'status' && (
         <div className="space-y-4">
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-base font-semibold text-gray-700 mb-4">ZATCA Configuration Status</h2>
+            <h2 className="text-base font-semibold text-gray-700 mb-4">{t('statusTitle')}</h2>
             <div className="space-y-3 text-sm">
-              <StatusRow label="Environment" value={config.environment} />
-              <TokenRow label="Compliance CSID (binarySecurityToken)" value={config.complianceCsid} />
-              <TokenRow label="Production CSID (binarySecurityToken)" value={config.productionCsid} />
-              <TokenRow label="Public Key" value={config.publicKey} />
+              <StatusRow label={t('environment')} value={config.environment} isRtl={isRtl} />
+              <TokenRow label="Compliance CSID" value={config.complianceCsid} t={t} isRtl={isRtl} />
+              <TokenRow label="Production CSID" value={config.productionCsid} t={t} isRtl={isRtl} />
+              <TokenRow label="Public Key" value={config.publicKey} t={t} isRtl={isRtl} />
               {config.pih && (
-                <div>
+                <div className="flex items-center justify-between py-1 border-b border-gray-100">
                   <span className="text-gray-500">Previous Invoice Hash (PIH):</span>
-                  <code className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded font-mono break-all">{config.pih}</code>
+                  <code className={`${isRtl ? 'mr-2' : 'ml-2'} text-xs bg-gray-100 px-2 py-0.5 rounded font-mono break-all`} dir="ltr">{config.pih}</code>
                 </div>
               )}
             </div>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="text-base font-semibold text-gray-700 mb-3">Retry Failed Submissions</h2>
-            <p className="text-sm text-gray-500 mb-4">Retry all failed ZATCA invoice submissions (requires Phase 2 CSID).</p>
+            <h2 className="text-base font-semibold text-gray-700 mb-3">{t('retryFailed')}</h2>
+            <p className="text-sm text-gray-500 mb-4">{t('retryDesc')}</p>
             <button
               onClick={async () => {
                 const res = await fetch('/api/zatca/retry', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
@@ -402,7 +408,7 @@ export default function ZatcaSettingsPage() {
               }}
               className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
             >
-              Retry All Failed
+              {t('retryBtn')}
             </button>
           </div>
         </div>
@@ -411,7 +417,7 @@ export default function ZatcaSettingsPage() {
   );
 }
 
-function StatusRow({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
+function StatusRow({ label, value, ok, isRtl }: { label: string; value: string; ok?: boolean; isRtl: boolean }) {
   return (
     <div className="flex items-center justify-between py-1 border-b border-gray-100">
       <span className="text-gray-500">{label}</span>
@@ -420,7 +426,7 @@ function StatusRow({ label, value, ok }: { label: string; value: string; ok?: bo
   );
 }
 
-function TokenRow({ label, value }: { label: string; value?: string }) {
+function TokenRow({ label, value, t, isRtl }: { label: string; value?: string; t: any; isRtl: boolean }) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -428,7 +434,7 @@ function TokenRow({ label, value }: { label: string; value?: string }) {
     return (
       <div className="flex items-center justify-between py-1 border-b border-gray-100">
         <span className="text-gray-500">{label}</span>
-        <span className="text-red-500">✗ Not configured</span>
+        <span className="text-red-500">✗ {t('notConfigured')}</span>
       </div>
     );
   }
@@ -445,22 +451,22 @@ function TokenRow({ label, value }: { label: string; value?: string }) {
     <div className="py-2 border-b border-gray-100">
       <div className="flex items-center justify-between mb-1">
         <span className="text-gray-500">{label}</span>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${isRtl ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
           <button
             onClick={() => setRevealed(r => !r)}
             className="text-xs text-teal-600 hover:text-teal-700 font-medium"
           >
-            {revealed ? 'Hide' : 'Show'}
+            {revealed ? t('hide') : t('show')}
           </button>
           <button
             onClick={copy}
             className="text-xs text-teal-600 hover:text-teal-700 font-medium"
           >
-            {copied ? 'Copied!' : 'Copy'}
+            {copied ? t('copied') : t('copy')}
           </button>
         </div>
       </div>
-      <code className="block text-[11px] bg-gray-100 px-2 py-1.5 rounded font-mono break-all text-gray-700 max-h-40 overflow-auto">
+      <code className="block text-[11px] bg-gray-100 px-2 py-1.5 rounded font-mono break-all text-gray-700 max-h-40 overflow-auto" dir="ltr">
         {revealed ? value : preview}
       </code>
     </div>

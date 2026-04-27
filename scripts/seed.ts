@@ -87,7 +87,7 @@ async function main() {
       name: 'Mohammed Al-Otaibi',
       email: 'manager@carsaudi.com',
       password: await bcrypt.hash('Manager@123456', BCRYPT_ROUNDS),
-      role: 'Manager',
+      role: 'Car Manager',
       phone: '+966501110002',
       isActive: true,
       passwordVersion: 1,
@@ -97,7 +97,7 @@ async function main() {
       name: 'Fatima Al-Zahrani',
       email: 'accounts@carsaudi.com',
       password: await bcrypt.hash('Accounts@123456', BCRYPT_ROUNDS),
-      role: 'Accounts Officer',
+      role: 'Accountant',
       phone: '+966501110003',
       isActive: true,
       passwordVersion: 1,
@@ -107,7 +107,7 @@ async function main() {
       name: 'Khalid Al-Ghamdi',
       email: 'khalid@carsaudi.com',
       password: await bcrypt.hash('Sales@123456', BCRYPT_ROUNDS),
-      role: 'Sales Agent',
+      role: 'Sales Person',
       phone: '+966501110004',
       isActive: true,
       passwordVersion: 1,
@@ -117,7 +117,7 @@ async function main() {
       name: 'Omar Al-Shehri',
       email: 'omar@carsaudi.com',
       password: await bcrypt.hash('Sales@123456', BCRYPT_ROUNDS),
-      role: 'Sales Agent',
+      role: 'Sales Person',
       phone: '+966501110005',
       isActive: true,
       passwordVersion: 1,
@@ -964,10 +964,10 @@ async function main() {
   console.log('═'.repeat(60));
   console.log('\n🔑 Login Credentials:');
   console.log('  Admin:           admin@carsaudi.com       / Admin@123456');
-  console.log('  Manager:         manager@carsaudi.com     / Manager@123456');
-  console.log('  Accounts:        accounts@carsaudi.com    / Accounts@123456');
-  console.log('  Sales Agent 1:   khalid@carsaudi.com      / Sales@123456');
-  console.log('  Sales Agent 2:   omar@carsaudi.com        / Sales@123456');
+  console.log('  Car Manager:     manager@carsaudi.com     / Manager@123456');
+  console.log('  Accountant:      accounts@carsaudi.com    / Accounts@123456');
+  console.log('  Sales Person 1:  khalid@carsaudi.com      / Sales@123456');
+  console.log('  Sales Person 2:  omar@carsaudi.com        / Sales@123456');
   console.log('\n📊 Data Summary:');
   console.log(`  Users: 5  |  Employees: 5  |  Customers: 10  |  Suppliers: 3`);
   console.log(`  Cars: 15  |  Car Purchases: 15  |  Vehicle Docs: 45`);

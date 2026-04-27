@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface SalaryPayment {
   _id: string;
@@ -20,13 +21,6 @@ interface SalaryPayment {
 }
 
 const PAYMENT_TYPES = ['Monthly', 'Bonus', 'Advance', 'Deduction'] as const;
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  Monthly: { bg: '#28aaa920', color: '#28aaa9' },
-  Bonus: { bg: '#42ca7f20', color: '#42ca7f' },
-  Advance: { bg: '#f8b42520', color: '#f8b425' },
-  Deduction: { bg: '#ec456120', color: '#ec4561' },
-};
 
 interface EmployeeDetail {
   _id: string;
@@ -36,6 +30,11 @@ interface EmployeeDetail {
 }
 
 export default function SalaryPaymentsPage() {
+  const t = useTranslations('SalaryPayments');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [payments, setPayments] = useState<SalaryPayment[]>([]);
   const [employees, setEmployees] = useState<EmployeeDetail[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +87,7 @@ export default function SalaryPaymentsPage() {
   }, []);
 
   const handleCancelPayment = async (id: string) => {
-    if (!confirm('Cancel this payment?')) return;
+    if (!confirm(t('cancelPayment'))) return;
     const res = await fetch(`/api/salary-payments/${id}`, { method: 'DELETE' });
     if (res.ok) fetchPayments();
     else alert((await res.json()).error || 'Failed to cancel');
@@ -102,56 +101,65 @@ export default function SalaryPaymentsPage() {
     setPage(1);
   };
 
+  const TYPE_COLORS: Record<string, { bg: string; color: string }> = {
+    Monthly: { bg: '#28aaa920', color: '#28aaa9' },
+    Bonus: { bg: '#42ca7f20', color: '#42ca7f' },
+    Advance: { bg: '#f8b42520', color: '#f8b425' },
+    Deduction: { bg: '#ec456120', color: '#ec4561' },
+  };
+
+  const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
+
   return (
-    <div style={{ marginBottom: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h2 className="page-title">Salary Payments</h2>
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <h2 className="page-title">{t('title')}</h2>
         <button onClick={() => setShowAddModal(true)} style={{ background: '#28aaa9', color: '#fff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer' }}>
-          + Add Payment
+          + {t('addNew')}
         </button>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Total Paid This Month</p>
-          <p style={{ fontSize: '24px', fontWeight: 700, color: '#ec4561', margin: '8px 0 0' }}>SAR {totalThisMonth.toLocaleString()}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #ec4561', borderRight: isRtl ? '4px solid #ec4561' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalPaidThisMonth')}</p>
+          <p style={{ fontSize: '24px', fontWeight: 700, color: '#ec4561', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(totalThisMonth)}</p>
         </div>
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Shown (Active)</p>
-          <p style={{ fontSize: '24px', fontWeight: 700, color: '#28aaa9', margin: '8px 0 0' }}>SAR {totalShown.toLocaleString()}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #28aaa9', borderRight: isRtl ? '4px solid #28aaa9' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('shownActive')}</p>
+          <p style={{ fontSize: '24px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(totalShown)}</p>
         </div>
-        <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '14px', color: '#9ca8b3', margin: 0 }}>Records Shown</p>
-          <p style={{ fontSize: '24px', fontWeight: 700, color: '#2a3142', margin: '8px 0 0' }}>{payments.length}</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #525f80', borderRight: isRtl ? '4px solid #525f80' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('recordsShown')}</p>
+          <p style={{ fontSize: '24px', fontWeight: 700, color: '#2a3142', margin: '4px 0 0' }}>{payments.length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'flex-end' }}>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <div style={{ minWidth: '200px' }}>
           <SearchableSelect
             value={filterEmployee}
             onChange={(v) => { setFilterEmployee(v); setPage(1); }}
-            options={[{ value: '', label: 'All Employees' }, ...employees.map(e => ({ value: e._id, label: e.name }))]}
-            placeholder="All Employees"
+            options={[{ value: '', label: t('allEmployees') }, ...employees.map(e => ({ value: e._id, label: e.name }))]}
+            placeholder={t('allEmployees')}
           />
         </div>
-        <select value={filterMonth} onChange={(e) => { setFilterMonth(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff' }}>
-          <option value="">All Months</option>
-          {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+        <select value={filterMonth} onChange={(e) => { setFilterMonth(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff', textAlign: isRtl ? 'right' : 'left' }}>
+          <option value="">{t('allMonths')}</option>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{t(`fullMonths.${m}`)}</option>)}
         </select>
-        <select value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff' }}>
-          <option value="">All Years</option>
+        <select value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff', textAlign: isRtl ? 'right' : 'left' }}>
+          <option value="">{t('allYears')}</option>
           {years.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
-        <select value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff' }}>
-          <option value="">All Types</option>
-          {PAYMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        <select value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff', textAlign: isRtl ? 'right' : 'left' }}>
+          <option value="">{t('allTypes')}</option>
+          {PAYMENT_TYPES.map(type => <option key={type} value={type}>{t(`types.${type}`)}</option>)}
         </select>
         {(filterEmployee || filterMonth || filterYear || filterType) && (
           <button onClick={resetFilters} style={{ height: '40px', padding: '0 16px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#fff', cursor: 'pointer', color: '#525f80' }}>
-            Clear Filters
+            {commonT('clearFilters')}
           </button>
         )}
       </div>
@@ -159,17 +167,22 @@ export default function SalaryPaymentsPage() {
       {/* Table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : payments.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No payments found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noPayments')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '800px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Payment ID', 'Employee', 'Period', 'Type', 'Amount', 'Date', 'Status', 'Actions'].map(h => (
-                    <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('paymentId')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('employee')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('period')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('type')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('amount')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('date')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,26 +195,26 @@ export default function SalaryPaymentsPage() {
                       <span style={{ fontSize: '12px', color: '#9ca8b3', fontFamily: 'monospace' }}>{p.employeeId}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      {MONTH_NAMES[p.month - 1].slice(0, 3)} {p.year}
+                      {t(`months.${p.month}`)} {p.year}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '3px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, ...TYPE_COLORS[p.paymentType] }}>
-                        {p.paymentType}
+                        {t(`types.${p.paymentType}`)}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', fontWeight: 600, color: p.paymentType === 'Deduction' ? '#ec4561' : '#2a3142' }}>
-                      {p.paymentType === 'Deduction' ? '-' : ''}SAR {p.amount.toLocaleString()}
+                    <td style={{ padding: '12px', fontWeight: 600, color: p.paymentType === 'Deduction' ? '#ec4561' : '#2a3142', textAlign: isRtl ? 'left' : 'right' }}>
+                      {p.paymentType === 'Deduction' ? '-' : ''}{formatCurrency(p.amount)}
                     </td>
-                    <td style={{ padding: '12px' }}>{new Date(p.paymentDate).toLocaleDateString()}</td>
+                    <td style={{ padding: '12px' }}>{new Date(p.paymentDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '3px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: p.status === 'Active' ? '#42ca7f20' : '#ec456120', color: p.status === 'Active' ? '#42ca7f' : '#ec4561' }}>
-                        {p.status}
+                        {p.status === 'Active' ? t('active') : commonT('cancelled')}
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
                       {p.status === 'Active' && (
                         <button onClick={() => handleCancelPayment(p._id)} style={{ fontSize: '13px', color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                          Cancel
+                          {commonT('cancel')}
                         </button>
                       )}
                     </td>
@@ -214,10 +227,10 @@ export default function SalaryPaymentsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>Prev</button>
-          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>Page {page} of {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#fff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>Next</button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>{commonT('prev')}</button>
+          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>{commonT('page', { page, total: totalPages })}</span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#fff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>{commonT('next')}</button>
         </div>
       )}
 
@@ -237,12 +250,17 @@ function AddPaymentModal({ employees, onClose, onSave }: {
   onClose: () => void;
   onSave: () => void;
 }) {
+  const t = useTranslations('SalaryPayments');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeDetail | null>(null);
   const [form, setForm] = useState({
     employeeId: '',
     amount: '',
     paymentDate: new Date().toISOString().split('T')[0],
-    paymentType: 'Monthly' as typeof PAYMENT_TYPES[number],
+    paymentType: 'Monthly' as any,
     notes: '',
   });
   const [loading, setLoading] = useState(false);
@@ -279,39 +297,57 @@ function AddPaymentModal({ employees, onClose, onSave }: {
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: '40px',
+    fontSize: '14px',
+    borderRadius: '0',
+    padding: '0 12px',
+    border: '1px solid #ced4da',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    marginBottom: '4px',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', width: '440px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Add Salary Payment</h3>
+      <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', width: '440px', maxHeight: '90vh', overflowY: 'auto', textAlign: isRtl ? 'right' : 'left' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('addPayment')}</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Employee *</label>
-            <select required value={form.employeeId} onChange={(e) => handleEmployeeChange(e.target.value)} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff' }}>
-              <option value="">Select employee...</option>
+            <label style={labelStyle}>{t('employee')} *</label>
+            <select required value={form.employeeId} onChange={(e) => handleEmployeeChange(e.target.value)} style={{ ...inputStyle, background: '#fff' }}>
+              <option value="">{t('selectEmployee')}</option>
               {employees.map(e => <option key={e._id} value={e._id}>{e.name} ({e.employeeId})</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Amount (SAR) *</label>
-            <input required type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            <label style={labelStyle}>{t('amount')} *</label>
+            <input required type="number" min="0" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={inputStyle} />
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Payment Date *</label>
-            <input required type="date" value={form.paymentDate} onChange={(e) => setForm({ ...form, paymentDate: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+            <label style={labelStyle}>{t('date')} *</label>
+            <input required type="date" value={form.paymentDate} onChange={(e) => setForm({ ...form, paymentDate: e.target.value })} style={inputStyle} />
           </div>
           <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Type</label>
-            <select value={form.paymentType} onChange={(e) => setForm({ ...form, paymentType: e.target.value as typeof PAYMENT_TYPES[number] })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#fff' }}>
-              {PAYMENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            <label style={labelStyle}>{t('type')}</label>
+            <select value={form.paymentType} onChange={(e) => setForm({ ...form, paymentType: e.target.value as any })} style={{ ...inputStyle, background: '#fff' }}>
+              {PAYMENT_TYPES.map(type => <option key={type} value={type}>{t(`types.${type}`)}</option>)}
             </select>
           </div>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', height: '60px', fontSize: '14px', borderRadius: '0', padding: '12px', border: '1px solid #ced4da' }} />
+            <label style={labelStyle}>{commonT('notes')}</label>
+            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ ...inputStyle, height: '60px', padding: '12px' }} />
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#fff', cursor: 'pointer' }}>Cancel</button>
-            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? 'Saving...' : 'Save Payment'}</button>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#fff', cursor: 'pointer' }}>{commonT('cancel')}</button>
+            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : t('savePayment')}</button>
           </div>
         </form>
       </div>

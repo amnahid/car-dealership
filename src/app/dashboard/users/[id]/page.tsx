@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { ROLE_OPTIONS } from '@/lib/rbac';
 
 interface User {
   _id: string;
@@ -116,9 +117,10 @@ export default function UserDetailPage() {
   const roleBadgeColor = (role: string) => {
     switch (role) {
       case 'Admin': return { background: '#dc2626', color: '#fff' };
-      case 'Manager': return { background: '#2563eb', color: '#fff' };
-      case 'Accounts Officer': return { background: '#7c3aed', color: '#fff' };
-      case 'Sales Agent': return { background: '#16a34a', color: '#fff' };
+      case 'Car Manager': return { background: '#2563eb', color: '#fff' };
+      case 'Finance Manager': return { background: '#7c3aed', color: '#fff' };
+      case 'Accountant': return { background: '#f59e0b', color: '#fff' };
+      case 'Sales Person': return { background: '#16a34a', color: '#fff' };
       default: return { background: '#6b7280', color: '#fff' };
     }
   };
@@ -216,10 +218,9 @@ export default function UserDetailPage() {
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e5e5', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
                 >
-                  <option value="Admin">Admin</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Accounts Officer">Accounts Officer</option>
-                  <option value="Sales Agent">Sales Agent</option>
+                  {ROLE_OPTIONS.map((roleOption) => (
+                    <option key={roleOption} value={roleOption}>{roleOption}</option>
+                  ))}
                 </select>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>

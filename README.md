@@ -26,7 +26,7 @@ A full-stack web application for managing vehicle inventory, repairs, documents,
 - **Repair Management** – Record vehicle repairs with labour and parts cost tracking, before/after images, and status (*Pending*, *In Progress*, *Completed*).
 - **Document Management** – Track important car documents (Insurance, Road Permit, Registration Card) with expiry dates and file uploads.
 - **Expiry Alerts** – Automatic alerts for documents expiring within 7, 15, or 30 days.
-- **User Management** – Multi-role user system with Admin, Manager, Accounts Officer, and Sales Agent roles.
+- **User Management** – Multi-role user system with Admin, Car Manager, Accountant, Finance Manager, and Sales Person roles.
 - **Activity Audit Logging** – Complete audit trail of all user actions with timestamps and IP addresses.
 - **Dashboard Statistics** – Overview of total cars, repairs, documents, and overall system health.
 
@@ -126,25 +126,49 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | `npm run build` | Create an optimized production build |
 | `npm run start` | Start the production server (requires a build) |
 | `npm run lint` | Run ESLint on the codebase |
+| `npm run migrate:roles` | Migrate legacy user roles to the current role set |
 
 ---
 
 ## Seeding the Database
 
-The seed endpoint creates an initial **Admin** user so you can log in for the first time.
+You can seed demo data in two ways:
+
+1. API seeder (requires app running):
+
+   ```bash
+   curl -X POST http://localhost:3000/api/seed
+   ```
+
+2. Script seeder (comprehensive fixture dataset):
+
+   ```bash
+   npm run seed
+   ```
+
+Default credentials from `/api/seed`:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@amyalcar.com` | `Admin@123` |
+| Car Manager | `car-manager@amyalcar.com` | `CarManager@123` |
+| Accountant | `accountant@amyalcar.com` | `Accountant@123` |
+| Finance Manager | `finance-manager@amyalcar.com` | `FinanceManager@123` |
+| Sales Person | `sales-person@amyalcar.com` | `SalesPerson@123` |
+
+> **Security:** Change all default passwords immediately in production.
+
+If your database still contains legacy role values (`Manager`, `Accounts Officer`, `Sales Agent`), run:
 
 ```bash
-curl -X POST http://localhost:3000/api/seed
+npm run migrate:roles
 ```
 
-Default admin credentials:
+Preview the migration without applying changes:
 
-| Field | Value |
-|---|---|
-| Email | `admin@dealership.com` |
-| Password | `Admin@123` |
-
-> **Security:** Change the admin password immediately after the first login in a production environment.
+```bash
+npm run migrate:roles -- --dry-run
+```
 
 ---
 
@@ -265,7 +289,7 @@ All endpoints except the auth and seed routes require a valid `auth-token` cooki
 |---|---|---|
 | `GET` | `/api/activity-logs` | Retrieve the audit log |
 | `GET` | `/api/dashboard/stats` | Get dashboard statistics |
-| `POST` | `/api/seed` | Seed the initial admin user |
+| `POST` | `/api/seed` | Seed demo users and sample data |
 
 ---
 
@@ -273,7 +297,8 @@ All endpoints except the auth and seed routes require a valid `auth-token` cooki
 
 | Role | Description |
 |---|---|
-| **Admin** | Full system access: manage users, cars, repairs, and documents |
-| **Manager** | Manage cars, repairs, and documents |
-| **Accounts Officer** | View and track repair costs and financial data |
-| **Sales Agent** | View inventory and manage sales-related information |
+| **Admin** | Full system access across all modules |
+| **Car Manager** | Manage cars, purchases, repairs, suppliers, and documents |
+| **Sales Person** | Manage customers and sales workflows (cash, installment, rental, returns) |
+| **Accountant** | Manage transactions, salary payments, finance records, and operational finance views |
+| **Finance Manager** | Access finance reports and audit-level views (activity and notification logs) |

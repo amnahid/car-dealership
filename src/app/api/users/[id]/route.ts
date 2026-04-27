@@ -5,6 +5,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { hashPassword } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
 import { sendUserCredentialsEmail, generateStrongPassword } from '@/lib/userCredentialsEmail';
+import { isAssignableRole } from '@/lib/rbac';
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function GET(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const { id } = await params;
@@ -33,11 +34,15 @@ export async function PUT(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const { id } = await params;
     const body = await request.json();
+
+    if (body.role !== undefined && !isAssignableRole(body.role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
 
     if (body.password) {
       body.password = await hashPassword(body.password);
@@ -73,7 +78,7 @@ export async function DELETE(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const { id } = await params;
@@ -108,7 +113,7 @@ export async function POST(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');

@@ -144,13 +144,13 @@ export default function ReturnDetailPage() {
           <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Financial Details</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px' }}>
             <div><span style={{ color: '#9ca8b3' }}>Original Price:</span></div>
-            <div style={{ fontWeight: 600 }}>SAR{ret.originalPrice.toLocaleString()}</div>
+            <div style={{ fontWeight: 600 }}>SAR{(ret.originalPrice || 0).toLocaleString()}</div>
             <div><span style={{ color: '#9ca8b3' }}>Refund Amount:</span></div>
-            <div style={{ color: '#42ca7f', fontWeight: 600 }}>SAR{ret.refundAmount.toLocaleString()}</div>
+            <div style={{ color: '#42ca7f', fontWeight: 600 }}>SAR{(ret.refundAmount || 0).toLocaleString()}</div>
             <div><span style={{ color: '#9ca8b3' }}>Penalty Amount:</span></div>
-            <div style={{ color: '#ec4561' }}>SAR{ret.penaltyAmount.toLocaleString()}</div>
+            <div style={{ color: '#ec4561' }}>SAR{(ret.penaltyAmount || 0).toLocaleString()}</div>
             <div><span style={{ color: '#9ca8b3' }}>Net Refund:</span></div>
-            <div style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>SAR{(ret.refundAmount - ret.penaltyAmount).toLocaleString()}</div>
+            <div style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>SAR{((ret.refundAmount || 0) - (ret.penaltyAmount || 0)).toLocaleString()}</div>
           </div>
         </div>
 

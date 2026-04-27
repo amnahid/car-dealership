@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   BarChart,
   Bar,
@@ -25,18 +26,22 @@ interface DateRangeFilterProps {
   onChange: (startDate: string, endDate: string) => void;
 }
 
-const presetRanges: Record<DateRangePreset, { label: string; days: number }> = {
-  '7d': { label: 'Last 7 days', days: 7 },
-  '30d': { label: 'Last 30 days', days: 30 },
-  '90d': { label: 'Last 90 days', days: 90 },
-  '1y': { label: 'Last year', days: 365 },
-  'all': { label: 'All time', days: 0 },
-};
-
 export function DateRangeFilter({ onChange }: DateRangeFilterProps) {
+  const t = useTranslations('Charts.DateRange');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+  
   const [preset, setPreset] = useState<DateRangePreset>('1y');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
+
+  const presetRanges: Record<DateRangePreset, { label: string; days: number }> = {
+    '7d': { label: t('last7Days'), days: 7 },
+    '30d': { label: t('last30Days'), days: 30 },
+    '90d': { label: t('last90Days'), days: 90 },
+    '1y': { label: t('lastYear'), days: 365 },
+    'all': { label: t('allTime'), days: 0 },
+  };
 
   useEffect(() => {
     if (preset === 'all') {
@@ -56,7 +61,7 @@ export function DateRangeFilter({ onChange }: DateRangeFilterProps) {
   };
 
   return (
-    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
       <select
         value={preset}
         onChange={(e) => setPreset(e.target.value as DateRangePreset)}
@@ -81,7 +86,7 @@ export function DateRangeFilter({ onChange }: DateRangeFilterProps) {
             onChange={(e) => setCustomStart(e.target.value)}
             style={{ height: '36px', fontSize: '14px', borderRadius: '4px', padding: '0 8px', border: '1px solid #ced4da' }}
           />
-          <span style={{ color: '#9ca8b3' }}>to</span>
+          <span style={{ color: '#9ca8b3' }}>{t('to')}</span>
           <input
             type="date"
             value={customEnd}
@@ -129,28 +134,29 @@ export function BarChartComponent({
   stacked = false,
   horizontal = false,
 }: BarChartComponentProps) {
-  const Chart = horizontal ? BarChart : BarChart;
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
 
   return (
     <div className="card" style={{ padding: '20px' }}>
-      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
+      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142', textAlign: isRtl ? 'right' : 'left' }}>{title}</h4>}
       <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <BarChart data={data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 5, right: 30, left: 20, bottom: 5 }} reverseStackOrder={isRtl}>
           {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="#eee" />}
           {horizontal ? (
             <>
-              <XAxis type="number" fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
-              <YAxis type="category" dataKey={xAxisKey} fontSize={12} width={80} />
+              <XAxis type="number" fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} orientation={isRtl ? 'top' : 'bottom'} />
+              <YAxis type="category" dataKey={xAxisKey} fontSize={12} width={80} orientation={isRtl ? 'right' : 'left'} />
             </>
           ) : (
             <>
-              <XAxis dataKey={xAxisKey} fontSize={12} />
-              <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
+              <XAxis dataKey={xAxisKey} fontSize={12} orientation={isRtl ? 'top' : 'bottom'} />
+              <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} orientation={isRtl ? 'right' : 'left'} />
             </>
           )}
           <Tooltip
             formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
-            contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
+            contentStyle={{ borderRadius: '8px', border: '1px solid #eee', textAlign: isRtl ? 'right' : 'left' }}
           />
           <Legend />
           {dataKeys.map(({ key, color, name }) => (
@@ -182,17 +188,20 @@ export function LineChartComponent({
   height = 300,
   title,
 }: LineChartComponentProps) {
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   return (
     <div className="card" style={{ padding: '20px' }}>
-      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
+      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142', textAlign: isRtl ? 'right' : 'left' }}>{title}</h4>}
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-          <XAxis dataKey={xAxisKey} fontSize={12} />
-          <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
+          <XAxis dataKey={xAxisKey} fontSize={12} orientation={isRtl ? 'top' : 'bottom'} />
+          <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} orientation={isRtl ? 'right' : 'left'} />
           <Tooltip
             formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
-            contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
+            contentStyle={{ borderRadius: '8px', border: '1px solid #eee', textAlign: isRtl ? 'right' : 'left' }}
           />
           <Legend />
           {dataKeys.map(({ key, color, name }) => (
@@ -226,17 +235,20 @@ export function AreaChartComponent({
   height = 300,
   title,
 }: AreaChartComponentProps) {
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   return (
     <div className="card" style={{ padding: '20px' }}>
-      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
+      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142', textAlign: isRtl ? 'right' : 'left' }}>{title}</h4>}
       <ResponsiveContainer width="100%" height={height}>
         <AreaChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-          <XAxis dataKey={xAxisKey} fontSize={12} />
-          <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
+          <XAxis dataKey={xAxisKey} fontSize={12} orientation={isRtl ? 'top' : 'bottom'} />
+          <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} orientation={isRtl ? 'right' : 'left'} />
           <Tooltip
             formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
-            contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
+            contentStyle={{ borderRadius: '8px', border: '1px solid #eee', textAlign: isRtl ? 'right' : 'left' }}
           />
           <Legend />
           {dataKeys.map(({ key, color, name }) => (
@@ -270,18 +282,22 @@ export function PieChartComponent({
   title,
   donut = false,
 }: PieChartComponentProps) {
+  const t = useTranslations('Charts');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   if (!data || data.length === 0) {
     return (
       <div className="card" style={{ padding: '20px' }}>
-        {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
-        <p style={{ color: '#9ca8b3', textAlign: 'center' }}>No data available</p>
+        {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142', textAlign: isRtl ? 'right' : 'left' }}>{title}</h4>}
+        <p style={{ color: '#9ca8b3', textAlign: 'center' }}>{t('noData')}</p>
       </div>
     );
   }
 
   return (
     <div className="card" style={{ padding: '20px' }}>
-      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
+      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142', textAlign: isRtl ? 'right' : 'left' }}>{title}</h4>}
       <ResponsiveContainer width="100%" height={height}>
         <PieChart>
           <Pie
@@ -304,7 +320,7 @@ export function PieChartComponent({
               const num = typeof value === 'number' ? value : Number(value) || 0;
               return [`SAR ${num.toLocaleString()}`, ''];
             }}
-            contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
+            contentStyle={{ borderRadius: '8px', border: '1px solid #eee', textAlign: isRtl ? 'right' : 'left' }}
           />
           <Legend />
         </PieChart>
@@ -328,17 +344,20 @@ export function ComboChartComponent({
   height = 300,
   title,
 }: ComboChartComponentProps) {
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   return (
     <div className="card" style={{ padding: '20px' }}>
-      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142' }}>{title}</h4>}
+      {title && <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#2a3142', textAlign: isRtl ? 'right' : 'left' }}>{title}</h4>}
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-          <XAxis dataKey={xAxisKey} fontSize={12} />
-          <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} />
+          <XAxis dataKey={xAxisKey} fontSize={12} orientation={isRtl ? 'top' : 'bottom'} />
+          <YAxis fontSize={12} tickFormatter={(v) => `SAR ${v.toLocaleString()}`} orientation={isRtl ? 'right' : 'left'} />
           <Tooltip
             formatter={(value) => [`SAR ${Number(value).toLocaleString()}`, '']}
-            contentStyle={{ borderRadius: '8px', border: '1px solid #eee' }}
+            contentStyle={{ borderRadius: '8px', border: '1px solid #eee', textAlign: isRtl ? 'right' : 'left' }}
           />
           <Legend />
           {bars.map(({ key, color, name }) => (

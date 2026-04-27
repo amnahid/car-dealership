@@ -160,27 +160,27 @@ export default function RentalDetailPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Daily Rate</span>
-              <span style={{ color: '#2a3142' }}>SAR {rental.dailyRate.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(rental.dailyRate || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Security Deposit</span>
-              <span style={{ color: '#2a3142' }}>SAR {rental.securityDeposit.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(rental.securityDeposit || 0).toLocaleString()}</span>
             </div>
             {rental.lateFee !== undefined && rental.lateFee > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>Late Fee</span>
-                <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {rental.lateFee.toLocaleString()}</span>
+                <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {(rental.lateFee || 0).toLocaleString()}</span>
               </div>
             )}
             {rental.vatAmount !== undefined && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>VAT ({rental.vatRate ?? 15}%)</span>
-                <span style={{ color: '#2a3142' }}>SAR {rental.vatAmount.toLocaleString()}</span>
+                <span style={{ color: '#2a3142' }}>SAR {(rental.vatAmount || 0).toLocaleString()}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '12px' }}>
               <span style={{ color: '#2a3142', fontWeight: 600 }}>Total Amount</span>
-              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>SAR {rental.totalAmount.toLocaleString()}</span>
+              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>SAR {(rental.totalAmount || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>

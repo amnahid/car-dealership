@@ -5,12 +5,13 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { hashPassword } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
 import { sendUserCredentialsEmail, generateStrongPassword } from '@/lib/userCredentialsEmail';
+import { ROLE_OPTIONS, isAssignableRole } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const users = await User.find().select('-password').sort({ createdAt: -1 });
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.role !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const { name, email, password, role } = await request.json();
@@ -34,8 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name, email, and role are required' }, { status: 400 });
     }
 
-    const validRoles = ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'];
-    if (!validRoles.includes(role)) {
+    if (!isAssignableRole(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       message: password
         ? 'User created successfully'
         : 'User created and credentials sent via email',
+      allowedRoles: ROLE_OPTIONS,
     }, { status: 201 });
   } catch (error) {
     console.error('Create user error:', error);

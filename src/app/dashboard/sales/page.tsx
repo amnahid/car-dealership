@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface SalesStats {
   cash: { count: number; revenue: number };
@@ -11,6 +12,11 @@ interface SalesStats {
 }
 
 export default function SalesHubPage() {
+  const t = useTranslations('Sales');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [stats, setStats] = useState<SalesStats>({
     cash: { count: 0, revenue: 0 },
     installments: { count: 0, totalValue: 0, totalPaid: 0 },
@@ -65,54 +71,56 @@ export default function SalesHubPage() {
     fetchAllStats();
   }, []);
 
+  const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
+
   const salesTypes = [
     {
-      title: 'Cash Sales',
-      description: 'One-time cash purchases',
+      title: t('cashSales'),
+      description: t('cashSalesDesc'),
       href: '/dashboard/sales/cash',
       icon: '💵',
       color: '#28aaa9',
-      stats: `${stats.cash.count} sales`,
-      amount: `SAR${stats.cash.revenue.toLocaleString()}`,
+      stats: t('salesCount', { count: stats.cash.count }),
+      amount: formatCurrency(stats.cash.revenue),
     },
     {
-      title: 'Installment Sales',
-      description: 'Monthly payment plans',
+      title: t('installmentSales'),
+      description: t('installmentSalesDesc'),
       href: '/dashboard/sales/installments',
       icon: '📅',
       color: '#42ca7f',
-      stats: `${stats.installments.count} sales`,
-      amount: `SAR${(stats.installments.totalPaid || 0).toLocaleString()} paid`,
-      sub: `of SAR${stats.installments.totalValue.toLocaleString()}`,
+      stats: t('salesCount', { count: stats.installments.count }),
+      amount: `${formatCurrency(stats.installments.totalPaid || 0)} ${t('paid')}`,
+      sub: `${t('of')} ${formatCurrency(stats.installments.totalValue)}`,
     },
     {
-      title: 'Rentals',
-      description: 'Car rental services',
+      title: t('rentals'),
+      description: t('rentalsDesc'),
       href: '/dashboard/sales/rentals',
       icon: '🚗',
       color: '#f5a623',
-      stats: `${stats.rentals.count} rentals`,
-      amount: `SAR${stats.rentals.revenue.toLocaleString()}`,
+      stats: t('rentalsCount', { count: stats.rentals.count }),
+      amount: formatCurrency(stats.rentals.revenue),
     },
     {
-      title: 'Purchase Returns',
-      description: 'Customer returns with refunds',
+      title: t('purchaseReturns'),
+      description: t('purchaseReturnsDesc'),
       href: '/dashboard/sales/returns',
       icon: '↩️',
       color: '#ec4561',
-      stats: `${stats.returns.count} returns`,
-      amount: `SAR${stats.returns.totalRefunds.toLocaleString()} refunded`,
+      stats: t('returnsCount', { count: stats.returns.count }),
+      amount: `${formatCurrency(stats.returns.totalRefunds)} ${t('refunded')}`,
     },
   ];
 
   return (
     <div>
-      <h2 className="page-title">Sales Overview</h2>
+      <h2 className="page-title" style={{ textAlign: isRtl ? 'right' : 'left' }}>{t('overview')}</h2>
 
       {loading ? (
-        <div style={{ padding: '48px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+        <div style={{ padding: '48px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
           {salesTypes.map((type) => (
             <Link
               key={type.href}
@@ -130,6 +138,7 @@ export default function SalesHubPage() {
                   borderTop: `4px solid ${type.color}`,
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   cursor: 'pointer',
+                  textAlign: isRtl ? 'right' : 'left'
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
@@ -140,7 +149,7 @@ export default function SalesHubPage() {
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                   <div>
                     <div style={{ fontSize: '24px', marginBottom: '4px' }}>{type.icon}</div>
                     <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>{type.title}</h3>
@@ -160,9 +169,9 @@ export default function SalesHubPage() {
         </div>
       )}
 
-      <div className="card" style={{ marginTop: '24px', padding: '24px' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>Quick Links</h3>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <div className="card" style={{ marginTop: '24px', padding: '24px', textAlign: isRtl ? 'right' : 'left' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '16px', fontWeight: 600 }}>{t('quickLinks')}</h3>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <Link href="/dashboard/sales/cash" style={{ 
             background: '#28aaa9', 
             color: '#fff', 
@@ -172,7 +181,7 @@ export default function SalesHubPage() {
             fontSize: '14px',
             fontWeight: 500
           }}>
-            View Cash Sales
+            {t('viewCashSales')}
           </Link>
           <Link href="/dashboard/sales/installments" style={{ 
             background: '#42ca7f', 
@@ -183,7 +192,7 @@ export default function SalesHubPage() {
             fontSize: '14px',
             fontWeight: 500
           }}>
-            View Installment Sales
+            {t('viewInstallmentSales')}
           </Link>
           <Link href="/dashboard/sales/rentals" style={{ 
             background: '#f5a623', 
@@ -194,7 +203,7 @@ export default function SalesHubPage() {
             fontSize: '14px',
             fontWeight: 500
           }}>
-            View Rentals
+            {t('viewRentals')}
           </Link>
           <Link href="/dashboard/sales/returns" style={{ 
             background: '#ec4561', 
@@ -205,7 +214,7 @@ export default function SalesHubPage() {
             fontSize: '14px',
             fontWeight: 500
           }}>
-            View Returns
+            {t('viewReturns')}
           </Link>
         </div>
       </div>

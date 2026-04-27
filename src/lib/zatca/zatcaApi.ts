@@ -10,14 +10,12 @@ function basicAuth(csid: string, secret: string): string {
 
 /**
  * Request Compliance CSID from ZATCA sandbox.
- * Used during onboarding to get an initial certificate.
- * OTP is mandatory per ZATCA developer-portal spec — POST /compliance.
  */
 export async function requestComplianceCsid(
   csr: string,
   environment: string = 'sandbox',
   otp: string
-): Promise<{ csid: string; secret: string; requestId: number; binarySecurityToken: string }> {
+): Promise<{ csid: string; secret: string; requestId: number; binarySecurityToken: string; dispositionMessage?: string }> {
   if (!otp) {
     throw new Error('OTP is required for ZATCA compliance CSID request.');
   }
@@ -26,22 +24,19 @@ export async function requestComplianceCsid(
     method: 'POST',
     headers: {
       'Accept-Version': 'V2',
+      'Accept': 'application/json',
+      'Accept-Language': 'en',
       'Content-Type': 'application/json',
       'OTP': otp,
     },
     body: JSON.stringify({ csr }),
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`ZATCA compliance CSID request failed: ${response.status} ${error}`);
-  }
-
-  const data = await response.json() as {
-    requestID: number;
-    dispositionMessage: string;
+  const data = (await parseZatcaResponse(response)) as {
     binarySecurityToken: string;
     secret: string;
+    requestID: number;
+    dispositionMessage?: string;
   };
 
   return {
@@ -49,7 +44,31 @@ export async function requestComplianceCsid(
     secret: data.secret,
     requestId: data.requestID,
     binarySecurityToken: data.binarySecurityToken,
+    dispositionMessage: data.dispositionMessage,
   };
+}
+
+async function parseZatcaResponse(response: Response): Promise<unknown> {
+  const text = await response.text();
+  let data: { errors?: Array<{ code: string; message: string }> } & Record<string, unknown>;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    if (!response.ok) {
+      throw new Error(`ZATCA API error (${response.status}): ${text || response.statusText}`);
+    }
+    return text;
+  }
+
+  if (!response.ok) {
+    // Handle array of errors if present (ZATCA standard for 400 Bad Request)
+    if (data.errors && Array.isArray(data.errors)) {
+      const messages = data.errors.map((e) => `${e.code}: ${e.message}`).join(', ');
+      throw new Error(`ZATCA API error (${response.status}): ${messages}`);
+    }
+    throw new Error(`ZATCA API error (${response.status}): ${JSON.stringify(data)}`);
+  }
+  return data;
 }
 
 /**
@@ -60,12 +79,14 @@ export async function checkInvoiceCompliance(
   xmlHash: string,
   uuid: string,
   credentials: ZatcaApiCredentials
-): Promise<{ validationResults: object; reportingStatus: string }> {
+): Promise<unknown> {
   const url = `${getBaseUrl(credentials.environment)}/compliance/invoices`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'Accept-Version': 'V2',
+      'Accept': 'application/json',
+      'Accept-Language': 'en',
       'Authorization': basicAuth(credentials.csid, credentials.csidSecret),
       'Content-Type': 'application/json',
     },
@@ -76,11 +97,7 @@ export async function checkInvoiceCompliance(
     }),
   });
 
-  const data = await response.json() as { validationResults: object; reportingStatus: string };
-  if (!response.ok) {
-    throw new Error(`ZATCA compliance check failed: ${response.status} ${JSON.stringify(data)}`);
-  }
-  return data;
+  return parseZatcaResponse(response);
 }
 
 /**
@@ -97,19 +114,15 @@ export async function requestProductionCsid(
     method: 'POST',
     headers: {
       'Accept-Version': 'V2',
+      'Accept': 'application/json',
+      'Accept-Language': 'en',
       'Authorization': basicAuth(complianceCsid, complianceCsidSecret),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ compliance_request_id: complianceRequestId }),
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`ZATCA production CSID request failed: ${response.status} ${error}`);
-  }
-
-  const data = await response.json() as {
-    requestID: string;
+  const data = (await parseZatcaResponse(response)) as {
     binarySecurityToken: string;
     secret: string;
   };
@@ -123,7 +136,6 @@ export async function requestProductionCsid(
 
 /**
  * Clear a Standard (B2B) invoice via ZATCA Clearance API.
- * Returns the cleared XML from ZATCA.
  */
 export async function clearInvoice(
   xml: string,
@@ -136,6 +148,8 @@ export async function clearInvoice(
     method: 'POST',
     headers: {
       'Accept-Version': 'V2',
+      'Accept': 'application/json',
+      'Accept-Language': 'en',
       'Authorization': basicAuth(credentials.csid, credentials.csidSecret),
       'Clearance-Status': '1',
       'Content-Type': 'application/json',
@@ -147,17 +161,10 @@ export async function clearInvoice(
     }),
   });
 
-  const data = await response.json() as {
-    clearedInvoice: string;
+  const data = (await parseZatcaResponse(response)) as {
+    clearedInvoice?: string;
     validationResults: object;
-    reportingStatus: string;
-    clearanceStatus: string;
   };
-
-  if (!response.ok) {
-    throw new Error(`ZATCA clearance failed: ${response.status} ${JSON.stringify(data)}`);
-  }
-
   return {
     clearedInvoice: data.clearedInvoice
       ? Buffer.from(data.clearedInvoice, 'base64').toString('utf8')
@@ -180,6 +187,8 @@ export async function reportInvoice(
     method: 'POST',
     headers: {
       'Accept-Version': 'V2',
+      'Accept': 'application/json',
+      'Accept-Language': 'en',
       'Authorization': basicAuth(credentials.csid, credentials.csidSecret),
       'Clearance-Status': '0',
       'Content-Type': 'application/json',
@@ -191,9 +200,9 @@ export async function reportInvoice(
     }),
   });
 
-  const data = await response.json() as { validationResults: object; reportingStatus: string };
-  if (!response.ok) {
-    throw new Error(`ZATCA reporting failed: ${response.status} ${JSON.stringify(data)}`);
-  }
+  const data = (await parseZatcaResponse(response)) as {
+    validationResults: object;
+    reportingStatus: string;
+  };
   return data;
 }

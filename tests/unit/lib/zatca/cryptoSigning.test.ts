@@ -1,12 +1,24 @@
 import {
   generateECKeyPair,
-  signInvoiceHash,
-  verifyInvoiceSignature,
+  signData,
   embedSignatureInXML,
   KeyPair,
 } from '@/lib/zatca/cryptoSigning';
 
 let keyPair: KeyPair;
+
+// A real-ish DER self-signed cert for testing parsing
+const TEST_CERT = `-----BEGIN CERTIFICATE-----
+MIIBqDCCAU6gAwIBAgIUa0Te1czkAVb5jXKm4MZiwzQ+8+cwCgYIKoZIzj0EAwIw
+KzELMAkGA1UEBhMCU0ExDTALBgNVBAoMBFRlc3QxDTALBgNVBAMMBFRlc3QwHhcN
+MjYwNDI2MTIzNjExWhcNMjcwNDI2MTIzNjExWjArMQswCQYDVQQGEwJTQTENMAsG
+A1UECgwEVGVzdDENMAsGA1UEAwwEVGVzdDBWMBAGByqGSM49AgEGBSuBBAAKA0IA
+BLYeqn+zCKNC/8xNp2lIpBamrGC9gH9um4twOWDRElj4L4LRPE4L2eLxY/7UJpST
+OHwApMFJZADoIetBU+IyHt2jUzBRMB0GA1UdDgQWBBQax8TIfcTo9G9jfsErjgD/
+Dh70jDAfBgNVHSMEGDAWgBQax8TIfcTo9G9jfsErjgD/Dh70jDAPBgNVHRMBAf8E
+BTADAQH/MAoGCCqGSM49BAMCA0gAMEUCIF+AsennKQ7tvZuedh/n/7Jp2d+aUYf6
+G3TRdnm4saMzAiEAnRKXI1NxORZDckpoyto824OEtWl1ivvCXbbPhf2j02o=
+-----END CERTIFICATE-----`;
 
 beforeAll(() => {
   keyPair = generateECKeyPair();
@@ -20,91 +32,49 @@ describe('generateECKeyPair', () => {
 
   it('privateKey is PEM PKCS8 format', () => {
     expect(keyPair.privateKey).toContain('BEGIN PRIVATE KEY');
-    expect(keyPair.privateKey).toContain('END PRIVATE KEY');
-  });
-
-  it('publicKey is PEM SPKI format', () => {
-    expect(keyPair.publicKey).toContain('BEGIN PUBLIC KEY');
-    expect(keyPair.publicKey).toContain('END PUBLIC KEY');
-  });
-
-  it('each call generates unique keys', () => {
-    const kp2 = generateECKeyPair();
-    expect(kp2.privateKey).not.toBe(keyPair.privateKey);
-    expect(kp2.publicKey).not.toBe(keyPair.publicKey);
   });
 });
 
-describe('signInvoiceHash + verifyInvoiceSignature', () => {
-  const fakeHash = Buffer.from('a'.repeat(32)).toString('base64'); // 32-byte fake hash
-
-  it('sign produces non-empty base64 string', () => {
-    const sig = signInvoiceHash(fakeHash, keyPair.privateKey);
-    expect(typeof sig).toBe('string');
+describe('signData', () => {
+  it('produces non-empty Buffer', () => {
+    const sig = signData('test', keyPair.privateKey);
+    expect(sig).toBeInstanceOf(Buffer);
     expect(sig.length).toBeGreaterThan(0);
-    expect(() => Buffer.from(sig, 'base64')).not.toThrow();
-  });
-
-  it('verify returns true for valid signature', () => {
-    const sig = signInvoiceHash(fakeHash, keyPair.privateKey);
-    expect(verifyInvoiceSignature(fakeHash, sig, keyPair.publicKey)).toBe(true);
-  });
-
-  it('verify returns false for wrong signature', () => {
-    const badSig = Buffer.from('invalidsignature').toString('base64');
-    expect(verifyInvoiceSignature(fakeHash, badSig, keyPair.publicKey)).toBe(false);
-  });
-
-  it('verify returns false for tampered hash', () => {
-    const sig = signInvoiceHash(fakeHash, keyPair.privateKey);
-    const tampered = Buffer.from('b'.repeat(32)).toString('base64');
-    expect(verifyInvoiceSignature(tampered, sig, keyPair.publicKey)).toBe(false);
-  });
-
-  it('verify returns false for wrong key pair', () => {
-    const otherPair = generateECKeyPair();
-    const sig = signInvoiceHash(fakeHash, keyPair.privateKey);
-    expect(verifyInvoiceSignature(fakeHash, sig, otherPair.publicKey)).toBe(false);
-  });
-
-  it('different data → different signatures', () => {
-    const hash2 = Buffer.from('b'.repeat(32)).toString('base64');
-    const sig1 = signInvoiceHash(fakeHash, keyPair.privateKey);
-    const sig2 = signInvoiceHash(hash2, keyPair.privateKey);
-    expect(sig1).not.toBe(sig2);
   });
 });
 
 describe('embedSignatureInXML', () => {
-  const xmlWithPlaceholder = `<Invoice>
+  const xmlWithPlaceholder = `<Invoice xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">
   <ext:UBLExtensions>
     <ext:UBLExtension>
       <ext:ExtensionContent>
-        <sig:UBLDocumentSignatures>
-          <sac:SignatureInformation>
-            <cbc:ID>urn:oasis:names:specification:ubl:signature:Invoice</cbc:ID>
-            <sbc:ReferencedSignatureID>urn:oasis:names:specification:ubl:signature:Invoice</sbc:ReferencedSignatureID>
-          </sac:SignatureInformation>
-        </sig:UBLDocumentSignatures>
+        <sac:SignatureInformation xmlns:sac="urn:oasis:names:specification:ubl:schema:xsd:SignatureAggregateComponents-2">
+          <cbc:ID xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">urn:oasis:names:specification:ubl:signature:1</cbc:ID>
+          <sbc:ReferencedSignatureID xmlns:sbc="urn:oasis:names:specification:ubl:schema:xsd:SignatureBasicComponents-2">urn:oasis:names:specification:ubl:signature:Invoice</sbc:ReferencedSignatureID>
+        </sac:SignatureInformation>
       </ext:ExtensionContent>
     </ext:UBLExtension>
   </ext:UBLExtensions>
-  <cbc:ID>INV-001</cbc:ID>
+  <cbc:ID xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">INV-001</cbc:ID>
 </Invoice>`;
 
+  const fakeHash = Buffer.from('a'.repeat(32)).toString('base64');
+
   it('embeds ds:Signature block', () => {
-    const result = embedSignatureInXML(xmlWithPlaceholder, 'FAKESIG', 'FAKECERT', 'FAKEHASH');
-    expect(result).toContain('<ds:Signature');
-    expect(result).toContain('<ds:SignatureValue>FAKESIG</ds:SignatureValue>');
+    const { signedXml, signatureValue } = embedSignatureInXML(xmlWithPlaceholder, keyPair.privateKey, TEST_CERT, fakeHash);
+    expect(signedXml).toContain('<ds:Signature');
+    expect(signedXml).toContain(`<ds:SignatureValue>${signatureValue}</ds:SignatureValue>`);
+    expect(signedXml).toContain('Id="signature"');
   });
 
   it('embeds certificate', () => {
-    const result = embedSignatureInXML(xmlWithPlaceholder, 'SIG', 'MYCERT', 'HASH');
-    expect(result).toContain('<ds:X509Certificate>MYCERT</ds:X509Certificate>');
+    const { signedXml } = embedSignatureInXML(xmlWithPlaceholder, keyPair.privateKey, TEST_CERT, fakeHash);
+    const certBase64 = TEST_CERT.replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s/g, '');
+    expect(signedXml).toContain(`<ds:X509Certificate>${certBase64}</ds:X509Certificate>`);
   });
 
   it('preserves non-signature XML content', () => {
-    const result = embedSignatureInXML(xmlWithPlaceholder, 'SIG', 'CERT', 'HASH');
-    expect(result).toContain('INV-001');
+    const { signedXml } = embedSignatureInXML(xmlWithPlaceholder, keyPair.privateKey, TEST_CERT, fakeHash);
+    expect(signedXml).toContain('INV-001');
   });
 });

@@ -1,4 +1,5 @@
 import { Types } from 'mongoose';
+import { type UserRole } from '@/lib/rbac';
 
 export interface IUser {
   _id: Types.ObjectId;
@@ -6,7 +7,7 @@ export interface IUser {
   email: string;
   password: string;
   phone?: string;
-  role: 'Admin' | 'Manager' | 'Accounts Officer' | 'Sales Agent';
+  role: UserRole;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -83,7 +84,6 @@ export interface IActivityLog {
   createdAt: Date;
 }
 
-export type UserRole = 'Admin' | 'Manager' | 'Accounts Officer' | 'Sales Agent';
 export type CarStatus = 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented';
 export type DocumentType = 'Insurance' | 'Road Permit' | 'Registration Card';
 export type RepairStatus = 'Pending' | 'In Progress' | 'Completed';

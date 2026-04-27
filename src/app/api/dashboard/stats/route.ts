@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    if (!['Admin', 'Sales Person', 'Car Manager', 'Accountant', 'Finance Manager'].includes(auth.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
 
     const now = new Date();

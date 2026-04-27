@@ -66,8 +66,8 @@ export default function PurchasesPage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
+  const formatCurrency = (amount: number | undefined | null) => {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount || 0);
   };
 
   const containerStyle: React.CSSProperties = {

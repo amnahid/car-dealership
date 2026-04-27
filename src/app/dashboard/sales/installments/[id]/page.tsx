@@ -155,15 +155,15 @@ export default function InstallmentSaleDetailPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Total Price</span>
-              <span style={{ color: '#2a3142' }}>SAR {sale.totalPrice.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(sale.totalPrice || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Down Payment</span>
-              <span style={{ color: '#2a3142' }}>SAR {sale.downPayment.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(sale.downPayment || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Loan Amount</span>
-              <span style={{ color: '#2a3142' }}>SAR {sale.loanAmount.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(sale.loanAmount || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Interest Rate</span>
@@ -176,7 +176,7 @@ export default function InstallmentSaleDetailPage() {
             {sale.vatAmount !== undefined && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>VAT ({sale.vatRate ?? 15}%)</span>
-                <span style={{ color: '#2a3142' }}>SAR {sale.vatAmount.toLocaleString()}</span>
+                <span style={{ color: '#2a3142' }}>SAR {(sale.vatAmount || 0).toLocaleString()}</span>
               </div>
             )}
           </div>
@@ -187,19 +187,19 @@ export default function InstallmentSaleDetailPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Monthly Payment</span>
-              <span style={{ color: '#28aaa9', fontWeight: 600 }}>SAR {sale.monthlyPayment.toLocaleString()}</span>
+              <span style={{ color: '#28aaa9', fontWeight: 600 }}>SAR {(sale.monthlyPayment || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Total Paid</span>
-              <span style={{ color: '#42ca7f', fontWeight: 600 }}>SAR {sale.totalPaid.toLocaleString()}</span>
+              <span style={{ color: '#42ca7f', fontWeight: 600 }}>SAR {(sale.totalPaid || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Remaining</span>
-              <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {sale.remainingAmount.toLocaleString()}</span>
+              <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {(sale.remainingAmount || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Next Payment</span>
-              <span style={{ color: '#2a3142' }}>SAR {sale.nextPaymentAmount.toLocaleString()} ({new Date(sale.nextPaymentDate).toLocaleDateString()})</span>
+              <span style={{ color: '#2a3142' }}>SAR {(sale.nextPaymentAmount || 0).toLocaleString()} ({new Date(sale.nextPaymentDate).toLocaleDateString()})</span>
             </div>
             {sale.lateFeePercent !== undefined && sale.lateFeePercent > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -210,7 +210,7 @@ export default function InstallmentSaleDetailPage() {
             {sale.lateFeeCharged !== undefined && sale.lateFeeCharged > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>Total Late Fees</span>
-                <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {sale.lateFeeCharged.toLocaleString()}</span>
+                <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {(sale.lateFeeCharged || 0).toLocaleString()}</span>
               </div>
             )}
           </div>
@@ -238,14 +238,14 @@ export default function InstallmentSaleDetailPage() {
                   <tr key={payment.installmentNumber} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '12px' }}>{payment.installmentNumber}</td>
                     <td style={{ padding: '12px' }}>{new Date(payment.dueDate).toLocaleDateString()}</td>
-                    <td style={{ padding: '12px' }}>SAR {payment.amount.toLocaleString()}</td>
+                    <td style={{ padding: '12px' }}>SAR {(payment.amount || 0).toLocaleString()}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '4px', background: statusColor, color: '#ffffff', fontSize: '12px' }}>
                         {payment.status}
                       </span>
                     </td>
                     <td style={{ padding: '12px', color: payment.lateFee && payment.lateFee > 0 ? '#ec4561' : '#9ca8b3' }}>
-                      {payment.lateFee && payment.lateFee > 0 ? `SAR ${payment.lateFee.toLocaleString()}` : '-'}
+                      {payment.lateFee && payment.lateFee > 0 ? `SAR ${(payment.lateFee || 0).toLocaleString()}` : '-'}
                     </td>
                     <td style={{ padding: '12px', color: '#9ca8b3' }}>
                       {payment.paidDate ? new Date(payment.paidDate).toLocaleDateString() : '-'}

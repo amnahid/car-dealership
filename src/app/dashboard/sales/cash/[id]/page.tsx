@@ -153,7 +153,7 @@ export default function CashSaleDetailPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Sale Price</span>
-              <span style={{ color: '#2a3142' }}>SAR {sale.salePrice.toLocaleString()}</span>
+              <span style={{ color: '#2a3142' }}>SAR {(sale.salePrice || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>
@@ -162,23 +162,23 @@ export default function CashSaleDetailPage() {
                   : 'Discount'}
               </span>
               <span style={{ color: sale.discountAmount > 0 ? '#ec4561' : '#2a3142' }}>
-                {sale.discountAmount > 0 ? `-SAR ${sale.discountAmount.toLocaleString()}` : '-'}
+                {sale.discountAmount > 0 ? `-SAR ${(sale.discountAmount || 0).toLocaleString()}` : '-'}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '12px' }}>
               <span style={{ color: '#9ca8b3', fontWeight: 600 }}>Subtotal</span>
-              <span style={{ color: '#2a3142', fontWeight: 600 }}>SAR {sale.finalPrice.toLocaleString()}</span>
+              <span style={{ color: '#2a3142', fontWeight: 600 }}>SAR {(sale.finalPrice || 0).toLocaleString()}</span>
             </div>
             {sale.vatAmount !== undefined && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>VAT ({sale.vatRate ?? 15}%)</span>
-                <span style={{ color: '#2a3142' }}>SAR {sale.vatAmount.toLocaleString()}</span>
+                <span style={{ color: '#2a3142' }}>SAR {(sale.vatAmount || 0).toLocaleString()}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '12px' }}>
               <span style={{ color: '#2a3142', fontWeight: 600 }}>Total (incl. VAT)</span>
               <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>
-                SAR {(sale.finalPriceWithVat ?? sale.finalPrice).toLocaleString()}
+                SAR {(sale.finalPriceWithVat ?? sale.finalPrice ?? 0).toLocaleString()}
               </span>
             </div>
           </div>
@@ -195,7 +195,7 @@ export default function CashSaleDetailPage() {
               {sale.agentCommission !== undefined && sale.agentCommission > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#9ca8b3' }}>Commission</span>
-                  <span style={{ color: '#2a3142' }}>SAR {sale.agentCommission.toLocaleString()}</span>
+                  <span style={{ color: '#2a3142' }}>SAR {(sale.agentCommission || 0).toLocaleString()}</span>
                 </div>
               )}
             </div>

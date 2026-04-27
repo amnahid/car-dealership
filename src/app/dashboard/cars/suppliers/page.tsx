@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Supplier {
   _id: string;
@@ -28,6 +29,11 @@ interface Supplier {
 }
 
 export default function SuppliersPage() {
+  const t = useTranslations('Suppliers');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -37,7 +43,7 @@ export default function SuppliersPage() {
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
 
-  const fetchSuppliers = async (page = 1, searchVal = debouncedSearch, status = statusFilter) => {
+  const fetchSuppliers = useCallback(async (page = 1, searchVal = debouncedSearch, status = statusFilter) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -55,11 +61,11 @@ export default function SuppliersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [debouncedSearch, statusFilter]);
 
   useEffect(() => {
-    fetchSuppliers();
-  }, [searchParams.get('page'), searchParams.get('status')]);
+    fetchSuppliers(parseInt(searchParams.get('page') || '1'), searchParams.get('search') || '', searchParams.get('status') || '');
+  }, [fetchSuppliers, searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +73,6 @@ export default function SuppliersPage() {
     if (search) params.set('search', search);
     if (statusFilter) params.set('status', statusFilter);
     router.push(`/dashboard/cars/suppliers?${params.toString()}`);
-    fetchSuppliers(1, search, statusFilter);
   };
 
   const handleStatusChange = (status: string) => {
@@ -76,11 +81,10 @@ export default function SuppliersPage() {
     if (search) params.set('search', search);
     if (status) params.set('status', status);
     router.push(`/dashboard/cars/suppliers?${params.toString()}`);
-    fetchSuppliers(1, search, status);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this supplier?')) return;
+    if (!confirm(t('deleteConfirm'))) return;
     try {
       const res = await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });
       if (res.ok) {
@@ -91,12 +95,12 @@ export default function SuppliersPage() {
     }
   };
 
-  const formatCurrency = (value: number) => value.toLocaleString();
+  const formatCurrency = (value: number | undefined | null) => `SAR ${(value || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 className="page-title" style={{ margin: 0 }}>Suppliers</h2>
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <h2 className="page-title" style={{ margin: 0 }}>{t('title')}</h2>
         <Link
           href="/dashboard/cars/suppliers/new"
           style={{
@@ -108,15 +112,15 @@ export default function SuppliersPage() {
             fontWeight: 500,
           }}
         >
-          + Add Supplier
+          + {t('addNew')}
         </Link>
       </div>
 
       <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <input
             type="text"
-            placeholder="Search suppliers..."
+            placeholder={t('searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
@@ -126,6 +130,7 @@ export default function SuppliersPage() {
               border: '1px solid #e0e0e0',
               borderRadius: '6px',
               fontSize: '14px',
+              textAlign: isRtl ? 'right' : 'left'
             }}
           />
           <select
@@ -138,11 +143,12 @@ export default function SuppliersPage() {
               fontSize: '14px',
               background: '#fff',
               minWidth: '150px',
+              textAlign: isRtl ? 'right' : 'left'
             }}
           >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="">{t('allStatus')}</option>
+            <option value="active">{t('active')}</option>
+            <option value="inactive">{t('inactive')}</option>
           </select>
           <button
             type="submit"
@@ -156,40 +162,40 @@ export default function SuppliersPage() {
               fontWeight: 500,
             }}
           >
-            Search
+            {commonT('search')}
           </button>
         </form>
       </div>
 
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
-                <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>Company</th>
-                <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>Company No.</th>
-                <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>Contact</th>
-                <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>Sales Agent</th>
-                <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>Purchases</th>
-                <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>Total Amount</th>
-                <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>Status</th>
-                <th style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 600, fontSize: '14px', color: '#555' }}>Actions</th>
+                <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('company')}</th>
+                <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('companyNo')}</th>
+                <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('contact')}</th>
+                <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('salesAgent')}</th>
+                <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('purchases')}</th>
+                <th style={{ padding: '14px 16px', textAlign: isRtl ? 'left' : 'right', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('totalAmount')}</th>
+                <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('status')}</th>
+                <th style={{ padding: '14px 16px', textAlign: 'center', fontWeight: 600, fontSize: '14px', color: '#555' }}>{commonT('actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>Loading...</td>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>{commonT('loading')}</td>
                 </tr>
               ) : suppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>No suppliers found</td>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#999' }}>{t('noSuppliers')}</td>
                 </tr>
               ) : (
                 suppliers.map((supplier) => (
                   <tr key={supplier._id} style={{ borderBottom: '1px solid #eee' }}>
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {supplier.companyLogo ? (
                           <img
                             src={supplier.companyLogo}
@@ -201,7 +207,7 @@ export default function SuppliersPage() {
                             {supplier.companyName.charAt(0)}
                           </div>
                         )}
-                        <div>
+                        <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
                           <Link href={`/dashboard/cars/suppliers/${supplier._id}`} style={{ color: '#2b2d5d', fontWeight: 500, textDecoration: 'none' }}>
                             {supplier.companyName}
                           </Link>
@@ -216,7 +222,7 @@ export default function SuppliersPage() {
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '14px' }}>
                       {supplier.salesAgent ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                           {supplier.salesAgent.photo ? (
                             <img src={supplier.salesAgent.photo} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                           ) : (
@@ -224,7 +230,7 @@ export default function SuppliersPage() {
                               {supplier.salesAgent.name.charAt(0)}
                             </div>
                           )}
-                          <div>
+                          <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
                             <p style={{ margin: 0, fontWeight: 500, fontSize: '13px' }}>{supplier.salesAgent.name}</p>
                             {supplier.salesAgent.designation && <p style={{ margin: 0, fontSize: '11px', color: '#999' }}>{supplier.salesAgent.designation}</p>}
                           </div>
@@ -232,7 +238,7 @@ export default function SuppliersPage() {
                       ) : <span style={{ color: '#999' }}>-</span>}
                     </td>
                     <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500 }}>{supplier.totalPurchases}</td>
-                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, color: '#28aaa9' }}>${formatCurrency(supplier.totalAmount)}</td>
+                    <td style={{ padding: '14px 16px', fontSize: '14px', fontWeight: 500, color: '#28aaa9', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(supplier.totalAmount)}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{
                         padding: '4px 10px',
@@ -242,28 +248,28 @@ export default function SuppliersPage() {
                         background: supplier.status === 'active' ? '#d4edda' : '#f8d7da',
                         color: supplier.status === 'active' ? '#155724' : '#721c24',
                       }}>
-                        {supplier.status}
+                        {supplier.status === 'active' ? t('active') : t('inactive')}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         <Link
                           href={`/dashboard/cars/suppliers/${supplier._id}`}
                           style={{ padding: '6px 12px', background: '#e9ecef', borderRadius: '4px', fontSize: '12px', color: '#555', textDecoration: 'none' }}
                         >
-                          View
+                          {commonT('view')}
                         </Link>
                         <Link
                           href={`/dashboard/cars/suppliers/${supplier._id}/edit`}
                           style={{ padding: '6px 12px', background: '#fff3cd', borderRadius: '4px', fontSize: '12px', color: '#856404', textDecoration: 'none' }}
                         >
-                          Edit
+                          {commonT('edit')}
                         </Link>
                         <button
                           onClick={() => handleDelete(supplier._id)}
                           style={{ padding: '6px 12px', background: '#f8d7da', borderRadius: '4px', fontSize: '12px', color: '#721c24', border: 'none', cursor: 'pointer' }}
                         >
-                          Delete
+                          {commonT('delete')}
                         </button>
                       </div>
                     </td>
@@ -275,11 +281,15 @@ export default function SuppliersPage() {
         </div>
 
         {pagination.totalPages > 1 && (
-          <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee' }}>
+          <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} suppliers
+              {t('showing', { 
+                start: ((pagination.page - 1) * pagination.limit) + 1,
+                end: Math.min(pagination.page * pagination.limit, pagination.total),
+                total: pagination.total
+              })}
             </p>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
               <button
                 disabled={pagination.page <= 1}
                 onClick={() => {
@@ -289,7 +299,7 @@ export default function SuppliersPage() {
                 }}
                 style={{ padding: '8px 14px', border: '1px solid #ddd', background: '#fff', borderRadius: '4px', cursor: pagination.page <= 1 ? 'not-allowed' : 'pointer', opacity: pagination.page <= 1 ? 0.5 : 1 }}
               >
-                Previous
+                {commonT('prev')}
               </button>
               <button
                 disabled={pagination.page >= pagination.totalPages}
@@ -300,7 +310,7 @@ export default function SuppliersPage() {
                 }}
                 style={{ padding: '8px 14px', border: '1px solid #ddd', background: '#fff', borderRadius: '4px', cursor: pagination.page >= pagination.totalPages ? 'not-allowed' : 'pointer', opacity: pagination.page >= pagination.totalPages ? 0.5 : 1 }}
               >
-                Next
+                {commonT('next')}
               </button>
             </div>
           </div>

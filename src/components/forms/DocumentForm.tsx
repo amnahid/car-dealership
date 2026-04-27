@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadPdf, deleteFile } from '@/lib/uploadClient';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface CarOption {
   _id: string;
@@ -34,6 +35,11 @@ interface DocumentFormProps {
 }
 
 export default function DocumentForm({ mode }: DocumentFormProps) {
+  const t = useTranslations('DocumentForm');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -76,11 +82,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
       
       setDocs(updated);
     }
-  }, [autoFill]);
-
-  const toggleSection = (type: string) => {
-    setExpandedSections(prev => ({ ...prev, [type]: !prev[type] }));
-  };
+  }, [autoFill, selectedCar]);
 
   const updateDoc = (type: string, field: keyof DocSection, value: string | boolean) => {
     setDocs(prev => ({
@@ -123,7 +125,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
     setError('');
 
     if (!selectedCar) {
-      setError('Please select a car');
+      setError(t('errors.selectCar'));
       return;
     }
 
@@ -131,7 +133,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
       d.enabled && (d.fileUrl || (d.issueDate && d.expiryDate))
     );
     if (docsWithData.length === 0) {
-      setError('Please add at least one document with file or dates');
+      setError(t('errors.addAtLeastOne'));
       return;
     }
 
@@ -159,17 +161,14 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
 
       const data = await res.json();
       if (!res.ok) {
-        console.error('Document save error:', res.status, data);
         setError(data.error || `Failed to save (${res.status})`);
         return;
       }
 
-      console.log('Documents saved:', data);
-
       router.push('/dashboard/documents');
       router.refresh();
     } catch {
-      setError('Network error. Please try again.');
+      setError(commonT('errors.networkError'));
     } finally {
       setLoading(false);
     }
@@ -183,6 +182,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
     padding: '0 12px',
     border: '1px solid #ced4da',
     background: '#ffffff',
+    textAlign: isRtl ? 'right' : 'left'
   };
 
   const labelStyle: React.CSSProperties = {
@@ -191,32 +191,33 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
     fontWeight: 500,
     color: '#2a3142',
     marginBottom: '4px',
+    textAlign: isRtl ? 'right' : 'left'
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
       {error && (
-        <div style={{ background: 'rgba(236, 69, 97, 0.1)', border: '1px solid #ec4561', borderRadius: '3px', padding: '12px', marginBottom: '20px' }}>
+        <div style={{ background: 'rgba(236, 69, 97, 0.1)', border: '1px solid #ec4561', borderRadius: '3px', padding: '12px', marginBottom: '20px', textAlign: isRtl ? 'right' : 'left' }}>
           <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
         <SearchableSelect
-          label="Car *"
+          label={commonT('brand')}
           value={selectedCar}
           onChange={setSelectedCar}
           options={cars.map(c => ({ value: c._id, label: `${c.carId} - ${c.brand} ${c.model}` }))}
-          placeholder="Select a car..."
+          placeholder={t('selectCar')}
         />
         <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '8px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             <input
               type="checkbox"
               checked={autoFill}
               onChange={(e) => setAutoFill(e.target.checked)}
             />
-            <span style={{ fontSize: '14px', color: '#525f80' }}>Auto-fill dates (1 year)</span>
+            <span style={{ fontSize: '14px', color: '#525f80' }}>{t('autoFill')}</span>
           </label>
         </div>
       </div>
@@ -242,9 +243,10 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
               justifyContent: 'space-between',
               alignItems: 'center',
               cursor: 'pointer',
+              flexDirection: isRtl ? 'row-reverse' : 'row'
             }}
           >
-            <span style={{ fontWeight: 600, color: '#2a3142' }}>{type}</span>
+            <span style={{ fontWeight: 600, color: '#2a3142' }}>{t(`types.${type}`)}</span>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style={{ transform: expandedSections[type] ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.2s', color: '#9ca8b3' }}>
               <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" fill="none" />
             </svg>
@@ -252,9 +254,9 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
 
           {expandedSections[type] && (
             <div style={{ padding: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
                 <div>
-                  <label style={labelStyle}>Issue Date</label>
+                  <label style={labelStyle}>{t('issueDate')}</label>
                   <input
                     type="date"
                     value={docs[type].issueDate}
@@ -263,7 +265,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>Expiry Date</label>
+                  <label style={labelStyle}>{t('expiryDate')}</label>
                   <input
                     type="date"
                     value={docs[type].expiryDate}
@@ -273,19 +275,19 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
                 </div>
               </div>
 
-              <div>
-                <label style={labelStyle}>Upload File (optional)</label>
+              <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
+                <label style={labelStyle}>{t('uploadFile')}</label>
                 {docs[type].fileUrl ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f0fdf4', border: '1px solid #42ca7f', borderRadius: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: '#f0fdf4', border: '1px solid #42ca7f', borderRadius: '4px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#42ca7f" strokeWidth="2">
                       <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                       <polyline points="14 2 14 8 20 8" />
                       <line x1="16" y1="13" x2="8" y2="13" />
                       <line x1="16" y1="17" x2="8" y2="17" />
                     </svg>
-                    <span style={{ flex: 1, fontSize: '14px', color: '#2a3142' }}>{docs[type].fileName}</span>
+                    <span style={{ flex: 1, fontSize: '14px', color: '#2a3142', textAlign: isRtl ? 'right' : 'left' }}>{docs[type].fileName}</span>
                     <button type="button" onClick={() => removeFile(type)} style={{ background: '#ec4561', color: '#fff', border: 'none', borderRadius: '3px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
-                      Remove
+                      {commonT('delete')}
                     </button>
                   </div>
                 ) : (
@@ -305,7 +307,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
                     }}
                   >
                     {uploading === type ? (
-                      <span style={{ fontSize: '12px', color: '#28aaa9' }}>Uploading...</span>
+                      <span style={{ fontSize: '12px', color: '#28aaa9' }}>{commonT('loading')}</span>
                     ) : (
                       <>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca8b3" strokeWidth="2">
@@ -313,7 +315,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
                           <polyline points="17 8 12 3 7 8" />
                           <line x1="12" y1="3" x2="12" y2="15" />
                         </svg>
-                        <span style={{ fontSize: '12px', color: '#9ca8b3' }}>Click to upload PDF or image</span>
+                        <span style={{ fontSize: '12px', color: '#9ca8b3' }}>{t('clickToUpload')}</span>
                       </>
                     )}
                   </div>
@@ -335,7 +337,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <button
           type="button"
           onClick={() => router.back()}
@@ -350,7 +352,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
             cursor: 'pointer',
           }}
         >
-          Cancel
+          {commonT('cancel')}
         </button>
         <button
           type="submit"
@@ -367,7 +369,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
             opacity: loading ? 0.6 : 1,
           }}
         >
-          {loading ? 'Saving...' : 'Save Documents'}
+          {loading ? commonT('loading') : t('saveDocuments')}
         </button>
       </div>
     </form>

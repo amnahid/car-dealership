@@ -3,6 +3,7 @@ import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { comparePassword, signToken } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
+import { normalizeRole } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,10 +30,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
+    const normalizedRole = normalizeRole(user.role);
+    if (!normalizedRole) {
+      return NextResponse.json({ error: 'Invalid role configuration' }, { status: 403 });
+    }
+
     const token = signToken({
       userId: user._id.toString(),
       email: user.email,
-      role: user.role,
+      role: normalizedRole,
       name: user.name,
       passwordVersion: user.passwordVersion,
     });
@@ -54,7 +60,7 @@ export async function POST(request: NextRequest) {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: normalizedRole,
       },
     });
 

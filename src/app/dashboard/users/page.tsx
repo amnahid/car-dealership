@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { ROLE_OPTIONS } from '@/lib/rbac';
 
 interface User {
   _id: string;
@@ -27,13 +29,18 @@ interface CreateResponse {
 }
 
 export default function UsersPage() {
+  const t = useTranslations('Users');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [generatedPw, setGeneratedPw] = useState('');
-  const [formData, setFormData] = useState<UserFormData>({ name: '', email: '', password: '', role: 'Sales Agent' });
+  const [formData, setFormData] = useState<UserFormData>({ name: '', email: '', password: '', role: 'Sales Person' });
   const [saving, setSaving] = useState(false);
 
   const fetchUsers = useCallback(async () => {
@@ -71,20 +78,20 @@ export default function UsersPage() {
       });
       const data: CreateResponse = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Failed to create user');
+        setError(data.error || t('errors.failedToCreate'));
         return;
       }
       if (data.generatedPassword) {
         setGeneratedPw(data.generatedPassword);
-        setSuccess('User created! Login credentials sent via email.');
+        setSuccess(t('successCreatedWithPw'));
       } else {
-        setSuccess('User created successfully.');
+        setSuccess(t('successCreated'));
       }
       setShowForm(false);
-      setFormData({ name: '', email: '', password: '', role: 'Sales Agent' });
+      setFormData({ name: '', email: '', password: '', role: 'Sales Person' });
       fetchUsers();
     } catch {
-      setError('Network error');
+      setError(t('errors.networkError'));
     } finally {
       setSaving(false);
     }
@@ -99,6 +106,11 @@ export default function UsersPage() {
     fetchUsers();
   };
 
+  const getRoleLabel = (role: string) => {
+    const key = role.replace(' ', '').charAt(0).toLowerCase() + role.replace(' ', '').slice(1);
+    return t(`roles.${key}`);
+  };
+
   const inputStyle: React.CSSProperties = {
     width: '100%',
     height: '40px',
@@ -107,6 +119,7 @@ export default function UsersPage() {
     padding: '0 12px',
     border: '1px solid #ced4da',
     background: '#ffffff',
+    textAlign: isRtl ? 'right' : 'left'
   };
 
   const labelStyle: React.CSSProperties = {
@@ -115,6 +128,7 @@ export default function UsersPage() {
     fontWeight: 500,
     color: '#2a3142',
     marginBottom: '4px',
+    textAlign: isRtl ? 'right' : 'left'
   };
 
   return (
@@ -125,9 +139,10 @@ export default function UsersPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: '24px',
+          flexDirection: isRtl ? 'row-reverse' : 'row'
         }}
       >
-        <h2 className="page-title">User Management</h2>
+        <h2 className="page-title">{t('title')}</h2>
         <button
           onClick={() => setShowForm(!showForm)}
           style={{
@@ -141,22 +156,22 @@ export default function UsersPage() {
             cursor: 'pointer',
           }}
         >
-          + Add User
+          + {t('addNew')}
         </button>
       </div>
 
       {showForm && (
-        <div className="card" style={{ padding: '24px', maxWidth: '500px' }}>
+        <div className="card" style={{ padding: '24px', maxWidth: '500px', marginLeft: isRtl ? 'auto' : '0', marginRight: isRtl ? '0' : 'auto' }}>
           <h3
             style={{
               fontSize: '18px',
               fontWeight: 600,
               color: '#2a3142',
               marginBottom: '16px',
-              fontFamily: '"Sarabun", sans-serif',
+              textAlign: isRtl ? 'right' : 'left'
             }}
           >
-            Create New User
+            {t('createUser')}
           </h3>
           {error && (
             <div
@@ -166,6 +181,7 @@ export default function UsersPage() {
                 borderRadius: '3px',
                 padding: '12px',
                 marginBottom: '16px',
+                textAlign: isRtl ? 'right' : 'left'
               }}
             >
               <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
@@ -179,12 +195,13 @@ export default function UsersPage() {
                 borderRadius: '3px',
                 padding: '12px',
                 marginBottom: '16px',
+                textAlign: isRtl ? 'right' : 'left'
               }}
             >
               <p style={{ color: '#28aaa9', fontSize: '14px', margin: 0 }}>{success}</p>
               {generatedPw && (
                 <div style={{ marginTop: '8px', padding: '8px', background: '#fff', borderRadius: '4px' }}>
-                  <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>Generated Password (share with user):</p>
+                  <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>{t('generatedPw')}</p>
                   <code style={{ fontSize: '14px', color: '#2a3142', fontWeight: 600 }}>{generatedPw}</code>
                 </div>
               )}
@@ -192,7 +209,7 @@ export default function UsersPage() {
           )}
           <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>
             <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>Name *</label>
+              <label style={labelStyle}>{t('name')} *</label>
               <input
                 required
                 value={formData.name}
@@ -201,7 +218,7 @@ export default function UsersPage() {
               />
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>Email *</label>
+              <label style={labelStyle}>{t('email')} *</label>
               <input
                 type="email"
                 required
@@ -211,33 +228,33 @@ export default function UsersPage() {
               />
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>Password {formData.password ? '' : '(auto-generated if blank)'}</label>
+              <label style={labelStyle}>{t('password')} {formData.password ? '' : t('pwAutoHint')}</label>
               <input
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
-                placeholder="Leave blank to auto-generate"
+                placeholder={t('pwAutoHint')}
                 style={inputStyle}
               />
-              <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '4px 0 0' }}>
-                A strong password will be auto-generated if left blank. Login credentials will be sent via email.
+              <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '4px 0 0', textAlign: isRtl ? 'right' : 'left' }}>
+                {t('pwHelp')}
               </p>
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>Role *</label>
+              <label style={labelStyle}>{t('role')} *</label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value }))}
                 style={inputStyle}
               >
-                {['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'].map((r) => (
+                {ROLE_OPTIONS.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {getRoleLabel(r)}
                   </option>
                 ))}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
@@ -252,7 +269,7 @@ export default function UsersPage() {
                   cursor: 'pointer',
                 }}
               >
-                Cancel
+                {commonT('cancel')}
               </button>
               <button
                 type="submit"
@@ -269,7 +286,7 @@ export default function UsersPage() {
                   opacity: saving ? 0.6 : 1,
                 }}
               >
-                {saving ? 'Saving...' : 'Create User'}
+                {saving ? commonT('loading') : t('createBtn')}
               </button>
             </div>
           </form>
@@ -278,27 +295,18 @@ export default function UsersPage() {
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
-                {['Name', 'Email', 'Role', 'Status', 'Created', 'Actions'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: '#525f80',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('name')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('email')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('role')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('created')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
               </tr>
             </thead>
             <tbody style={{ borderBottom: '1px solid #eee' }}>
@@ -320,7 +328,7 @@ export default function UsersPage() {
                         color: '#ffffff',
                       }}
                     >
-                      {u.role}
+                      {getRoleLabel(u.role)}
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
@@ -335,10 +343,10 @@ export default function UsersPage() {
                         color: '#ffffff',
                       }}
                     >
-                      {u.isActive ? 'Active' : 'Inactive'}
+                      {u.isActive ? t('active') : t('inactive')}
                     </span>
                   </td>
-                  <td style={{ padding: '12px', color: '#525f80' }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: '12px', color: '#525f80' }}>{new Date(u.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                   <td style={{ padding: '12px' }}>
                     <button
                       onClick={() => toggleActive(u._id, u.isActive)}
@@ -351,7 +359,7 @@ export default function UsersPage() {
                         textDecoration: 'none',
                       }}
                     >
-                      {u.isActive ? 'Deactivate' : 'Activate'}
+                      {u.isActive ? t('deactivate') : t('activate')}
                     </button>
                   </td>
                 </tr>

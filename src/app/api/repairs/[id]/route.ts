@@ -21,6 +21,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await getAuthPayload(_request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!['Admin', 'Car Manager', 'Accountant', 'Finance Manager'].includes(auth.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
     const { id } = await params;
     const repair = await Repair.findById(id)
@@ -42,6 +49,10 @@ export async function PUT(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     await connectDB();
     const { id } = await params;
@@ -74,6 +85,10 @@ export async function DELETE(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     await connectDB();
     const { id } = await params;

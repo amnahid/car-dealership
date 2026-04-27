@@ -5,7 +5,7 @@ import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import { useDebounce } from '@/hooks/useDebounce';
 import { CarStatus } from '@/types';
-import { formatCurrency } from '@/constants/currency';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Purchase {
   supplierName: string;
@@ -27,16 +27,9 @@ interface Car {
   createdAt?: string;
 }
 
-const TABS = ['Inventory', 'Stock Report'] as const;
-type Tab = typeof TABS[number];
-
-function getDaysInStock(purchaseDate?: string, createdAt?: string): number {
-  const date = purchaseDate || createdAt;
-  if (!date) return 0;
-  const start = new Date(date);
-  const now = new Date();
-  const diff = now.getTime() - start.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
+function formatCurrency(value: number | undefined | null, locale: string): string {
+  if (value === undefined || value === null) return 'SAR 0';
+  return `SAR ${value.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
 }
 
 interface FilterOptions {
@@ -47,11 +40,20 @@ interface FilterOptions {
 }
 
 export default function CarsPage() {
+  const t = useTranslations('Cars');
+  const commonT = useTranslations('Common');
+  const statusT = useTranslations('Status');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
+  const TABS = [t('inventoryTab'), t('stockReportTab')] as const;
+  type Tab = typeof TABS[number];
+
   const [cars, setCars] = useState<Car[]>([]);
   const [stats, setStats] = useState({ inStock: 0, sold: 0, underRepair: 0, rented: 0, reserved: 0, totalPurchaseValue: 0, totalRepairCost: 0, totalCost: 0 });
   const [stockReport, setStockReport] = useState<{ brand: string; count: number; value: number; models: Record<string, number> }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('Inventory');
+  const [activeTab, setActiveTab] = useState<Tab>(TABS[0]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
@@ -145,9 +147,10 @@ export default function CarsPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: '24px',
+          flexDirection: isRtl ? 'row-reverse' : 'row'
         }}
       >
-        <h2 className="page-title">Car Inventory</h2>
+        <h2 className="page-title">{t('inventory')}</h2>
         <Link
           href="/dashboard/cars/new"
           style={{
@@ -161,44 +164,46 @@ export default function CarsPage() {
             border: '1px solid #28aaa9',
           }}
         >
-          + Add New Car
+          + {t('addNew')}
         </Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {[
-          { label: 'In Stock', value: stats.inStock, color: '#28aaa9' },
-          { label: 'Under Repair', value: stats.underRepair, color: '#f5a623' },
-          { label: 'Reserved', value: stats.reserved, color: '#38a4f8' },
-          { label: 'Sold', value: stats.sold, color: '#42ca7f' },
-          { label: 'Rented', value: stats.rented, color: '#8b5cf6' },
+          { label: statusT('inStock'), value: stats.inStock, color: '#28aaa9', key: 'In Stock' },
+          { label: statusT('underRepair'), value: stats.underRepair, color: '#f5a623', key: 'Under Repair' },
+          { label: statusT('reserved'), value: stats.reserved, color: '#38a4f8', key: 'Reserved' },
+          { label: statusT('sold'), value: stats.sold, color: '#42ca7f', key: 'Sold' },
+          { label: statusT('rented'), value: stats.rented, color: '#8b5cf6', key: 'Rented' },
         ].map((stat) => (
           <div
             key={stat.label}
             className="card"
             style={{
               padding: '16px',
-              borderLeft: `4px solid ${stat.color}`,
+              borderLeft: isRtl ? 'none' : `4px solid ${stat.color}`,
+              borderRight: isRtl ? `4px solid ${stat.color}` : 'none',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexDirection: isRtl ? 'row-reverse' : 'row'
             }}
           >
-            <div>
+            <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
               <div style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{stat.label}</div>
               <div style={{ fontSize: '24px', fontWeight: 600, color: '#2a3142' }}>{stat.value}</div>
             </div>
-            {stat.label === 'In Stock' && stats.totalCost > 0 && (
-              <div style={{ fontSize: '12px', color: '#525f80', textAlign: 'right' }}>
-                Total Cost<br />
-                <span style={{ fontWeight: 600, color: '#28aaa9' }}>{formatCurrency(stats.totalCost)}</span>
+            {stat.key === 'In Stock' && stats.totalCost > 0 && (
+              <div style={{ fontSize: '12px', color: '#525f80', textAlign: isRtl ? 'left' : 'right' }}>
+                {t('totalCost')}<br />
+                <span style={{ fontWeight: 600, color: '#28aaa9' }}>{formatCurrency(stats.totalCost, locale)}</span>
               </div>
             )}
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '1px solid #e5e5e5' }}>
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '24px', borderBottom: '1px solid #e5e5e5', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         {TABS.map((tab) => (
           <button
             key={tab}
@@ -220,43 +225,45 @@ export default function CarsPage() {
         ))}
       </div>
 
-      {activeTab === 'Inventory' && (
+      {activeTab === t('inventoryTab') && (
         <>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             <input
               type="text"
-              placeholder="Search brand..."
+              placeholder={t('searchBrand')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
               style={{
-                width: '140px',
+                width: '160px',
                 height: '40px',
                 fontSize: '14px',
                 borderRadius: '0',
                 padding: '0 12px',
                 border: '1px solid #ced4da',
                 background: '#ffffff',
+                textAlign: isRtl ? 'right' : 'left'
               }}
             />
             <input
               type="text"
-              placeholder="Search model..."
+              placeholder={t('searchModel')}
               value={modelFilter}
               onChange={(e) => {
                 setModelFilter(e.target.value);
                 setPage(1);
               }}
               style={{
-                width: '140px',
+                width: '160px',
                 height: '40px',
                 fontSize: '14px',
                 borderRadius: '0',
                 padding: '0 12px',
                 border: '1px solid #ced4da',
                 background: '#ffffff',
+                textAlign: isRtl ? 'right' : 'left'
               }}
             />
             <select
@@ -266,16 +273,17 @@ export default function CarsPage() {
                 setPage(1);
               }}
               style={{
-                width: '100px',
+                width: '120px',
                 height: '40px',
                 fontSize: '14px',
                 borderRadius: '0',
                 padding: '0 12px',
                 border: '1px solid #ced4da',
                 background: '#ffffff',
+                textAlign: isRtl ? 'right' : 'left'
               }}
             >
-              <option value="">Year</option>
+              <option value="">{commonT('year')}</option>
               {filterOptions.years.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -294,9 +302,10 @@ export default function CarsPage() {
                 padding: '0 12px',
                 border: '1px solid #ced4da',
                 background: '#ffffff',
+                textAlign: isRtl ? 'right' : 'left'
               }}
             >
-              <option value="">Color</option>
+              <option value="">{commonT('color')}</option>
               {filterOptions.colors.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -315,12 +324,13 @@ export default function CarsPage() {
                 padding: '0 12px',
                 border: '1px solid #ced4da',
                 background: '#ffffff',
+                textAlign: isRtl ? 'right' : 'left'
               }}
             >
-              <option value="">All Statuses</option>
+              <option value="">{t('allStatuses')}</option>
               {['In Stock', 'Under Repair', 'Reserved', 'Sold', 'Rented'].map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {statusT(s.replace(' ', '').charAt(0).toLowerCase() + s.replace(' ', '').slice(1))}
                 </option>
               ))}
             </select>
@@ -328,29 +338,25 @@ export default function CarsPage() {
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             {loading ? (
-              <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+              <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
             ) : filteredCars.length === 0 ? (
-              <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No cars found.</div>
+              <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noCarsFound')}</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', fontSize: '14px', minWidth: '900px' }}>
+                <table style={{ width: '100%', fontSize: '14px', minWidth: '900px', direction: isRtl ? 'rtl' : 'ltr' }}>
                   <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                     <tr>
-                      {['Image', 'Car ID', 'Brand', 'Model', 'Year', 'Color', 'Purchase Price', 'Repair Cost', 'Total Cost', 'Status', 'Actions'].map((h) => (
-                        <th
-                          key={h}
-                          style={{
-                            padding: '12px',
-                            textAlign: 'left',
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: '#525f80',
-                            textTransform: 'uppercase',
-                          }}
-                        >
-                          {h}
-                        </th>
-                      ))}
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('image')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('brand')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('model')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('year')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('color')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('purchasePrice')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('repairCost')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('totalCost')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('status')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                     </tr>
                   </thead>
                   <tbody style={{ borderBottom: '1px solid #eee' }}>
@@ -370,20 +376,20 @@ export default function CarsPage() {
                           <td style={{ padding: '12px' }}>{car.model}</td>
                           <td style={{ padding: '12px' }}>{car.year}</td>
                           <td style={{ padding: '12px' }}>{car.color}</td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>{formatCurrency(car.purchase?.purchasePrice || 0)}</td>
-                          <td style={{ padding: '12px', textAlign: 'right', color: car.totalRepairCost > 0 ? '#f5a623' : '#525f80' }}>
-                            {car.totalRepairCost > 0 ? formatCurrency(car.totalRepairCost) : '-'}
+                          <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(car.purchase?.purchasePrice || 0, locale)}</td>
+                          <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', color: car.totalRepairCost > 0 ? '#f5a623' : '#525f80' }}>
+                            {car.totalRepairCost > 0 ? formatCurrency(car.totalRepairCost, locale) : '-'}
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, color: '#28aaa9' }}>
-                            {formatCurrency((car.purchase?.purchasePrice || 0) + (car.totalRepairCost || 0))}
+                          <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontWeight: 600, color: '#28aaa9' }}>
+                            {formatCurrency((car.purchase?.purchasePrice || 0) + (car.totalRepairCost || 0), locale)}
                           </td>
                           <td style={{ padding: '12px' }}>
                             <StatusBadge status={car.status} />
                           </td>
                           <td style={{ padding: '12px' }}>
-                            <div style={{ display: 'flex', gap: '12px' }}>
-                              <Link href={`/dashboard/cars/${car._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>View</Link>
-                              <Link href={`/dashboard/cars/${car._id}/edit`} style={{ color: '#525f80', textDecoration: 'none' }}>Edit</Link>
+                            <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                              <Link href={`/dashboard/cars/${car._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</Link>
+                              <Link href={`/dashboard/cars/${car._id}/edit`} style={{ color: '#525f80', textDecoration: 'none' }}>{commonT('edit')}</Link>
                             </div>
                           </td>
                         </tr>
@@ -395,7 +401,7 @@ export default function CarsPage() {
           </div>
 
           {totalPages > 1 && (
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
@@ -409,10 +415,10 @@ export default function CarsPage() {
                   opacity: page === 1 ? 0.5 : 1,
                 }}
               >
-                Prev
+                {commonT('prev')}
               </button>
               <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
-                Page {page} of {totalPages}
+                {commonT('page', { page, total: totalPages })}
               </span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -427,36 +433,36 @@ export default function CarsPage() {
                   opacity: page === totalPages ? 0.5 : 1,
                 }}
               >
-                Next
+                {commonT('next')}
               </button>
             </div>
           )}
         </>
       )}
 
-      {activeTab === 'Stock Report' && (
+      {activeTab === t('stockReportTab') && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {stockReport.length === 0 ? (
-            <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No cars in stock.</div>
+            <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('stockReport.noCars')}</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
+              <table style={{ width: '100%', fontSize: '14px', minWidth: '600px', direction: isRtl ? 'rtl' : 'ltr' }}>
                 <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                   <tr>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>Brand</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>Count</th>
-                    <th style={{ padding: '12px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>Total Value</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>Models</th>
+                    <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('brand')}</th>
+                    <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('stockReport.count')}</th>
+                    <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('stockReport.totalValue')}</th>
+                    <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('stockReport.models')}</th>
                   </tr>
                 </thead>
                 <tbody style={{ borderBottom: '1px solid #eee' }}>
                   {stockReport.map((brand) => (
                     <tr key={brand.brand} style={{ borderBottom: '1px solid #f5f5f5' }}>
                       <td style={{ padding: '12px', fontWeight: 600, color: '#2a3142' }}>{brand.brand}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600 }}>{brand.count}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', color: '#28aaa9', fontWeight: 500 }}>{formatCurrency(brand.value)}</td>
+                      <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontWeight: 600 }}>{brand.count}</td>
+                      <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', color: '#28aaa9', fontWeight: 500 }}>{formatCurrency(brand.value, locale)}</td>
                       <td style={{ padding: '12px' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                           {(Object.entries(brand.models) as [string, number][]).map(([model, count]) => (
                             <span key={model} style={{ background: '#f0f0f0', padding: '2px 8px', borderRadius: '3px', fontSize: '12px' }}>
                               {model} ({count})

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import { isRoleAllowed, normalizeRole, type UserRole } from '@/lib/rbac';
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -16,6 +17,7 @@ export interface AuthPayload {
   userId: string;
   email: string;
   role: string;
+  normalizedRole: UserRole | null;
   name: string;
   passwordVersion: number;
 }
@@ -26,10 +28,13 @@ export async function getAuthPayload(request: NextRequest): Promise<AuthPayload 
 
   try {
     const { payload } = await jwtVerify(token, getSecret());
+    const role = payload.role as string;
+
     return {
       userId: payload.userId as string,
       email: payload.email as string,
-      role: payload.role as string,
+      role,
+      normalizedRole: normalizeRole(role),
       name: payload.name as string,
       passwordVersion: payload.passwordVersion as number,
     };
@@ -39,5 +44,5 @@ export async function getAuthPayload(request: NextRequest): Promise<AuthPayload 
 }
 
 export function requireRole(userRole: string, allowedRoles: string[]): boolean {
-  return allowedRoles.includes(userRole);
+  return isRoleAllowed(userRole, allowedRoles);
 }

@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     await connectDB();
     const user = await getAuthPayload(request);
-    if (!user || user.role !== 'Admin') {
+    if (!user || user.normalizedRole !== 'Admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

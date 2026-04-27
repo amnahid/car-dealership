@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import EditRepairModal from '@/components/EditRepairModal';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Repair {
   _id: string;
@@ -20,6 +21,11 @@ interface Repair {
 }
 
 export default function RepairsPage() {
+  const t = useTranslations('Repairs');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,8 +60,7 @@ export default function RepairsPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this repair?')) return;
-    if (!confirm('This action cannot be undone. Continue?')) return;
+    if (!confirm(t('deleteConfirm'))) return;
     try {
       const res = await fetch(`/api/repairs/${id}`, { method: 'DELETE' });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
@@ -77,11 +82,18 @@ export default function RepairsPage() {
     } catch (err) { console.error(err); }
   };
 
+  const getStatusLabel = (status: string) => {
+    const key = status.replace(' ', '').charAt(0).toLowerCase() + status.replace(' ', '').slice(1);
+    return t(`statuses.${key}`);
+  };
+
   const statusStyles: Record<string, { background: string; color: string }> = {
     Pending: { background: '#f8b425', color: '#ffffff' },
     'In Progress': { background: '#38a4f8', color: '#ffffff' },
     Completed: { background: '#42ca7f', color: '#ffffff' },
   };
+
+  const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
 
   return (
     <div style={{ marginBottom: '24px' }}>
@@ -91,9 +103,10 @@ export default function RepairsPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: '24px',
+          flexDirection: isRtl ? 'row-reverse' : 'row'
         }}
       >
-        <h2 className="page-title">Repairs</h2>
+        <h2 className="page-title">{t('title')}</h2>
         <Link
           href="/dashboard/repairs/new"
           style={{
@@ -107,35 +120,26 @@ export default function RepairsPage() {
             border: '1px solid #28aaa9',
           }}
         >
-          + Add Repair
+          + {t('addNew')}
         </Link>
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : repairs.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No repairs found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noRepairsFound')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '700px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '700px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
-                {['Car ID', 'Description', 'Total Cost', 'Repair Date', 'Status', 'Actions'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: '#525f80',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('repairDescription')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('totalCost')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('repairDate')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
               </tr>
             </thead>
             <tbody style={{ borderBottom: '1px solid #eee' }}>
@@ -145,8 +149,8 @@ export default function RepairsPage() {
                   <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.repairDescription}
                   </td>
-                  <td style={{ padding: '12px' }}>${r.totalCost?.toLocaleString()}</td>
-                  <td style={{ padding: '12px' }}>{new Date(r.repairDate).toLocaleDateString()}</td>
+                  <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(r.totalCost || 0)}</td>
+                  <td style={{ padding: '12px' }}>{new Date(r.repairDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                   <td style={{ padding: '12px' }}>
                     <span
                       style={{
@@ -158,14 +162,14 @@ export default function RepairsPage() {
                         ...(statusStyles[r.status] || { background: '#adb5bd', color: '#ffffff' }),
                       }}
                     >
-                      {r.status}
+                      {getStatusLabel(r.status)}
                     </span>
                   </td>
                   <td style={{ padding: '12px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => { setEditingRepair(r); setShowModal(true); }} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Edit</button>
-                      <button onClick={() => handleDelete(r._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>Delete</button>
-                      <Link href={`/dashboard/repairs/${r._id}`} style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>View</Link>
+                    <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                      <button onClick={() => { setEditingRepair(r); setShowModal(true); }} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('edit')}</button>
+                      <button onClick={() => handleDelete(r._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('delete')}</button>
+                      <Link href={`/dashboard/repairs/${r._id}`} style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>{commonT('view')}</Link>
                     </div>
                   </td>
                 </tr>
@@ -177,7 +181,7 @@ export default function RepairsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
@@ -191,10 +195,10 @@ export default function RepairsPage() {
               opacity: page === 1 ? 0.5 : 1,
             }}
           >
-            Prev
+            {commonT('prev')}
           </button>
           <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
-            Page {page} of {totalPages}
+            {commonT('page', { page, total: totalPages })}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -209,7 +213,7 @@ export default function RepairsPage() {
               opacity: page === totalPages ? 0.5 : 1,
             }}
           >
-          Next
+          {commonT('next')}
         </button>
       </div>
     )}

@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface SidebarProps {
   userRole: string;
@@ -11,7 +12,7 @@ interface SidebarProps {
 
 interface MenuItem {
   href?: string;
-  label: string;
+  labelKey: string;
   icon: string;
   roles: string[];
   children?: MenuItem[];
@@ -20,73 +21,72 @@ interface MenuItem {
 const navItems: MenuItem[] = [
   { 
     href: '/dashboard', 
-    label: 'Dashboard', 
+    labelKey: 'dashboard', 
     icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', 
-    roles: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'] 
+    roles: ['Admin', 'Sales Person', 'Car Manager', 'Accountant', 'Finance Manager'] 
   },
   {
-    label: 'Car',
+    labelKey: 'car',
     icon: 'M5 17h14v-5H5v5zm2-4h10v3H7v-3zm0-4h10v2H7V9z',
-    roles: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'],
+    roles: ['Admin', 'Car Manager'],
     children: [
-      { href: '/dashboard/cars', label: 'All Cars', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'] },
-      { href: '/dashboard/cars/suppliers', label: 'Suppliers', icon: '', roles: ['Admin', 'Manager'] },
-      { href: '/dashboard/cars/purchases', label: 'Purchases', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
-      { href: '/dashboard/repairs', label: 'Repairs', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'] },
-      { href: '/dashboard/cars/stock', label: 'Stock', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
-      { href: '/dashboard/documents', label: 'Documents', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'] },
+      { href: '/dashboard/cars', labelKey: 'allCars', icon: '', roles: ['Admin', 'Car Manager'] },
+      { href: '/dashboard/cars/suppliers', labelKey: 'suppliers', icon: '', roles: ['Admin', 'Car Manager'] },
+      { href: '/dashboard/cars/purchases', labelKey: 'purchases', icon: '', roles: ['Admin', 'Car Manager'] },
+      { href: '/dashboard/repairs', labelKey: 'repairs', icon: '', roles: ['Admin', 'Car Manager'] },
+      { href: '/dashboard/cars/stock', labelKey: 'stock', icon: '', roles: ['Admin', 'Car Manager'] },
+      { href: '/dashboard/documents', labelKey: 'documents', icon: '', roles: ['Admin', 'Car Manager'] },
     ]
   },
   {
-    label: 'Sales',
+    labelKey: 'sales',
     icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-    roles: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'],
+    roles: ['Admin', 'Sales Person'],
     children: [
-      { href: '/dashboard/sales', label: 'All Sales', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer', 'Sales Agent'] },
-      { href: '/dashboard/sales/cash', label: 'Cash Sales', icon: '', roles: ['Admin', 'Manager', 'Sales Agent'] },
-      { href: '/dashboard/sales/installments', label: 'Installments', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
-      { href: '/dashboard/sales/rentals', label: 'Rentals', icon: '', roles: ['Admin', 'Manager', 'Sales Agent'] },
-      { href: '/dashboard/sales/returns', label: 'Purchase Returns', icon: '', roles: ['Admin', 'Manager'] },
-      { href: '/dashboard/sales/invoices', label: 'Invoice Manager', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
+      { href: '/dashboard/sales', labelKey: 'allSales', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/sales/cash', labelKey: 'cashSales', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/sales/installments', labelKey: 'installments', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/sales/rentals', labelKey: 'rentals', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/sales/returns', labelKey: 'purchaseReturns', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/sales/invoices', labelKey: 'invoiceManager', icon: '', roles: ['Admin', 'Sales Person'] },
     ]
   },
   {
-    label: 'Finance',
+    labelKey: 'finance',
     icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2v-5a2 2 0 00-2-2H7a2 2 0 00-2 2v5a2 2 0 002 2z',
-    roles: ['Admin', 'Manager', 'Accounts Officer'],
+    roles: ['Admin', 'Accountant', 'Finance Manager'],
     children: [
-      { href: '/dashboard/finance', label: 'Transactions', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
-      { href: '/dashboard/finance/expenses', label: 'Expenses', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
-      { href: '/dashboard/finance/incomes', label: 'Incomes', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
-      { href: '/dashboard/finance/reports', label: 'Reports', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
+      { href: '/dashboard/finance', labelKey: 'transactions', icon: '', roles: ['Admin', 'Accountant', 'Finance Manager'] },
+      { href: '/dashboard/finance/expenses', labelKey: 'expenses', icon: '', roles: ['Admin', 'Accountant', 'Finance Manager'] },
+      { href: '/dashboard/finance/incomes', labelKey: 'incomes', icon: '', roles: ['Admin', 'Accountant', 'Finance Manager'] },
+      { href: '/dashboard/finance/reports', labelKey: 'reports', icon: '', roles: ['Admin', 'Finance Manager'] },
     ]
   },
-  
   {
-    label: 'CRM',
+    labelKey: 'crm',
     icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-    roles: ['Admin', 'Manager', 'Sales Agent'],
+    roles: ['Admin', 'Sales Person'],
     children: [
-      { href: '/dashboard/customers', label: 'Customers', icon: '', roles: ['Admin', 'Manager', 'Sales Agent'] },
+      { href: '/dashboard/customers', labelKey: 'customers', icon: '', roles: ['Admin', 'Sales Person'] },
     ]
   },
   {
-    label: 'HRM',
+    labelKey: 'hrm',
     icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-    roles: ['Admin', 'Manager'],
+    roles: ['Admin', 'Accountant', 'Finance Manager'],
     children: [
-      { href: '/dashboard/employees', label: 'Employees', icon: '', roles: ['Admin', 'Manager'] },
-      { href: '/dashboard/salary-payments', label: 'Salary Payments', icon: '', roles: ['Admin', 'Manager', 'Accounts Officer'] },
+      { href: '/dashboard/employees', labelKey: 'employees', icon: '', roles: ['Admin', 'Accountant', 'Finance Manager'] },
+      { href: '/dashboard/salary-payments', labelKey: 'salaryPayments', icon: '', roles: ['Admin', 'Accountant', 'Finance Manager'] },
     ]
   },
   {
-    label: 'Administration',
+    labelKey: 'administration',
     icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
-    roles: ['Admin'],
+    roles: ['Admin', 'Finance Manager'],
     children: [
-      { href: '/dashboard/users', label: 'Users', icon: '', roles: ['Admin'] },
-      { href: '/dashboard/activity-logs', label: 'Activity Logs', icon: '', roles: ['Admin', 'Manager'] },
-      { href: '/dashboard/notifications', label: 'Notification Logs', icon: '', roles: ['Admin', 'Manager'] },
+      { href: '/dashboard/users', labelKey: 'users', icon: '', roles: ['Admin'] },
+      { href: '/dashboard/activity-logs', labelKey: 'activityLogs', icon: '', roles: ['Admin', 'Finance Manager'] },
+      { href: '/dashboard/notifications', labelKey: 'notificationLogs', icon: '', roles: ['Admin', 'Finance Manager'] },
     ]
   },
 ];
@@ -144,10 +144,14 @@ function SubMenu({
 function isPathActive(href: string | undefined, pathname: string): boolean {
     if (!href) return false;
     if (href === '/dashboard') return pathname === '/dashboard';
-    const hrefParts = href.split('/').filter(Boolean);
-    const pathParts = pathname.split('/').filter(Boolean);
-    if (hrefParts.length !== pathParts.length) return false;
-    return pathname === href;
+    
+    // Exact match
+    if (pathname === href) return true;
+    
+    // Check if it's a sub-path, ensuring we don't match partial words
+    // e.g., /dashboard/sales should not match /dashboard/sales-report
+    // but should match /dashboard/sales/123
+    return pathname.startsWith(href + '/');
   }
 
   function MenuItemComponent({ 
@@ -165,28 +169,45 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
   depth?: number;
   index?: number;
 }) {
+  const t = useTranslations('Sidebar');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+  
   const [isHovered, setIsHovered] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
-  const isOpen = openMenus.has(item.label);
-  const isActive = isPathActive(item.href, pathname);
+  const isOpen = openMenus.has(item.labelKey);
+  
+  // An item is active if its own href matches
+  const isDirectlyActive = isPathActive(item.href, pathname);
+  
+  // A parent item is active if any of its children are active
+  const isAnyChildActive = hasChildren && item.children!.some(child => 
+    isPathActive(child.href, pathname) || (child.children && child.children.some(gChild => isPathActive(gChild.href, pathname)))
+  );
+
+  const isActive = isDirectlyActive || (hasChildren && isAnyChildActive);
 
   const getBackgroundColor = () => {
-    if (isActive) return '#28aaa9';
+    if (isDirectlyActive) return '#28aaa9';
     if (isHovered) return '#f0f4f4';
     return 'transparent';
   };
 
   const getTextColor = () => {
-    if (isActive) return '#ffffff';
+    if (isDirectlyActive) return '#ffffff';
+    if (isAnyChildActive) return '#28aaa9';
     return '#555582';
   };
+
+  const paddingStart = depth === 0 ? '20px' : '28px';
+  const paddingEnd = '20px';
 
   return (
     <li style={{ marginBottom: depth === 0 ? '4px' : '0' }}>
       {hasChildren ? (
         <>
           <button
-            onClick={() => toggleMenu(item.label)}
+            onClick={() => toggleMenu(item.labelKey)}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{
@@ -194,14 +215,16 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
               alignItems: 'center',
               justifyContent: 'space-between',
               width: '100%',
-              padding: depth === 0 ? '12px 20px' : '10px 20px 10px 28px',
+              paddingTop: depth === 0 ? '12px' : '10px',
+              paddingBottom: depth === 0 ? '12px' : '10px',
+              paddingLeft: isRtl ? paddingEnd : paddingStart,
+              paddingRight: isRtl ? paddingStart : paddingEnd,
               fontSize: depth === 0 ? '16px' : '14px',
-              fontFamily: '"Sarabun", sans-serif',
               color: getTextColor(),
               backgroundColor: getBackgroundColor(),
               border: 'none',
               cursor: 'pointer',
-              textAlign: 'left',
+              textAlign: isRtl ? 'right' : 'left',
               transition: 'all 0.2s ease',
               position: 'relative',
               overflow: 'hidden',
@@ -224,7 +247,7 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
               >
                 <path d={item.icon}></path>
               </svg>
-              <span style={{ fontWeight: isOpen ? 600 : 400 }}>{item.label}</span>
+              <span style={{ fontWeight: isOpen ? 600 : 400 }}>{t(item.labelKey)}</span>
             </div>
             <svg 
               width="16" 
@@ -236,7 +259,7 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
               strokeLinecap="round" 
               strokeLinejoin="round"
               style={{
-                transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                transform: isOpen ? 'rotate(90deg)' : (isRtl ? 'rotate(180deg)' : 'rotate(0deg)'),
                 transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 opacity: isHovered ? 1 : 0.7,
               }}
@@ -248,7 +271,7 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
             <SubMenu isOpen={isOpen}>
               {item.children!.map((child, idx) => (
                 <MenuItemComponent
-                  key={child.href || child.label}
+                  key={child.href || child.labelKey}
                   item={child}
                   pathname={pathname}
                   openMenus={openMenus}
@@ -269,21 +292,25 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            padding: depth === 0 ? '12px 20px' : '10px 20px 10px 28px',
+            paddingTop: depth === 0 ? '12px' : '10px',
+            paddingBottom: depth === 0 ? '12px' : '10px',
+            paddingLeft: isRtl ? paddingEnd : paddingStart,
+            paddingRight: isRtl ? paddingStart : paddingEnd,
             fontSize: depth === 0 ? '16px' : '14px',
-            fontFamily: '"Sarabun", sans-serif',
             color: getTextColor(),
             backgroundColor: getBackgroundColor(),
             textDecoration: 'none',
             transition: 'all 0.2s ease',
             position: 'relative',
-            borderLeft: isActive ? '3px solid #1e8e8d' : '3px solid transparent',
-            animation: isActive ? 'none' : `fadeSlideIn 0.3s ease ${index * 0.05}s both`,
+            borderLeft: (!isRtl && isActive) ? '3px solid #1e8e8d' : '3px solid transparent',
+            borderRight: (isRtl && isActive) ? '3px solid #1e8e8d' : '3px solid transparent',
+            animation: isActive ? 'none' : `fadeSlideIn${isRtl ? 'Rtl' : ''} 0.3s ease ${index * 0.05}s both`,
           }}
         >
           <span style={{ 
             position: 'absolute', 
-            left: 0, 
+            left: isRtl ? 'auto' : 0,
+            right: isRtl ? 0 : 'auto',
             top: 0, 
             bottom: 0, 
             width: '3px', 
@@ -292,7 +319,7 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
             transformOrigin: 'top',
             transition: 'transform 0.2s ease',
           }} />
-          <span style={{ position: 'relative', zIndex: 1 }}>{item.label}</span>
+          <span style={{ position: 'relative', zIndex: 1 }}>{t(item.labelKey)}</span>
         </Link>
       ) : null}
     </li>
@@ -300,6 +327,10 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
 }
 
 export default function Sidebar({ userRole }: SidebarProps) {
+  const t = useTranslations('Sidebar');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
   const pathname = usePathname();
   const router = useRouter();
   const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
@@ -308,18 +339,17 @@ export default function Sidebar({ userRole }: SidebarProps) {
 
   useEffect(() => {
     const parentMenus = new Set<string>();
-    const pathParts = pathname.split('/').filter(Boolean);
     
-    const findParentMenus = (items: MenuItem[], parentLabel?: string) => {
+    const findParentMenus = (items: MenuItem[]) => {
       for (const item of items) {
         if (item.children) {
           for (const child of item.children) {
             if (child.href && pathname.startsWith(child.href)) {
-              parentMenus.add(item.label);
+              parentMenus.add(item.labelKey);
               break;
             }
           }
-          findParentMenus(item.children, item.label);
+          findParentMenus(item.children);
         }
       }
     };
@@ -331,13 +361,13 @@ export default function Sidebar({ userRole }: SidebarProps) {
     }
   }, [pathname]);
 
-  const toggleMenu = (label: string) => {
+  const toggleMenu = (labelKey: string) => {
     setOpenMenus(prev => {
       const next = new Set(prev);
-      if (next.has(label)) {
-        next.delete(label);
+      if (next.has(labelKey)) {
+        next.delete(labelKey);
       } else {
-        next.add(label);
+        next.add(labelKey);
       }
       return next;
     });
@@ -354,12 +384,14 @@ export default function Sidebar({ userRole }: SidebarProps) {
       style={{
         position: 'fixed',
         top: 0,
-        left: 0,
+        left: isRtl ? 'auto' : 0,
+        right: isRtl ? 0 : 'auto',
         width: '260px',
         height: '100vh',
         background: '#ffffff',
-        borderRight: '1px solid #e9ecef',
-        boxShadow: '1px 0px 10px 0px rgba(0,0,0,0.05)',
+        borderRight: isRtl ? 'none' : '1px solid #e9ecef',
+        borderLeft: isRtl ? '1px solid #e9ecef' : 'none',
+        boxShadow: isRtl ? '-1px 0px 10px 0px rgba(0,0,0,0.05)' : '1px 0px 10px 0px rgba(0,0,0,0.05)',
         display: 'flex',
         flexDirection: 'column',
         zIndex: 101,
@@ -377,12 +409,14 @@ export default function Sidebar({ userRole }: SidebarProps) {
             transform: translateX(0);
           }
         }
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
+        @keyframes fadeSlideInRtl {
+          from {
+            opacity: 0;
+            transform: translateX(10px);
           }
-          50% {
-            opacity: 0.7;
+          to {
+            opacity: 1;
+            transform: translateX(0);
           }
         }
         .logout-btn:hover {
@@ -390,7 +424,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
           color: #dc3545 !important;
         }
         .logout-btn:hover svg {
-          transform: translateX(3px);
+          transform: translateX(${isRtl ? '-3px' : '3px'});
         }
         .logout-btn svg {
           transition: transform 0.3s ease;
@@ -424,8 +458,8 @@ export default function Sidebar({ userRole }: SidebarProps) {
             }}
           />
           <div>
-            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>AMYAL CAR</h1>
-            <p style={{ fontSize: '11px', color: '#9ca8b3', marginTop: '2px' }}>Management System</p>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>{commonT('appName')}</h1>
+            <p style={{ fontSize: '11px', color: '#9ca8b3', marginTop: '2px' }}>{t('managementSystem')}</p>
           </div>
         </div>
       </div>
@@ -439,7 +473,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {filteredItems.map((item, index) => (
             <MenuItemComponent
-              key={item.label}
+              key={item.labelKey}
               item={item}
               pathname={pathname}
               openMenus={openMenus}
@@ -461,12 +495,11 @@ export default function Sidebar({ userRole }: SidebarProps) {
             width: '100%',
             padding: '12px 20px',
             fontSize: '16px',
-            fontFamily: '"Sarabun", sans-serif',
             color: '#555582',
             backgroundColor: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            textAlign: 'left',
+            textAlign: isRtl ? 'right' : 'left',
             transition: 'all 0.3s ease',
           }}
           onMouseEnter={(e) => {
@@ -487,12 +520,13 @@ export default function Sidebar({ userRole }: SidebarProps) {
             strokeWidth="2" 
             strokeLinecap="round" 
             strokeLinejoin="round"
+            style={{ transform: isRtl ? 'rotate(180deg)' : 'none' }}
           >
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
-          Logout
+          {t('logout')}
         </button>
       </div>
     </aside>

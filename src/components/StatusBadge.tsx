@@ -1,21 +1,25 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { CarStatus } from '@/types';
 
 interface StatusBadgeProps {
   status: CarStatus;
 }
 
-const statusConfig: Record<CarStatus, { label: string; background: string; color: string }> = {
-  'In Stock': { label: 'In Stock', background: '#42ca7f', color: '#ffffff' },
-  'Under Repair': { label: 'Under Repair', background: '#f8b425', color: '#ffffff' },
-  Reserved: { label: 'Reserved', background: '#38a4f8', color: '#ffffff' },
-  Sold: { label: 'Sold', background: '#adb5bd', color: '#ffffff' },
-  Rented: { label: 'Rented', background: '#9c27b0', color: '#ffffff' },
-};
-
-const defaultConfig = { label: 'Unknown', background: '#adb5bd', color: '#ffffff' };
-
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status] || defaultConfig;
+  const t = useTranslations('Status');
+
+  const statusConfig: Record<string, { label: string; background: string; color: string }> = {
+    'In Stock': { label: t('inStock'), background: '#42ca7f', color: '#ffffff' },
+    'Under Repair': { label: t('underRepair'), background: '#f8b425', color: '#ffffff' },
+    Reserved: { label: t('reserved'), background: '#38a4f8', color: '#ffffff' },
+    Sold: { label: t('sold'), background: '#adb5bd', color: '#ffffff' },
+    Rented: { label: t('rented'), background: '#9c27b0', color: '#ffffff' },
+  };
+
+  const config = statusConfig[status] || { label: t('unknown'), background: '#adb5bd', color: '#ffffff' };
+
   return (
     <span
       style={{

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { Roboto, Sarabun, Karla } from "next/font/google";
+import { Roboto, Sarabun, Karla, Cairo } from "next/font/google";
 import "./globals.css";
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getLocale } from 'next-intl/server';
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -23,20 +25,32 @@ const karla = Karla({
   display: "swap",
 });
 
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-cairo",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "AMYAL CAR - Car Dealership & Rental Management",
   description: "AMYAL CAR - Car Dealership & Rental Management System",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" className={`${roboto.variable} ${sarabun.variable} ${karla.variable}`}>
-      <body className="antialiased" suppressHydrationWarning>
-        {children}
+    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} className={`${roboto.variable} ${sarabun.variable} ${karla.variable} ${cairo.variable}`}>
+      <body className={`antialiased ${locale === 'ar' ? 'font-[family-name:var(--font-cairo)]' : ''}`} suppressHydrationWarning>
+        <NextIntlClientProvider messages={messages}>
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

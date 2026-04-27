@@ -128,7 +128,8 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
         ...qrData,
         xmlHashBytes: Buffer.from(xmlHash, 'base64'),
         ecdsaSigBytes: Buffer.from(signature, 'base64'),
-        publicKeyBytes: certInfo.publicKeyDer,
+        publicKeyBytes: certInfo.publicKeyRaw,
+        certSignatureBytes: certInfo.certSignatureRaw,
       });
 
       // Step 5: replace placeholder QR in XML with full Phase 2 QR
@@ -138,7 +139,8 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
       );
 
       // Step 6: embed signature
-      signedXml = embedSignatureInXML(xmlWithQR, signature, config.certificate, xmlHash);
+      const signingResult = embedSignatureInXML(xmlWithQR, config.privateKey, config.certificate, xmlHash);
+      signedXml = signingResult.signedXml;
     }
 
     // QR data URL for display — use the full Phase 2 TLV when available

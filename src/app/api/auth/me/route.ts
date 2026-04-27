@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
+import { normalizeRole } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    const normalizedRole = normalizeRole(user.role);
+    if (!normalizedRole) {
+      return NextResponse.json({ error: 'Invalid role configuration' }, { status: 403 });
+    }
+
+    if (user.role !== normalizedRole) {
+      user.role = normalizedRole;
+      await user.save();
+    }
+
+    return NextResponse.json({
+      user: {
+        ...user.toObject(),
+        role: normalizedRole,
+      },
+    });
   } catch (error) {
     console.error('Get me error:', error);
 

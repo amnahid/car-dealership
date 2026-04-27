@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface ActivityLog {
   _id: string;
@@ -12,6 +13,11 @@ interface ActivityLog {
 }
 
 export default function ActivityLogsPage() {
+  const t = useTranslations('ActivityLogs');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -37,33 +43,23 @@ export default function ActivityLogsPage() {
 
   return (
     <div style={{ marginBottom: '24px' }}>
-      <h2 className="page-title" style={{ marginBottom: '24px' }}>Activity Logs</h2>
+      <h2 className="page-title" style={{ marginBottom: '24px', textAlign: isRtl ? 'right' : 'left' }}>{t('title')}</h2>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : logs.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No activity logs found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noLogs')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '600px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
-                {['Action', 'Module', 'User', 'IP Address', 'Date'].map((h) => (
-                  <th
-                    key={h}
-                    style={{
-                      padding: '12px',
-                      textAlign: 'left',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: '#525f80',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('action')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('module')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('user')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('ipAddress')}</th>
+                <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('date')}</th>
               </tr>
             </thead>
             <tbody style={{ borderBottom: '1px solid #eee' }}>
@@ -89,7 +85,7 @@ export default function ActivityLogsPage() {
                   <td style={{ padding: '12px', color: '#525f80', fontFamily: 'monospace', fontSize: '12px' }}>
                     {log.ipAddress}
                   </td>
-                  <td style={{ padding: '12px', color: '#525f80' }}>{new Date(log.createdAt).toLocaleString()}</td>
+                  <td style={{ padding: '12px', color: '#525f80' }}>{new Date(log.createdAt).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                 </tr>
               ))}
             </tbody>
@@ -99,7 +95,7 @@ export default function ActivityLogsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
@@ -113,10 +109,10 @@ export default function ActivityLogsPage() {
               opacity: page === 1 ? 0.5 : 1,
             }}
           >
-            Prev
+            {commonT('prev')}
           </button>
           <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
-            Page {page} of {totalPages}
+            {commonT('page', { page, total: totalPages })}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
@@ -131,7 +127,7 @@ export default function ActivityLogsPage() {
               opacity: page === totalPages ? 0.5 : 1,
             }}
           >
-            Next
+            {commonT('next')}
           </button>
         </div>
       )}

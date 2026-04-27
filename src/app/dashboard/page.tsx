@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import InstallmentAlertsModal from '@/components/InstallmentAlertsModal';
+import { useTranslations, useLocale } from 'next-intl';
 import {
   BarChartComponent,
   LineChartComponent,
@@ -59,10 +60,10 @@ const statColors: Record<string, { background: string; border: string; color: st
   info: { background: '#38a4f8', border: '#38a4f8', color: '#ffffff' },
 };
 
-function formatCurrency(value: number | string | undefined | null): string {
+function formatCurrency(value: number | string | undefined | null, locale: string): string {
   if (value === undefined || value === null) return '0';
   if (typeof value === 'string') return value;
-  return value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return value.toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 function StatCard({
@@ -82,8 +83,9 @@ function StatCard({
   prefix?: string;
   suffix?: string;
 }) {
+  const locale = useLocale();
   const colors = statColors[colorKey] || statColors.primary;
-  const displayValue = formatCurrency(value);
+  const displayValue = formatCurrency(value, locale);
 
   const cardStyle: React.CSSProperties = {
     position: 'relative',
@@ -107,11 +109,12 @@ function StatCard({
         <span
           style={{
             position: 'absolute',
-            left: '-15px',
+            left: locale === 'ar' ? 'auto' : '-15px',
+            right: locale === 'ar' ? '-15px' : 'auto',
             top: '-15px',
             fontSize: '80px',
             opacity: 0.1,
-            transform: 'rotate(-10deg)',
+            transform: `rotate(${locale === 'ar' ? '10deg' : '-10deg'})`,
           }}
         >
           {icon}
@@ -144,8 +147,9 @@ function FinancialCard({
   colorKey: string;
   icon: string;
 }) {
+  const locale = useLocale();
   const colors = statColors[colorKey] || statColors.primary;
-  const displayValue = typeof value === 'number' ? formatCurrency(value) : value;
+  const displayValue = typeof value === 'number' ? formatCurrency(value, locale) : value;
 
   return (
     <div
@@ -156,6 +160,7 @@ function FinancialCard({
         alignItems: 'center',
         gap: '16px',
         minHeight: '80px',
+        flexDirection: locale === 'ar' ? 'row-reverse' : 'row',
       }}
     >
       <div
@@ -174,10 +179,10 @@ function FinancialCard({
           <path d={icon} />
         </svg>
       </div>
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, textAlign: locale === 'ar' ? 'right' : 'left', flex: 1 }}>
         <p style={{ fontSize: '13px', color: '#9ca8b3', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</p>
         <p style={{ fontSize: '20px', fontWeight: 700, color: colors.background, margin: '4px 0', wordBreak: 'break-word' }}>
-          ${displayValue}
+          SAR {displayValue}
         </p>
         {subValue && <p style={{ fontSize: '11px', color: '#9ca8b3', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subValue}</p>}
       </div>
@@ -186,6 +191,10 @@ function FinancialCard({
 }
 
 export default function DashboardPage() {
+  const t = useTranslations('Dashboard');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+  
   const [stats, setStats] = useState<StatsData | null>(null);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -197,7 +206,6 @@ export default function DashboardPage() {
     if (dateRange.startDate) params.append('startDate', dateRange.startDate);
     if (dateRange.endDate) params.append('endDate', dateRange.endDate);
 
-    // Step 1: fetch quick stats (counts only) — renders stat cards fast
     fetch(`/api/dashboard/stats?quick=true&${params.toString()}`)
       .then((res) => res.ok ? res.json() : Promise.reject('API Error'))
       .then((data) => {
@@ -209,7 +217,6 @@ export default function DashboardPage() {
         setLoading(false);
       });
 
-    // Step 2: fetch full stats (charts + trends) — populates charts when ready
     fetch(`/api/dashboard/stats?${params.toString()}`)
       .then((res) => res.ok ? res.json() : Promise.reject('API Error'))
       .then((data) => {
@@ -222,13 +229,13 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: '80px 20px', color: '#9ca8b3' }}>Loading dashboard...</div>;
+    return <div style={{ textAlign: 'center', padding: '80px 20px', color: '#9ca8b3' }}>{t('loading')}</div>;
   }
 
   if (!stats) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 20px', color: '#9ca8b3' }}>
-        Failed to load dashboard data. Make sure the database is connected.
+        {t('failed')}
       </div>
     );
   }
@@ -236,8 +243,8 @@ export default function DashboardPage() {
   return (
     <>
       <div style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-          <h2 className="page-title" style={{ margin: 0 }}>Dashboard Overview</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <h2 className="page-title" style={{ margin: 0 }}>{t('title')}</h2>
           <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
         </div>
 
@@ -249,13 +256,14 @@ export default function DashboardPage() {
             borderRadius: '3px',
             padding: '16px',
             marginBottom: '24px',
+            textAlign: isRtl ? 'right' : 'left'
           }}
         >
           <p style={{ fontSize: '14px', fontWeight: 500, color: '#856404', margin: 0 }}>
-            <span style={{ display: 'inline-block', width: '16px', height: '16px', borderRadius: '50%', background: '#ffc107', marginRight: '6px' }}></span>
-            {stats.expiringDocuments} document{stats.expiringDocuments !== 1 ? 's' : ''} expiring within 30 days.{' '}
+            <span style={{ display: 'inline-block', width: '16px', height: '16px', borderRadius: '50%', background: '#ffc107', marginLeft: isRtl ? '6px' : '0', marginRight: isRtl ? '0' : '6px' }}></span>
+            {t('expiringDocs', { count: stats.expiringDocuments })}{' '}
             <Link href="/dashboard/documents" style={{ color: '#28aaa9', fontWeight: 600, textDecoration: 'underline' }}>
-              View Documents
+              {t('viewDocuments')}
             </Link>
           </p>
         </div>
@@ -263,54 +271,54 @@ export default function DashboardPage() {
 
       {/* Inventory Stats */}
       <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
-          Inventory Status
+        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
+          {t('inventoryStatus')}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
           <StatCard 
-            label="Total Cars" 
+            label={t('totalCars')} 
             value={stats.totalCars} 
             colorKey="primary" 
             href="/dashboard/cars"
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg>}
           />
           <StatCard 
-            label="In Stock" 
+            label={t('inStock')} 
             value={stats.carsInStock} 
             colorKey="success" 
             href="/dashboard/cars?status=In+Stock"
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>}
           />
           <StatCard 
-            label="Under Repair" 
+            label={t('underRepair')} 
             value={stats.carsUnderRepair} 
             colorKey="warning" 
             href="/dashboard/cars?status=Under+Repair"
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>}
           />
           <StatCard 
-            label="Sold" 
+            label={t('sold')} 
             value={stats.carsSold} 
             colorKey="secondary" 
             href="/dashboard/cars?status=Sold"
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.35 3.98 3.93V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>}
           />
           <StatCard 
-            label="Rented" 
+            label={t('rented')} 
             value={stats.carsRented} 
             colorKey="info" 
             href="/dashboard/cars?status=Rented"
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/><path d="M7 7h2v2H7zm0 4h2v2H7zm0 4h2v2H7z" opacity="0.5"/></svg>}
           />
           <StatCard 
-            label="Reserved" 
+            label={t('reserved')} 
             value={stats.carsReserved} 
             colorKey="info" 
             href="/dashboard/cars?status=Reserved"
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>}
           />
           <StatCard 
-            label="Expiring Docs (30d)" 
+            label={t('expiringDocsCard')} 
             value={stats.expiringDocuments} 
             colorKey={stats.expiringDocuments > 0 ? 'danger' : 'success'} 
             href="/dashboard/documents"
@@ -321,42 +329,42 @@ export default function DashboardPage() {
 
       {/* Financial Stats - All Time */}
       <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
-          Financial Overview (All Time)
+        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
+          {t('financialOverview')}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
-          <FinancialCard label="Total Revenue" value={stats.totalRevenue} subValue={`Cash: $${formatCurrency(stats.cashRevenue)} | Install: $${formatCurrency(stats.installmentPaid)} | Rental: $${formatCurrency(stats.rentalRevenue)}`} colorKey="primary" icon="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
-          <FinancialCard label="Total Expenses" value={stats.totalExpenses} subValue="Repair costs + Salaries" colorKey="danger" icon="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-          <FinancialCard label="Total Profit" value={stats.totalProfit} subValue="Revenue - Expenses" colorKey={stats.totalProfit >= 0 ? 'success' : 'danger'} icon="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.35 3.98 3.93V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
-          <FinancialCard label="Pending Installments" value={stats.pendingInstallments} subValue="Remaining amount to collect" colorKey="warning" icon="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
+          <FinancialCard label={t('totalRevenue')} value={stats.totalRevenue} subValue={`Cash: SAR ${formatCurrency(stats.cashRevenue, locale)} | Install: SAR ${formatCurrency(stats.installmentPaid, locale)} | Rental: SAR ${formatCurrency(stats.rentalRevenue, locale)}`} colorKey="primary" icon="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
+          <FinancialCard label={t('totalExpenses')} value={stats.totalExpenses} subValue="Repair costs + Salaries" colorKey="danger" icon="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+          <FinancialCard label={t('totalProfit')} value={stats.totalProfit} subValue="Revenue - Expenses" colorKey={stats.totalProfit >= 0 ? 'success' : 'danger'} icon="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.35 3.98 3.93V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z" />
+          <FinancialCard label={t('pendingInstallments')} value={stats.pendingInstallments} subValue="Remaining amount to collect" colorKey="warning" icon="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" />
         </div>
       </div>
 
       {/* Financial Stats - This Month */}
       <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
-          This Month Performance
+        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
+          {t('thisMonthPerformance')}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
           <StatCard 
-            label="Revenue" 
+            label={t('revenue')} 
             value={stats.monthlyRevenue} 
             colorKey="primary" 
-            prefix="$"
+            prefix="SAR "
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.35 3.98 3.93V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>}
           />
           <StatCard 
-            label="Expenses" 
+            label={t('expenses')} 
             value={stats.monthlyExpenses} 
             colorKey="danger" 
-            prefix="$"
+            prefix="SAR "
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>}
           />
           <StatCard 
-            label="Profit" 
+            label={t('profit')} 
             value={stats.monthlyProfit} 
             colorKey={stats.monthlyProfit >= 0 ? 'success' : 'danger'} 
-            prefix="$"
+            prefix="SAR "
             icon={<svg width="110" height="110" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>}
           />
         </div>
@@ -365,8 +373,8 @@ export default function DashboardPage() {
       {/* Installment Tracking */}
       {(stats.overdueInstallments > 0 || stats.upcomingInstallments > 0) && (
         <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
-            Installment Alerts
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
+            {t('installmentAlerts')}
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
             {stats.overdueInstallments > 0 && (
@@ -375,16 +383,18 @@ export default function DashboardPage() {
                 className="card"
                 style={{
                   padding: '20px',
-                  borderLeft: '4px solid #ec4561',
+                  borderLeft: isRtl ? 'none' : '4px solid #ec4561',
+                  borderRight: isRtl ? '4px solid #ec4561' : 'none',
                   background: '#fff5f5',
                   cursor: 'pointer',
+                  textAlign: isRtl ? 'right' : 'left'
                 }}
               >
                 <p style={{ fontSize: '14px', fontWeight: 600, color: '#ec4561', margin: 0 }}>
-                  ⚠️ {stats.overdueInstallments} Overdue Payment{stats.overdueInstallments !== 1 ? 's' : ''}
+                  ⚠️ {t('overduePayments', { count: stats.overdueInstallments })}
                 </p>
                 <p style={{ fontSize: '24px', fontWeight: 700, color: '#2a3142', margin: '8px 0 0' }}>
-                  ${formatCurrency(stats.overdueInstallmentsAmount)}
+                  SAR {formatCurrency(stats.overdueInstallmentsAmount, locale)}
                 </p>
               </div>
             )}
@@ -394,16 +404,18 @@ export default function DashboardPage() {
                 className="card"
                 style={{
                   padding: '20px',
-                  borderLeft: '4px solid #f8b425',
+                  borderLeft: isRtl ? 'none' : '4px solid #f8b425',
+                  borderRight: isRtl ? '4px solid #f8b425' : 'none',
                   background: '#fffbf0',
                   cursor: 'pointer',
+                  textAlign: isRtl ? 'right' : 'left'
                 }}
               >
                 <p style={{ fontSize: '14px', fontWeight: 600, color: '#f8b425', margin: 0 }}>
-                  📅 {stats.upcomingInstallments} Upcoming (7 days)
+                  📅 {t('upcomingPayments', { count: stats.upcomingInstallments })}
                 </p>
                 <p style={{ fontSize: '24px', fontWeight: 700, color: '#2a3142', margin: '8px 0 0' }}>
-                  ${formatCurrency(stats.upcomingInstallmentsAmount)}
+                  SAR {formatCurrency(stats.upcomingInstallmentsAmount, locale)}
                 </p>
               </div>
             )}
@@ -413,18 +425,18 @@ export default function DashboardPage() {
 
       {/* Monthly Revenue Chart */}
       <div className="card" style={{ padding: '24px', marginBottom: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
-          Monthly Revenue (Last 12 Months)
+        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
+          {t('monthlyRevenue')}
         </h3>
         {chartsLoading ? (
-          <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+          <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>{t('loading')}</div>
         ) : stats.salesByMonth && stats.salesByMonth.length > 0 && (
           <BarChartComponent
             data={stats.salesByMonth.map((s) => ({
               month: s.month,
               revenue: s.total,
             }))}
-            dataKeys={[{ key: 'revenue', color: '#28aaa9', name: 'Revenue' }]}
+            dataKeys={[{ key: 'revenue', color: '#28aaa9', name: t('revenue') }]}
             xAxisKey="month"
             height={300}
           />
@@ -435,22 +447,22 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         {/* Income Breakdown */}
         {chartsLoading ? (
-          <div className="card" style={{ padding: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+          <div className="card" style={{ padding: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>{t('loading')}</div>
         ) : stats.incomeByType && stats.incomeByType.length > 0 && (
           <PieChartComponent
             data={stats.incomeByType}
-            title="Income by Type"
+            title={t('incomeByType')}
             height={300}
             donut
           />
         )}
         {/* Expense Breakdown */}
         {chartsLoading ? (
-          <div className="card" style={{ padding: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+          <div className="card" style={{ padding: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>{t('loading')}</div>
         ) : stats.expenseByCategory && stats.expenseByCategory.length > 0 && (
           <PieChartComponent
             data={stats.expenseByCategory}
-            title="Expenses by Category"
+            title={t('expensesByCategory')}
             height={300}
             donut
           />
@@ -459,23 +471,23 @@ export default function DashboardPage() {
 
       {/* Profit Trend */}
       {chartsLoading ? (
-        <div className="card" style={{ padding: '24px', marginBottom: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+        <div className="card" style={{ padding: '24px', marginBottom: '24px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>{t('loading')}</div>
       ) : stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <LineChartComponent
-            data={stats.monthlyTrends.map((t) => ({
-              month: t.month,
-              income: t.income,
-              expenses: t.expenses,
-              profit: t.profit,
+            data={stats.monthlyTrends.map((t_item) => ({
+              month: t_item.month,
+              income: t_item.income,
+              expenses: t_item.expenses,
+              profit: t_item.profit,
             }))}
             dataKeys={[
-              { key: 'income', color: '#42ca7f', name: 'Income' },
-              { key: 'expenses', color: '#ec4561', name: 'Expenses' },
-              { key: 'profit', color: '#28aaa9', name: 'Profit' },
+              { key: 'income', color: '#42ca7f', name: t('income') },
+              { key: 'expenses', color: '#ec4561', name: t('expenses') },
+              { key: 'profit', color: '#28aaa9', name: t('profit') },
             ]}
             xAxisKey="month"
-            title="Income vs Expenses Trend"
+            title={t('incomeVsExpenses')}
             height={300}
           />
         </div>
@@ -483,17 +495,17 @@ export default function DashboardPage() {
 
       {/* Profit Area Chart */}
       {chartsLoading ? (
-        <div className="card" style={{ padding: '24px', marginBottom: '24px', height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>Loading chart...</div>
+        <div className="card" style={{ padding: '24px', marginBottom: '24px', height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca8b3', fontSize: '14px' }}>{t('loading')}</div>
       ) : stats.monthlyTrends && stats.monthlyTrends.length > 0 && (
         <div style={{ marginBottom: '24px' }}>
           <AreaChartComponent
-            data={stats.monthlyTrends.map((t) => ({
-              month: t.month,
-              profit: t.profit,
+            data={stats.monthlyTrends.map((t_item) => ({
+              month: t_item.month,
+              profit: t_item.profit,
             }))}
-            dataKeys={[{ key: 'profit', color: '#28aaa9', name: 'Profit' }]}
+            dataKeys={[{ key: 'profit', color: '#28aaa9', name: t('profit') }]}
             xAxisKey="month"
-            title="Profit Trend"
+            title={t('profitTrend')}
             height={250}
           />
         </div>
@@ -501,13 +513,13 @@ export default function DashboardPage() {
 
       {/* Recent Activity */}
       <div className="card" style={{ padding: '24px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', fontFamily: '"Sarabun", sans-serif' }}>
-          Recent Activity
+        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
+          {t('recentActivity')}
         </h3>
         {chartsLoading ? (
-          <p style={{ fontSize: '14px', color: '#9ca8b3' }}>Loading activity...</p>
+          <p style={{ fontSize: '14px', color: '#9ca8b3', textAlign: isRtl ? 'right' : 'left' }}>{t('loadingActivity')}</p>
         ) : !stats.recentActivity || stats.recentActivity.length === 0 ? (
-          <p style={{ fontSize: '14px', color: '#9ca8b3' }}>No activity yet.</p>
+          <p style={{ fontSize: '14px', color: '#9ca8b3', textAlign: isRtl ? 'right' : 'left' }}>{t('noActivity')}</p>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {stats.recentActivity.map((log) => (
@@ -519,6 +531,7 @@ export default function DashboardPage() {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '12px',
+                  flexDirection: isRtl ? 'row-reverse' : 'row'
                 }}
               >
                 <span
@@ -531,10 +544,10 @@ export default function DashboardPage() {
                     flexShrink: 0,
                   }}
                 />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, textAlign: isRtl ? 'right' : 'left' }}>
                   <p style={{ fontSize: '14px', color: '#2a3142', margin: 0 }}>{log.action}</p>
                   <p style={{ fontSize: '12px', color: '#9ca8b3', marginTop: '4px' }}>
-                    {log.userName} · {log.module} · {new Date(log.createdAt).toLocaleString()}
+                    {log.userName} · {log.module} · {new Date(log.createdAt).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}
                   </p>
                 </div>
               </li>
