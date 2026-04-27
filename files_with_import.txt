@@ -1,0 +1,14 @@
+src/app/dashboard/cars/[id]/page.tsx
+src/app/dashboard/cars/purchases/[id]/edit/page.tsx
+src/app/dashboard/cars/purchases/[id]/page.tsx
+src/app/dashboard/cars/suppliers/[id]/edit/page.tsx
+src/app/dashboard/cars/suppliers/[id]/page.tsx
+src/app/dashboard/cars/suppliers/new/page.tsx
+src/app/dashboard/cars/suppliers/page.tsx
+src/app/dashboard/customers/[id]/page.tsx
+src/app/dashboard/documents/[id]/edit/page.tsx
+src/app/dashboard/profile/page.tsx
+src/app/dashboard/repairs/[id]/page.tsx
+src/app/dashboard/sales/cash/[id]/page.tsx
+src/app/dashboard/sales/returns/[id]/page.tsx
+src/app/dashboard/users/[id]/page.tsx

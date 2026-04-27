@@ -300,6 +300,7 @@ export default function InstallmentsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('zatca')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                 </tr>
+              </thead>
               <tbody style={{ borderBottom: '1px solid #eee' }}>
                 {sales.map((sale) => (
                   <tr key={sale._id} style={{ borderBottom: '1px solid #f5f5f5', opacity: sale.status === 'Cancelled' ? 0.5 : 1, background: selectedIds.has(sale._id) ? '#28aaa905' : 'transparent' }}>
@@ -313,7 +314,6 @@ export default function InstallmentsPage() {
                       )}
                     </td>
                     <td style={{ padding: '8px', width: '60px' }}>
-              ...
                       {sale.car?.images?.[0] ? (
                         <img src={sale.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
                       ) : (
