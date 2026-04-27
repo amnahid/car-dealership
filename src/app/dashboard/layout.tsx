@@ -82,15 +82,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isRtl = locale === 'ar';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fbfd' }}>
+    <div style={{ minHeight: '100vh', background: '#f9fbfd', display: 'flex', flexDirection: 'column' }}>
       <Sidebar userRole={user.role} />
       <Header userName={user.name} userRole={user.role} expiringDocsCount={expiringDocsCount} userEmail={user.email} userAvatar={user.avatar} />
       <main style={{ 
         padding: '24px', 
         marginTop: '70px', 
-        marginBottom: '60px', 
         marginLeft: isRtl ? 0 : '260px',
-        marginRight: isRtl ? '260px' : 0
+        marginRight: isRtl ? '260px' : 0,
+        flex: 1
       }}>
         {children}
       </main>
