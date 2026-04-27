@@ -65,8 +65,10 @@ export default function CarDetailPage() {
   const params = useParams();
   const id = params.id as string;
 
+  const router = useRouter();
   const [data, setData] = useState<{ car: Car; repairs: Repair[]; documents: Doc[] } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/cars/${id}`)
@@ -76,6 +78,26 @@ export default function CarDetailPage() {
         setLoading(false);
       });
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!confirm(commonT('deleteConfirm'))) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/cars/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        router.push('/dashboard/cars');
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to delete car');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>;
   if (!data) notFound();
@@ -97,6 +119,13 @@ export default function CarDetailPage() {
           <Link href={`/dashboard/cars/${car._id}/edit`} className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-indigo-500">
             {commonT('edit')}
           </Link>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="bg-red-100 text-red-600 text-sm font-semibold px-4 py-2 rounded-md hover:bg-red-200 disabled:opacity-50"
+          >
+            {deleting ? commonT('loading') : commonT('delete')}
+          </button>
         </div>
       </div>
 

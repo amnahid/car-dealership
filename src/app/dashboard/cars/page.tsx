@@ -75,7 +75,9 @@ export default function CarsPage() {
     }
   };
 
-  const toggleSelect = (id: string) => {
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleSelect = (id: string) => {
     const next = new Set(selectedIds);
     if (next.has(id)) {
       next.delete(id);
@@ -83,6 +85,27 @@ export default function CarsPage() {
       next.add(id);
     }
     setSelectedIds(next);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm(commonT('deleteConfirm'))) return;
+
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/cars/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchCars();
+        fetchStats();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete car');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const handleBulkAction = async (action: 'delete' | 'update-status', status?: string) => {
@@ -529,6 +552,21 @@ export default function CarsPage() {
                             <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                               <Link href={`/dashboard/cars/${car._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</Link>
                               <Link href={`/dashboard/cars/${car._id}/edit`} style={{ color: '#525f80', textDecoration: 'none' }}>{commonT('edit')}</Link>
+                              <button
+                                onClick={() => handleDelete(car._id)}
+                                disabled={deleting === car._id}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#ec4561',
+                                  cursor: 'pointer',
+                                  padding: 0,
+                                  fontSize: '14px',
+                                  opacity: deleting === car._id ? 0.5 : 1,
+                                }}
+                              >
+                                {commonT('delete')}
+                              </button>
                             </div>
                           </td>
                         </tr>

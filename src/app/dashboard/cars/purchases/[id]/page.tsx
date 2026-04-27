@@ -52,12 +52,34 @@ export default function PurchaseDetailPage() {
   const [purchase, setPurchase] = useState<Purchase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (params.id) {
       fetchPurchase();
     }
   }, [params.id]);
+
+  const handleDelete = async () => {
+    const confirmDelete = confirm('Are you sure you want to delete this purchase?');
+    if (!confirmDelete) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/cars/purchases/${params.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        router.push('/dashboard/cars/purchases');
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to delete purchase');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchPurchase = async () => {
     try {
@@ -161,6 +183,23 @@ export default function PurchaseDetailPage() {
           >
             Edit Purchase
           </Link>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: 500,
+              background: '#ec4561',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: deleting ? 'not-allowed' : 'pointer',
+              opacity: deleting ? 0.6 : 1,
+            }}
+          >
+            {deleting ? 'Deleting...' : 'Delete Purchase'}
+          </button>
         </div>
       </div>
 

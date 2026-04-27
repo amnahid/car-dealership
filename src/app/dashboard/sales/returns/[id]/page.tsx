@@ -27,10 +27,12 @@ interface PurchaseReturn {
 
 export default function ReturnDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
   const [ret, setRet] = useState<PurchaseReturn | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/sales/returns/${id}`)
@@ -41,6 +43,26 @@ export default function ReturnDetailPage() {
       })
       .catch(() => setLoading(false));
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this return request?')) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/sales/returns/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        router.push('/dashboard/sales/returns');
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to delete return');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleStatusUpdate = async (newStatus: string) => {
     setUpdating(true);
@@ -86,9 +108,28 @@ export default function ReturnDetailPage() {
           <Link href="/dashboard/sales/returns" style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>← Back to Returns</Link>
           <h2 className="page-title" style={{ marginTop: '8px' }}>Return Details</h2>
         </div>
-        <span style={{ padding: '8px 16px', borderRadius: '3px', fontSize: '14px', fontWeight: 600, background: getStatusColor(ret.status) + '20', color: getStatusColor(ret.status) }}>
-          {ret.status}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '3px',
+              fontSize: '14px',
+              fontWeight: 600,
+              background: '#ec456110',
+              color: '#ec4561',
+              border: '1px solid #ec4561',
+              cursor: deleting ? 'not-allowed' : 'pointer',
+              opacity: deleting ? 0.6 : 1,
+            }}
+          >
+            {deleting ? 'Deleting...' : 'Delete Request'}
+          </button>
+          <span style={{ padding: '8px 16px', borderRadius: '3px', fontSize: '14px', fontWeight: 600, background: getStatusColor(ret.status) + '20', color: getStatusColor(ret.status) }}>
+            {ret.status}
+          </span>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>

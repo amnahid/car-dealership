@@ -40,11 +40,33 @@ export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [filterCarId, setFilterCarId] = useState(carId || '');
 
   useEffect(() => {
     fetchPurchases();
   }, [filterCarId]);
+
+  const handleDelete = async (id: string) => {
+    const confirmDelete = confirm('Are you sure you want to delete this purchase?');
+    if (!confirmDelete) return;
+
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/cars/purchases/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchPurchases();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to delete purchase');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const fetchPurchases = async () => {
     setLoading(true);
@@ -223,6 +245,21 @@ export default function PurchasesPage() {
                   <Link href={`/dashboard/cars/purchases/${purchase._id}`} style={{ marginRight: '12px', color: '#28aaa9', textDecoration: 'none' }}>
                     View
                   </Link>
+                  <button
+                    onClick={() => handleDelete(purchase._id)}
+                    disabled={deleting === purchase._id}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ec4561',
+                      cursor: 'pointer',
+                      padding: 0,
+                      fontSize: '14px',
+                      opacity: deleting === purchase._id ? 0.5 : 1,
+                    }}
+                  >
+                    {deleting === purchase._id ? 'Deleting...' : 'Delete'}
+                  </button>
                 </td>
               </tr>
             ))}

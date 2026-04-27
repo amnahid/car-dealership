@@ -48,6 +48,28 @@ export default function ReturnsPage() {
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState({ totalRefunds: 0, totalPenalty: 0, count: 0 });
   const [showModal, setShowModal] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm(commonT('deleteConfirm'))) return;
+
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/sales/returns/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchReturns();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to delete return');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const [availableSales, setAvailableSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [formData, setFormData] = useState({
@@ -257,6 +279,21 @@ export default function ReturnsPage() {
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         <Link href={`/dashboard/sales/returns/${ret._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</Link>
+                        <button
+                          onClick={() => handleDelete(ret._id)}
+                          disabled={deleting === ret._id}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ec4561',
+                            cursor: 'pointer',
+                            padding: 0,
+                            fontSize: '14px',
+                            opacity: deleting === ret._id ? 0.5 : 1,
+                          }}
+                        >
+                          {deleting === ret._id ? commonT('loading') : commonT('delete')}
+                        </button>
                       </div>
                     </td>
                   </tr>
