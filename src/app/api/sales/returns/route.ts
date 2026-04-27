@@ -156,6 +156,15 @@ export async function POST(request: NextRequest) {
       createdBy: new mongoose.Types.ObjectId(auth.userId),
     });
 
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: 'Created return request',
+      module: 'Return',
+      targetId: newReturn._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
     return NextResponse.json({ return: newReturn }, { status: 201 });
   } catch (error) {
     console.error('Purchase Returns POST error:', error);

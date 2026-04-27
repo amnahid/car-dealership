@@ -85,6 +85,15 @@ export async function PUT(
         console.error('Document renewal notification failed:', notifyError);
       }
     }
+
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: 'Updated document',
+      module: 'Document',
+      targetId: id,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
     
     return NextResponse.json({ document });
   } catch (error) {

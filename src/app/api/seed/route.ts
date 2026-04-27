@@ -543,6 +543,10 @@ async function seedTransactions(
 
 export async function POST(request: NextRequest) {
   try {
+    if (process.env.ALLOW_SEEDING !== 'true') {
+      return NextResponse.json({ error: 'Seeding is disabled in this environment. Set ALLOW_SEEDING=true to enable.' }, { status: 403 });
+    }
+
     await connectDB();
 
     const { searchParams } = new URL(request.url);

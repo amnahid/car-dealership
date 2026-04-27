@@ -106,6 +106,15 @@ export async function PUT(
       ...(notes !== undefined && { notes }),
     }, { new: true });
 
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: 'Updated supplier',
+      module: 'Supplier',
+      targetId: id,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
     return NextResponse.json({ supplier: updatedSupplier });
   } catch (error) {
     console.error('Supplier PUT error:', error);

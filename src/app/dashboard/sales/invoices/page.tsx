@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Invoice {
   _id: string;
@@ -24,6 +25,11 @@ interface Stats {
 }
 
 export default function InvoicesPage() {
+  const t = useTranslations('Invoices');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -110,16 +116,16 @@ export default function InvoicesPage() {
         body: JSON.stringify({ email }),
       });
       if (res.ok) {
-        alert('Invoice sent successfully!');
+        alert(t('emailSuccess'));
         setShowSendModal(false);
         setEmail('');
         setSendingInvoice(null);
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to send email');
+        alert(data.error || t('emailFailed'));
       }
     } catch (err) {
-      alert('Failed to send email');
+      alert(t('emailFailed'));
     } finally {
       setSending(false);
     }
@@ -137,61 +143,62 @@ export default function InvoicesPage() {
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'CashSale': return 'Cash';
-      case 'InstallmentSale': return 'Installment';
-      case 'Rental': return 'Rental';
+      case 'CashSale': return t('typeOptions.cash');
+      case 'InstallmentSale': return t('typeOptions.installment');
+      case 'Rental': return t('typeOptions.rental');
       default: return type;
     }
   };
 
   return (
     <div style={{ marginBottom: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h2 className="page-title">Invoice Manager</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <h2 className="page-title">{t('title')}</h2>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #28aaa9' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Total Invoices</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #28aaa9', borderRight: isRtl ? '4px solid #28aaa9' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalInvoices')}</p>
           <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{stats.total}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #42ca7f' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>This Month</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #42ca7f', borderRight: isRtl ? '4px solid #42ca7f' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('thisMonth')}</p>
           <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>{stats.thisMonth}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #42ca7f' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Cleared</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #42ca7f', borderRight: isRtl ? '4px solid #42ca7f' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('cleared')}</p>
           <p style={{ fontSize: '28px', fontWeight: 700, color: '#42ca7f', margin: '4px 0 0' }}>{stats.byStatus?.Cleared || 0}</p>
         </div>
-        <div className="card" style={{ padding: '20px', borderLeft: '4px solid #f5a623' }}>
-          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>Pending</p>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #f5a623', borderRight: isRtl ? '4px solid #f5a623' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('pending')}</p>
           <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0' }}>{stats.byStatus?.Pending || 0}</p>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'center' }}>
-        <input type="text" placeholder="Search by invoice ID or UUID..." value={search} onChange={(e) => handleSearch(e.target.value)} style={{ width: '250px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-          <option value="">All Status</option>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <input type="text" placeholder={t('searchPlaceholder')} value={search} onChange={(e) => handleSearch(e.target.value)} style={{ width: '250px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
+          <option value="">{t('allStatus')}</option>
           <option value="Cleared">Cleared</option>
           <option value="Pending">Pending</option>
           <option value="Failed">Failed</option>
           <option value="Reported">Reported</option>
         </select>
-        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }}>
-          <option value="">All Types</option>
-          <option value="CashSale">Cash Sale</option>
-          <option value="InstallmentSale">Installment</option>
-          <option value="Rental">Rental</option>
+        <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
+          <option value="">{t('allTypes')}</option>
+          <option value="CashSale">{t('typeOptions.cash')}</option>
+          <option value="InstallmentSale">{t('typeOptions.installment')}</option>
+          <option value="Rental">{t('typeOptions.rental')}</option>
         </select>
+
         {selectedIds.size > 0 && (
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-            <span style={{ fontSize: '14px', color: '#525f80' }}>{selectedIds.size} selected</span>
+          <div style={{ marginLeft: isRtl ? '0' : 'auto', marginRight: isRtl ? 'auto' : '0', display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <span style={{ fontSize: '14px', color: '#525f80', alignSelf: 'center' }}>{selectedIds.size} {commonT('selected')}</span>
             <button onClick={handleBulkDownload} style={{ background: '#28aaa9', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '3px', cursor: 'pointer', fontSize: '14px' }}>
-              Download Selected ({selectedIds.size})
+              {t('downloadSelected')}
             </button>
             <button style={{ background: '#f5a623', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '3px', cursor: 'pointer', fontSize: '14px' }}>
-              Regenerate Selected
+              {t('regenerateSelected')}
             </button>
           </div>
         )}
@@ -199,26 +206,29 @@ export default function InvoicesPage() {
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
         ) : invoices.length === 0 ? (
-          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>No invoices found.</div>
+          <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noInvoices')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '900px' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '900px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  <th style={{ padding: '12px', width: '40px' }}>
+                  <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
                     <input type="checkbox" checked={selectedIds.size === invoices.length && invoices.length > 0} onChange={handleSelectAll} />
                   </th>
-                  {['Invoice ID', 'Type', 'UUID', 'Date', 'Status', 'Actions'].map((h) => (
-                    <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('invoiceId')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('type')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('uuid')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('date')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('status')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                 </tr>
               </thead>
               <tbody style={{ borderBottom: '1px solid #eee' }}>
                 {invoices.map((inv) => (
-                  <tr key={inv._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                    <td style={{ padding: '12px' }}>
+                  <tr key={inv._id} style={{ borderBottom: '1px solid #f5f5f5', background: selectedIds.has(inv._id) ? '#28aaa905' : 'transparent' }}>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
                       <input type="checkbox" checked={selectedIds.has(inv._id)} onChange={() => handleSelect(inv._id)} />
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9', fontWeight: 600 }}>{inv.saleId}</td>
@@ -228,14 +238,14 @@ export default function InvoicesPage() {
                       </span>
                     </td>
                     <td style={{ padding: '12px', fontSize: '12px', color: '#9ca8b3', fontFamily: 'monospace' }}>{inv.uuid?.slice(0, 18)}...</td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{new Date(inv.issueDate).toLocaleDateString()}</td>
+                    <td style={{ padding: '12px', color: '#525f80' }}>{new Date(inv.issueDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(inv.status) + '20', color: getStatusColor(inv.status) }}>{inv.status}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <a href={`/invoices/invoice-${inv.saleId}.pdf`} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', textDecoration: 'none' }}>Download</a>
-                        <button onClick={() => openSendModal(inv)} style={{ background: 'none', border: 'none', color: '#28aaa9', cursor: 'pointer', padding: 0, fontSize: '14px' }}>Send</button>
+                      <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                        <a href={`/invoices/invoice-${inv.saleId}.pdf`} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', textDecoration: 'none' }}>{t('download')}</a>
+                        <button onClick={() => openSendModal(inv)} style={{ background: 'none', border: 'none', color: '#28aaa9', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('send')}</button>
                       </div>
                     </td>
                   </tr>
@@ -247,26 +257,26 @@ export default function InvoicesPage() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-            <button key={p} onClick={() => setPage(p)} style={{ padding: '8px 12px', border: '1px solid #ced4da', background: page === p ? '#28aaa9' : '#fff', color: page === p ? '#fff' : '#525f80', cursor: 'pointer' }}>{p}</button>
-          ))}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} style={{ padding: '8px 12px', border: '1px solid #ced4da', background: '#fff', color: '#525f80', cursor: 'pointer', opacity: page === 1 ? 0.5 : 1 }}>{commonT('prev')}</button>
+          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>{commonT('page', { page, total: totalPages })}</span>
+          <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} style={{ padding: '8px 12px', border: '1px solid #ced4da', background: '#fff', color: '#525f80', cursor: 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>{commonT('next')}</button>
         </div>
       )}
 
       {showSendModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowSendModal(false)}>
-          <div style={{ background: '#fff', padding: '24px', borderRadius: '4px', width: '400px' }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Send Invoice Email</h3>
-            <p style={{ fontSize: '14px', color: '#525f80', marginBottom: '16px' }}>Send invoice <strong>{sendingInvoice?.saleId}</strong> to customer</p>
+          <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', width: '400px', textAlign: isRtl ? 'right' : 'left' }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{t('sendInvoiceEmail')}</h3>
+            <p style={{ fontSize: '14px', color: '#525f80', marginBottom: '16px' }}>{t('sendInvoiceTo', { id: sendingInvoice?.saleId })}</p>
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>Customer Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="customer@email.com" style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} />
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>{t('customerEmail')}</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="customer@email.com" style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
             </div>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowSendModal(false)} style={{ background: '#fff', color: '#525f80', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #ced4da', cursor: 'pointer' }}>Cancel</button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+              <button onClick={() => setShowSendModal(false)} style={{ background: '#fff', color: '#525f80', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #ced4da', cursor: 'pointer' }}>{commonT('cancel')}</button>
               <button onClick={handleSendEmail} disabled={sending || !email} style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}>
-                {sending ? 'Sending...' : 'Send Invoice'}
+                {sending ? commonT('loading') : t('sendInvoice')}
               </button>
             </div>
           </div>

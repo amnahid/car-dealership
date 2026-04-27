@@ -42,6 +42,52 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === suppliers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(suppliers.map((s) => s._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(t('deleteConfirm'))) return;
+
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/suppliers/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', ids: Array.from(selectedIds) }),
+      });
+
+      if (res.ok) {
+        setSelectedIds(new Set());
+        fetchSuppliers(pagination.page, search, statusFilter);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Bulk delete failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   const fetchSuppliers = useCallback(async (page = 1, searchVal = debouncedSearch, status = statusFilter) => {
     setLoading(true);
@@ -167,11 +213,75 @@ export default function SuppliersPage() {
         </form>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: 'sticky',
+            top: '0',
+            zIndex: 10,
+            background: '#ffffff',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            border: '1px solid #28aaa9',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            flexDirection: isRtl ? 'row-reverse' : 'row'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <span style={{ fontWeight: 600, color: '#28aaa9' }}>{selectedIds.size} {commonT('selected')}</span>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkActionLoading}
+              style={{
+                height: '32px',
+                padding: '0 12px',
+                fontSize: '13px',
+                borderRadius: '3px',
+                border: '1px solid #dc3545',
+                background: '#ffffff',
+                color: '#dc3545',
+                cursor: 'pointer'
+              }}
+            >
+              {commonT('deleteSelected')}
+            </button>
+          </div>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9ca8b3',
+              cursor: 'pointer',
+              fontSize: '13px'
+            }}
+          >
+            {commonT('cancel')}
+          </button>
+        </div>
+      )}
+
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
+                <th style={{ padding: '14px 16px', width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={suppliers.length > 0 && selectedIds.size === suppliers.length}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = selectedIds.size > 0 && selectedIds.size < suppliers.length;
+                      }
+                    }}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('company')}</th>
                 <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('companyNo')}</th>
                 <th style={{ padding: '14px 16px', textAlign: isRtl ? 'right' : 'left', fontWeight: 600, fontSize: '14px', color: '#555' }}>{t('contact')}</th>
@@ -193,7 +303,14 @@ export default function SuppliersPage() {
                 </tr>
               ) : (
                 suppliers.map((supplier) => (
-                  <tr key={supplier._id} style={{ borderBottom: '1px solid #eee' }}>
+                  <tr key={supplier._id} style={{ borderBottom: '1px solid #eee', background: selectedIds.has(supplier._id) ? '#28aaa905' : 'transparent' }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(supplier._id)}
+                        onChange={() => toggleSelect(supplier._id)}
+                      />
+                    </td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {supplier.companyLogo ? (

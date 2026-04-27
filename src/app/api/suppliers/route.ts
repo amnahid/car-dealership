@@ -140,6 +140,15 @@ export async function POST(request: NextRequest) {
       createdBy: auth.userId,
     });
 
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: 'Created supplier',
+      module: 'Supplier',
+      targetId: supplier._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
     return NextResponse.json({ supplier }, { status: 201 });
   } catch (error) {
     console.error('Supplier POST error:', error);

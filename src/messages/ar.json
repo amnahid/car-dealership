@@ -492,12 +492,41 @@
     "daysInStock": "أيام في المخزون",
     "stockReport": {
       "count": "العدد",
-      "totalValue": "القيمة الإجمالية",
+      "totalValue": "إجمالي القيمة",
       "models": "الموديلات",
-      "noCars": "لا توجد سيارات في المخزون."
+      "noCars": "لا توجد سيارات في المخزن."
     }
-  },
-  "Customers": {
+    },
+    "Invoices": {
+    "title": "إدارة الفواتير",
+    "totalInvoices": "إجمالي الفواتير",
+    "thisMonth": "هذا الشهر",
+    "cleared": "تمت تسويتها",
+    "pending": "قيد الانتظار",
+    "searchPlaceholder": "البحث برقم الفاتورة أو المعرف...",
+    "allStatus": "كل الحالات",
+    "allTypes": "كل الأنواع",
+    "downloadSelected": "تحميل المختارة",
+    "regenerateSelected": "إعادة توليد المختارة",
+    "noInvoices": "لم يتم العثور على فواتير.",
+    "invoiceId": "رقم الفاتورة",
+    "type": "النوع",
+    "uuid": "المعرف الفريد",
+    "download": "تحميل",
+    "send": "إرسال",
+    "sendInvoiceEmail": "إرسال الفاتورة عبر البريد",
+    "sendInvoiceTo": "إرسال الفاتورة {id} إلى العميل",
+    "customerEmail": "بريد العميل",
+    "sendInvoice": "إرسال الفاتورة",
+    "emailSuccess": "تم إرسال الفاتورة بنجاح!",
+    "emailFailed": "فشل إرسال البريد الإلكتروني",
+    "typeOptions": {
+      "cash": "نقدي",
+      "installment": "أقساط",
+      "rental": "تأجير"
+    }
+    },
+    "Customers": {
     "title": "العملاء",
     "addNew": "إضافة عميل",
     "searchPlaceholder": "بحث بالاسم، الهاتف، البريد الإلكتروني...",
@@ -897,6 +926,10 @@
     "expense": "المصاريف",
     "repairs": "الإصلاحات",
     "salaries": "الرواتب",
-    "other": "أخرى"
+    "other": "أخرى",
+    "selected": "تم اختياره",
+    "deleteSelected": "حذف المختارة",
+    "deleteConfirm": "هل أنت متأكد من حذف هذه العناصر؟",
+    "deleteActionUndone": "هذا الإجراء لا يمكن التراجع عنه."
   }
 }

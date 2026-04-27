@@ -497,6 +497,35 @@
       "noCars": "No cars in stock."
     }
   },
+  "Invoices": {
+    "title": "Invoice Manager",
+    "totalInvoices": "Total Invoices",
+    "thisMonth": "This Month",
+    "cleared": "Cleared",
+    "pending": "Pending",
+    "searchPlaceholder": "Search by invoice ID or UUID...",
+    "allStatus": "All Status",
+    "allTypes": "All Types",
+    "downloadSelected": "Download Selected",
+    "regenerateSelected": "Regenerate Selected",
+    "noInvoices": "No invoices found.",
+    "invoiceId": "Invoice ID",
+    "type": "Type",
+    "uuid": "UUID",
+    "download": "Download",
+    "send": "Send",
+    "sendInvoiceEmail": "Send Invoice Email",
+    "sendInvoiceTo": "Send invoice {id} to customer",
+    "customerEmail": "Customer Email",
+    "sendInvoice": "Send Invoice",
+    "emailSuccess": "Invoice sent successfully!",
+    "emailFailed": "Failed to send email",
+    "typeOptions": {
+      "cash": "Cash",
+      "installment": "Installment",
+      "rental": "Rental"
+    }
+  },
   "Customers": {
     "title": "Customers",
     "addNew": "Add Customer",
@@ -897,6 +926,10 @@
     "expense": "Expense",
     "repairs": "Repairs",
     "salaries": "Salaries",
-    "other": "Other"
+    "other": "Other",
+    "selected": "selected",
+    "deleteSelected": "Delete Selected",
+    "deleteConfirm": "Are you sure you want to delete these items?",
+    "deleteActionUndone": "This action cannot be undone."
   }
 }

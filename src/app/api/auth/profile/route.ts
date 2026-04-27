@@ -33,6 +33,15 @@ export async function PUT(request: NextRequest) {
 
     await user.save();
 
+    await logActivity({
+      userId: payload.userId,
+      userName: user.name,
+      action: 'Updated profile',
+      module: 'User',
+      targetId: payload.userId,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
     return NextResponse.json({
       user: {
         _id: user._id,

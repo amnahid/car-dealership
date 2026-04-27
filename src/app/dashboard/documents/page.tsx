@@ -35,6 +35,52 @@ export default function DocumentsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === documents.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(documents.map((d) => d._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(commonT('deleteConfirm'))) return;
+
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/documents/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', ids: Array.from(selectedIds) }),
+      });
+
+      if (res.ok) {
+        setSelectedIds(new Set());
+        fetchDocs();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Bulk delete failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm(t('deleteConfirm'))) return;
@@ -102,6 +148,58 @@ export default function DocumentsPage() {
         </Link>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: 'sticky',
+            top: '0',
+            zIndex: 10,
+            background: '#ffffff',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            border: '1px solid #28aaa9',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            flexDirection: isRtl ? 'row-reverse' : 'row'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <span style={{ fontWeight: 600, color: '#28aaa9' }}>{selectedIds.size} {commonT('selected')}</span>
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkActionLoading}
+              style={{
+                height: '32px',
+                padding: '0 12px',
+                fontSize: '13px',
+                borderRadius: '3px',
+                border: '1px solid #dc3545',
+                background: '#ffffff',
+                color: '#dc3545',
+                cursor: 'pointer'
+              }}
+            >
+              {commonT('deleteSelected')}
+            </button>
+          </div>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9ca8b3',
+              cursor: 'pointer',
+              fontSize: '13px'
+            }}
+          >
+            {commonT('cancel')}
+          </button>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
@@ -112,6 +210,18 @@ export default function DocumentsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '600px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
+                <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={documents.length > 0 && selectedIds.size === documents.length}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = selectedIds.size > 0 && selectedIds.size < documents.length;
+                      }
+                    }}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('documentType')}</th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('issueDate')}</th>
@@ -125,7 +235,14 @@ export default function DocumentsPage() {
                 const daysLeft = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / 86400000);
                 const expiryStyle = getExpiryStyle(doc.expiryDate);
                 return (
-                  <tr key={doc._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                  <tr key={doc._id} style={{ borderBottom: '1px solid #f5f5f5', background: selectedIds.has(doc._id) ? '#28aaa905' : 'transparent' }}>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(doc._id)}
+                        onChange={() => toggleSelect(doc._id)}
+                      />
+                    </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{doc.carId}</td>
                     <td style={{ padding: '12px' }}>{doc.documentType}</td>
                     <td style={{ padding: '12px' }}>{new Date(doc.issueDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>

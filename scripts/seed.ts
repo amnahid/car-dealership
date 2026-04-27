@@ -75,8 +75,8 @@ async function main() {
     {
       _id: adminId,
       name: 'Ahmed Al-Rashidi',
-      email: 'admin@carsaudi.com',
-      password: await bcrypt.hash('Admin@123456', BCRYPT_ROUNDS),
+      email: 'admin@amyalcar.com',
+      password: await bcrypt.hash('Admin@123', BCRYPT_ROUNDS),
       role: 'Admin',
       phone: '+966501110001',
       isActive: true,
@@ -85,8 +85,8 @@ async function main() {
     {
       _id: managerId,
       name: 'Mohammed Al-Otaibi',
-      email: 'manager@carsaudi.com',
-      password: await bcrypt.hash('Manager@123456', BCRYPT_ROUNDS),
+      email: 'car-manager@amyalcar.com',
+      password: await bcrypt.hash('CarManager@123', BCRYPT_ROUNDS),
       role: 'Car Manager',
       phone: '+966501110002',
       isActive: true,
@@ -95,8 +95,8 @@ async function main() {
     {
       _id: accountsId,
       name: 'Fatima Al-Zahrani',
-      email: 'accounts@carsaudi.com',
-      password: await bcrypt.hash('Accounts@123456', BCRYPT_ROUNDS),
+      email: 'accountant@amyalcar.com',
+      password: await bcrypt.hash('Accountant@123', BCRYPT_ROUNDS),
       role: 'Accountant',
       phone: '+966501110003',
       isActive: true,
@@ -105,25 +105,15 @@ async function main() {
     {
       _id: khalidUserId,
       name: 'Khalid Al-Ghamdi',
-      email: 'khalid@carsaudi.com',
-      password: await bcrypt.hash('Sales@123456', BCRYPT_ROUNDS),
+      email: 'sales-person@amyalcar.com',
+      password: await bcrypt.hash('SalesPerson@123', BCRYPT_ROUNDS),
       role: 'Sales Person',
       phone: '+966501110004',
       isActive: true,
       passwordVersion: 1,
     },
-    {
-      _id: omarUserId,
-      name: 'Omar Al-Shehri',
-      email: 'omar@carsaudi.com',
-      password: await bcrypt.hash('Sales@123456', BCRYPT_ROUNDS),
-      role: 'Sales Person',
-      phone: '+966501110005',
-      isActive: true,
-      passwordVersion: 1,
-    },
   ]);
-  console.log('  ✓ 5 users');
+  console.log('  ✓ 4 users');
 
   // ─── 2. EMPLOYEES ──────────────────────────────────────────────────────────
   console.log('👷 Seeding employees…');
@@ -140,7 +130,7 @@ async function main() {
       employeeId: 'EMP-0001',
       name: 'Khalid Al-Ghamdi',
       phone: '+966501110004',
-      email: 'khalid@carsaudi.com',
+      email: 'sales-person@amyalcar.com',
       designation: 'Sales Agent',
       department: 'Sales',
       baseSalary: 8000,
@@ -154,7 +144,7 @@ async function main() {
       employeeId: 'EMP-0002',
       name: 'Omar Al-Shehri',
       phone: '+966501110005',
-      email: 'omar@carsaudi.com',
+      email: 'omar@amyalcar.com',
       designation: 'Sales Agent',
       department: 'Sales',
       baseSalary: 7500,
@@ -168,7 +158,7 @@ async function main() {
       employeeId: 'EMP-0003',
       name: 'Fatima Al-Zahrani',
       phone: '+966501110003',
-      email: 'fatima@carsaudi.com',
+      email: 'accountant@amyalcar.com',
       designation: 'Accounts Officer',
       department: 'Finance',
       baseSalary: 9000,
@@ -963,13 +953,12 @@ async function main() {
   console.log('✅ SEED COMPLETE');
   console.log('═'.repeat(60));
   console.log('\n🔑 Login Credentials:');
-  console.log('  Admin:           admin@carsaudi.com       / Admin@123456');
-  console.log('  Car Manager:     manager@carsaudi.com     / Manager@123456');
-  console.log('  Accountant:      accounts@carsaudi.com    / Accounts@123456');
-  console.log('  Sales Person 1:  khalid@carsaudi.com      / Sales@123456');
-  console.log('  Sales Person 2:  omar@carsaudi.com        / Sales@123456');
+  console.log('  Admin:           admin@amyalcar.com       / Admin@123');
+  console.log('  Car Manager:     car-manager@amyalcar.com / CarManager@123');
+  console.log('  Accountant:      accountant@amyalcar.com  / Accountant@123');
+  console.log('  Sales Person:    sales-person@amyalcar.com/ SalesPerson@123');
   console.log('\n📊 Data Summary:');
-  console.log(`  Users: 5  |  Employees: 5  |  Customers: 10  |  Suppliers: 3`);
+  console.log(`  Users: 4  |  Employees: 5  |  Customers: 10  |  Suppliers: 3`);
   console.log(`  Cars: 15  |  Car Purchases: 15  |  Vehicle Docs: 45`);
   console.log(`  Cash Sales: 3  |  Installments: 2  |  Rentals: 2  |  Repairs: 4`);
   console.log(`  Salary Payments: 15  |  Transactions: ${txnSeq}  |  Activity Logs: 5`);

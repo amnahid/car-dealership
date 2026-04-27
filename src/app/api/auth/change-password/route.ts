@@ -40,6 +40,15 @@ export async function POST(request: NextRequest) {
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
 
+    await logActivity({
+      userId: payload.userId,
+      userName: user.name,
+      action: 'Changed password',
+      module: 'User',
+      targetId: payload.userId,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
     return NextResponse.json({ message: 'Password changed successfully' });
   } catch (error) {
     console.error('Change password error:', error);

@@ -129,6 +129,15 @@ export async function DELETE(
 
     await PurchaseReturn.findByIdAndDelete(id);
 
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: 'Deleted return',
+      module: 'Return',
+      targetId: id,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Purchase Return DELETE error:', error);

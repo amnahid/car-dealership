@@ -24,6 +24,16 @@ export async function POST(request: NextRequest) {
         id,
         url: `/invoices/invoice-${id}.pdf`,
       }));
+
+      await logActivity({
+        userId: auth.userId,
+        userName: auth.name,
+        action: `Bulk download invoices`,
+        module: 'Invoice',
+        targetId: invoiceIds.length > 5 ? `${invoiceIds.slice(0, 5).join(',')},...` : invoiceIds.join(','),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
       return NextResponse.json({ success: true, downloadUrls });
     }
 

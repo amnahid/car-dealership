@@ -42,6 +42,52 @@ export default function UsersPage() {
   const [generatedPw, setGeneratedPw] = useState('');
   const [formData, setFormData] = useState<UserFormData>({ name: '', email: '', password: '', role: 'Sales Person' });
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === users.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(users.map((u) => u._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleBulkAction = async (action: 'delete' | 'update-status', isActive?: boolean) => {
+    if (action === 'delete' && !confirm(commonT('deleteConfirm'))) return;
+
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/users/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ids: Array.from(selectedIds), isActive }),
+      });
+
+      if (res.ok) {
+        setSelectedIds(new Set());
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Bulk action failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -293,6 +339,58 @@ export default function UsersPage() {
         </div>
       )}
 
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: 'sticky',
+            top: '0',
+            zIndex: 10,
+            background: '#ffffff',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            border: '1px solid #28aaa9',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            flexDirection: isRtl ? 'row-reverse' : 'row'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <span style={{ fontWeight: 600, color: '#28aaa9' }}>{selectedIds.size} {commonT('selected')}</span>
+            <div style={{ width: '1px', height: '24px', background: '#eee' }} />
+            <button
+              onClick={() => handleBulkAction('update-status', true)}
+              disabled={bulkActionLoading}
+              style={{ height: '32px', padding: '0 12px', fontSize: '13px', borderRadius: '3px', border: '1px solid #28aaa9', background: '#ffffff', color: '#28aaa9', cursor: 'pointer' }}
+            >
+              {t('activate')}
+            </button>
+            <button
+              onClick={() => handleBulkAction('update-status', false)}
+              disabled={bulkActionLoading}
+              style={{ height: '32px', padding: '0 12px', fontSize: '13px', borderRadius: '3px', border: '1px solid #525f80', background: '#ffffff', color: '#525f80', cursor: 'pointer' }}
+            >
+              {t('deactivate')}
+            </button>
+            <button
+              onClick={() => handleBulkAction('delete')}
+              disabled={bulkActionLoading}
+              style={{ height: '32px', padding: '0 12px', fontSize: '13px', borderRadius: '3px', border: '1px solid #dc3545', background: '#ffffff', color: '#dc3545', cursor: 'pointer' }}
+            >
+              {commonT('deleteSelected')}
+            </button>
+          </div>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{ background: 'none', border: 'none', color: '#9ca8b3', cursor: 'pointer', fontSize: '13px' }}
+          >
+            {commonT('cancel')}
+          </button>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
@@ -301,6 +399,18 @@ export default function UsersPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '600px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
+                <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={users.length > 0 && selectedIds.size === users.length}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = selectedIds.size > 0 && selectedIds.size < users.length;
+                      }
+                    }}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('name')}</th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('email')}</th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('role')}</th>
@@ -311,7 +421,14 @@ export default function UsersPage() {
             </thead>
             <tbody style={{ borderBottom: '1px solid #eee' }}>
               {users.map((u) => (
-                <tr key={u._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                <tr key={u._id} style={{ borderBottom: '1px solid #f5f5f5', background: selectedIds.has(u._id) ? '#28aaa905' : 'transparent' }}>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(u._id)}
+                      onChange={() => toggleSelect(u._id)}
+                    />
+                  </td>
                   <td style={{ padding: '12px' }}>
                     <a href={`/dashboard/users/${u._id}`} style={{ color: '#28aaa9', fontWeight: 500, textDecoration: 'none' }}>{u.name}</a>
                   </td>

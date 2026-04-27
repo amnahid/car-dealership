@@ -33,6 +33,52 @@ export default function RepairsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editingRepair, setEditingRepair] = useState<Repair | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === repairs.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(repairs.map((r) => r._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleBulkAction = async (action: 'delete' | 'update-status', status?: string) => {
+    if (action === 'delete' && !confirm(commonT('deleteConfirm'))) return;
+
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/repairs/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ids: Array.from(selectedIds), status }),
+      });
+
+      if (res.ok) {
+        setSelectedIds(new Set());
+        fetchRepairs();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Bulk action failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
 
   const fetchRepairs = useCallback(async () => {
     setLoading(true);
@@ -124,6 +170,76 @@ export default function RepairsPage() {
         </Link>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: 'sticky',
+            top: '0',
+            zIndex: 10,
+            background: '#ffffff',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            border: '1px solid #28aaa9',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            flexDirection: isRtl ? 'row-reverse' : 'row'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <span style={{ fontWeight: 600, color: '#28aaa9' }}>{selectedIds.size} {commonT('selected')}</span>
+            <div style={{ width: '1px', height: '24px', background: '#eee' }} />
+            <select
+              onChange={(e) => handleBulkAction('update-status', e.target.value)}
+              disabled={bulkActionLoading}
+              style={{
+                height: '32px',
+                fontSize: '13px',
+                borderRadius: '3px',
+                border: '1px solid #ced4da',
+                background: '#ffffff',
+                padding: '0 8px'
+              }}
+            >
+              <option value="">{commonT('status')}</option>
+              {['Pending', 'In Progress', 'Completed'].map((s) => (
+                <option key={s} value={s}>{getStatusLabel(s)}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => handleBulkAction('delete')}
+              disabled={bulkActionLoading}
+              style={{
+                height: '32px',
+                padding: '0 12px',
+                fontSize: '13px',
+                borderRadius: '3px',
+                border: '1px solid #dc3545',
+                background: '#ffffff',
+                color: '#dc3545',
+                cursor: 'pointer'
+              }}
+            >
+              {commonT('deleteSelected')}
+            </button>
+          </div>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9ca8b3',
+              cursor: 'pointer',
+              fontSize: '13px'
+            }}
+          >
+            {commonT('cancel')}
+          </button>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
@@ -134,6 +250,18 @@ export default function RepairsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '700px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
+                <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={repairs.length > 0 && selectedIds.size === repairs.length}
+                    ref={(input) => {
+                      if (input) {
+                        input.indeterminate = selectedIds.size > 0 && selectedIds.size < repairs.length;
+                      }
+                    }}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('repairDescription')}</th>
                 <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('totalCost')}</th>
@@ -144,7 +272,14 @@ export default function RepairsPage() {
             </thead>
             <tbody style={{ borderBottom: '1px solid #eee' }}>
               {repairs.map((r) => (
-                <tr key={r._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                <tr key={r._id} style={{ borderBottom: '1px solid #f5f5f5', background: selectedIds.has(r._id) ? '#28aaa905' : 'transparent' }}>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(r._id)}
+                      onChange={() => toggleSelect(r._id)}
+                    />
+                  </td>
                   <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{r.carId}</td>
                   <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.repairDescription}

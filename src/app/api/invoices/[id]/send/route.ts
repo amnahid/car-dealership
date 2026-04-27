@@ -5,6 +5,7 @@ import ZatcaInvoice from '@/models/ZatcaInvoice';
 import Customer from '@/models/Customer';
 import path from 'path';
 import fs from 'fs';
+import { logActivity } from '@/lib/activityLogger';
 
 interface ResendResponse {
   data?: { id: string };
@@ -127,6 +128,15 @@ export async function POST(
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });
     }
+
+    await logActivity({
+      userId: auth.userId,
+      userName: auth.name,
+      action: 'Sent invoice via email',
+      module: 'Invoice',
+      targetId: id,
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
 
     return NextResponse.json({ success: true, messageId: result.messageId });
   } catch (error) {
