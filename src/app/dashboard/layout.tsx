@@ -94,13 +94,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
       }}>
         {children}
       </main>
-      <footer className="footer" style={{ 
+      <footer style={{ 
         textAlign: 'center', 
         padding: '20px', 
         marginLeft: isRtl ? 0 : '260px',
-        marginRight: isRtl ? '260px' : 0
+        marginRight: isRtl ? '260px' : 0,
+        background: '#ffffff',
+        borderTop: '1px solid #e1e5ef',
+        color: '#9ca8b3',
+        fontSize: '14px'
       }}>
-        <p style={{ margin: 0 }}>&copy; 2024 AMYAL CAR. All rights reserved.</p>
+        <p style={{ margin: 0 }}>&copy; {new Date().getFullYear()} AMYAL CAR. All rights reserved.</p>
       </footer>
     </div>
   );
