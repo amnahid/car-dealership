@@ -40,7 +40,8 @@
     "resend": "^6.12.2",
     "twilio": "^5.13.1",
     "xml-crypto": "^6.1.2",
-    "xmlbuilder2": "^4.0.3"
+    "xmlbuilder2": "^4.0.3",
+    "zatca-xml-ts": "^0.1.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

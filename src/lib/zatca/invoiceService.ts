@@ -1,11 +1,7 @@
 import { connectDB } from '@/lib/db';
 import ZatcaConfig from '@/models/ZatcaConfig';
 import ZatcaInvoice from '@/models/ZatcaInvoice';
-import { buildTLVBase64, buildTLVBase64Phase2, generateZatcaQRCodeFromTLV, ZatcaQRData } from './qrCode';
-import { generateZatcaXML } from './xmlGenerator';
-import { hashInvoiceXML, generateInvoiceUUID } from './invoiceHash';
-import { signInvoiceHash, embedSignatureInXML, parseCertificate } from './cryptoSigning';
-import { clearInvoice, reportInvoice } from './zatcaApi';
+import { ZatcaClient } from './zatcaClient';
 import {
   ZatcaInvoiceData,
   ZatcaProcessResult,
@@ -48,10 +44,10 @@ export interface ZatcaSaleInput {
 export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaProcessResult> {
   await connectDB();
 
-  const config = await ZatcaConfig.findOne({ isActive: true }).lean();
+  const config = await ZatcaConfig.findOne({ isActive: true });
   if (!config) {
     return {
-      uuid: generateInvoiceUUID(),
+      uuid: crypto.randomUUID(),
       qrCode: '',
       xml: '',
       xmlHash: '',
@@ -61,7 +57,8 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
     };
   }
 
-  const uuid = generateInvoiceUUID();
+  const client = new ZatcaClient(config);
+  const uuid = crypto.randomUUID();
   const pih = config.pih;
 
   const seller: ZatcaSellerInfo = {
@@ -78,6 +75,7 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
 
   const invoiceData: ZatcaInvoiceData = {
     uuid,
+    invoiceNumber: input.saleId,
     invoiceType: input.invoiceType,
     issueDate: input.issueDate,
     seller,
@@ -93,134 +91,50 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
   };
 
   try {
-    // Phase 1: Build QR TLV data
-    const qrData: ZatcaQRData = {
-      sellerName: config.sellerNameAr || config.sellerName,
-      sellerTrn: config.trn,
-      issueTimestamp: input.issueDate.toISOString(),
-      totalWithVat: input.totalWithVat.toFixed(2),
-      vatTotal: input.vatTotal.toFixed(2),
-    };
+    let result: ZatcaProcessResult;
+    
+    // Only auto-submit when the production CSID or compliance CSID is available.
+    const canSubmit = !!(config.productionCsid || config.complianceCsid);
 
-    let signedXml = '';
-    let xmlHash = '';
-
-    // Only auto-submit when the production CSID is available.
-    const hasPhase2 = !!(config.productionCsid && config.privateKey);
-
-    // Step 1: generate XML with a basic 5-tag QR placeholder
-    const tlvBase64 = buildTLVBase64(qrData);
-    const xml = generateZatcaXML(invoiceData, tlvBase64);
-
-    // Step 2: hash with QR value cleared (ZATCA spec)
-    xmlHash = hashInvoiceXML(xml);
-    signedXml = xml;
-
-    let qrTlvFull = tlvBase64; // will be replaced with 8-tag version when signing
-
-    if (hasPhase2 && config.privateKey && config.certificate) {
-      // Step 3: sign
-      const signature = signInvoiceHash(xmlHash, config.privateKey);
-
-      // Step 4: build Phase 2 QR with binary tags 6-8
-      const certInfo = parseCertificate(config.certificate);
-      qrTlvFull = buildTLVBase64Phase2({
-        ...qrData,
-        xmlHashBytes: Buffer.from(xmlHash, 'base64'),
-        ecdsaSigBytes: Buffer.from(signature, 'base64'),
-        publicKeyBytes: certInfo.publicKeyRaw,
-        certSignatureBytes: certInfo.certSignatureRaw,
-      });
-
-      // Step 5: replace placeholder QR in XML with full Phase 2 QR
-      const xmlWithQR = xml.replace(
-        /(<cbc:ID>QR<\/cbc:ID>[\s\S]*?<cbc:EmbeddedDocumentBinaryObject[^>]*>)[^<]*(<\/cbc:EmbeddedDocumentBinaryObject>)/,
-        `$1${qrTlvFull}$2`
-      );
-
-      // Step 6: embed signature
-      const signingResult = embedSignatureInXML(xmlWithQR, config.privateKey, config.certificate, xmlHash);
-      signedXml = signingResult.signedXml;
-    }
-
-    // QR data URL for display — use the full Phase 2 TLV when available
-    const qrCode = await generateZatcaQRCodeFromTLV(qrTlvFull);
-    const newPih = xmlHash;
-
-    // Default status
-    let status: ZatcaProcessResult['status'] = 'Pending';
-    let zatcaResponse: object | undefined;
-    let errorMessage: string | undefined;
-    let clearedXml: string | undefined;
-
-    // Phase 2 API submission
-    if (hasPhase2) {
-      const csid = config.environment === 'production'
-        ? config.productionCsid!
-        : config.complianceCsid!;
-      const csidSecret = config.environment === 'production'
-        ? (config.productionCsidSecret || '')
-        : (config.complianceCsidSecret || '');
-
-      const credentials = {
-        csid,
-        csidSecret,
-        environment: config.environment,
-      };
-
-      try {
-        if (input.invoiceType === 'Standard') {
-          const result = await clearInvoice(signedXml, xmlHash, uuid, credentials);
-          status = 'Cleared';
-          zatcaResponse = result.validationResults as object;
-          clearedXml = result.clearedInvoice;
-        } else {
-          const result = await reportInvoice(signedXml, xmlHash, uuid, credentials);
-          status = 'Reported';
-          zatcaResponse = result as object;
-        }
-
-        // Update PIH chain in config
-        await ZatcaConfig.updateOne({ _id: config._id }, { $set: { pih: newPih } });
-      } catch (apiError) {
-        status = 'Failed';
-        errorMessage = apiError instanceof Error ? apiError.message : 'ZATCA API error';
+    if (canSubmit) {
+      result = await client.processInvoice(invoiceData);
+      
+      // Update PIH chain in config on success
+      if (result.status === 'Cleared' || result.status === 'Reported') {
+        await ZatcaConfig.updateOne({ _id: config._id }, { $set: { pih: result.xmlHash } });
       }
+    } else {
+        // Fallback for when we don't have CSIDs yet - just for debug or testing
+        // This won't be fully signed correctly without certificate, but we want to avoid crashing
+        throw new Error('ZATCA CSID not found. Complete onboarding first.');
     }
 
     // Save audit record
     await ZatcaInvoice.create({
-      uuid,
+      uuid: result.uuid,
       invoiceType: input.invoiceType,
       referenceId: input.referenceId,
       referenceType: input.referenceType,
       saleId: input.saleId,
       issueDate: input.issueDate,
-      xml: clearedXml || signedXml,
-      xmlHash,
+      xml: result.xml,
+      xmlHash: result.xmlHash,
       pih,
-      qrCode,
-      status,
-      zatcaResponse,
-      errorMessage,
-      clearedXml,
-      submittedAt: hasPhase2 ? new Date() : undefined,
+      qrCode: result.qrCode,
+      status: result.status,
+      zatcaResponse: result.zatcaResponse,
+      errorMessage: result.errorMessage,
+      clearedXml: result.clearedXml,
+      submittedAt: new Date(),
       createdBy: input.createdBy,
     });
 
-    return {
-      uuid,
-      qrCode,
-      xml: clearedXml || signedXml,
-      xmlHash,
-      status,
-      zatcaResponse,
-      errorMessage,
-      newPih,
-    };
+    return result;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown ZATCA error';
-    return {
+    
+    // Create a failed record
+    const failedResult: ZatcaProcessResult = {
       uuid,
       qrCode: '',
       xml: '',
@@ -229,6 +143,24 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
       errorMessage: errorMsg,
       newPih: pih,
     };
+
+    await ZatcaInvoice.create({
+        uuid,
+        invoiceType: input.invoiceType,
+        referenceId: input.referenceId,
+        referenceType: input.referenceType,
+        saleId: input.saleId,
+        issueDate: input.issueDate,
+        xml: '',
+        xmlHash: '',
+        pih,
+        qrCode: '',
+        status: 'Failed',
+        errorMessage: errorMsg,
+        createdBy: input.createdBy,
+      });
+
+    return failedResult;
   }
 }
 

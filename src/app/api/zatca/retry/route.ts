@@ -5,7 +5,7 @@ import CashSale from '@/models/CashSale';
 import InstallmentSale from '@/models/InstallmentSale';
 import Rental from '@/models/Rental';
 import { getAuthPayload } from '@/lib/apiAuth';
-import { clearInvoice, reportInvoice } from '@/lib/zatca/zatcaApi';
+import { ZatcaClient } from '@/lib/zatca/zatcaClient';
 import ZatcaConfig from '@/models/ZatcaConfig';
 
 export async function POST(request: NextRequest) {
@@ -19,30 +19,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { uuid } = body;
 
-    const config = await ZatcaConfig.findOne({ isActive: true }).lean();
+    const config = await ZatcaConfig.findOne({ isActive: true });
     if (!config) {
       return NextResponse.json({ error: 'ZATCA config not found' }, { status: 400 });
     }
 
-    // Clearance/reporting endpoints require the production CSID.
-    // The compliance CSID only works with /compliance/invoices (Step 3 in onboarding).
-    if (!config.productionCsid) {
-      return NextResponse.json({
-        error: 'Production CSID not yet configured. Complete ZATCA onboarding Steps 3 and 4 first, then retry.',
-      }, { status: 400 });
-    }
-    if (!config.privateKey) {
-      return NextResponse.json({ error: 'Private key missing from ZATCA config.' }, { status: 400 });
-    }
-
-    const csid = config.productionCsid;
-    const csidSecret = config.productionCsidSecret || '';
-
-    const credentials = { csid, csidSecret, environment: config.environment };
+    const client = new ZatcaClient(config);
 
     // Build query — retry all failed if no UUID, else specific one
     const query = uuid ? { uuid } : { status: 'Failed' };
-    const invoices = await ZatcaInvoice.find(query).lean();
+    const invoices = await ZatcaInvoice.find(query);
 
     if (invoices.length === 0) {
       return NextResponse.json({ message: 'No failed invoices found.' });
@@ -57,14 +43,14 @@ export async function POST(request: NextRequest) {
         let clearedXml: string | undefined;
 
         if (invoice.invoiceType === 'Standard') {
-          const result = await clearInvoice(invoice.xml, invoice.xmlHash, invoice.uuid, credentials);
+          zatcaResponse = await client.clearanceExistingInvoice(invoice.xml, invoice.xmlHash);
           status = 'Cleared';
-          zatcaResponse = result.validationResults;
-          clearedXml = result.clearedInvoice;
+          if (zatcaResponse.clearedInvoice) {
+            clearedXml = Buffer.from(zatcaResponse.clearedInvoice, 'base64').toString('utf8');
+          }
         } else {
-          const result = await reportInvoice(invoice.xml, invoice.xmlHash, invoice.uuid, credentials);
+          zatcaResponse = await client.reportExistingInvoice(invoice.xml, invoice.xmlHash);
           status = 'Reported';
-          zatcaResponse = result;
         }
 
         // Update ZatcaInvoice record

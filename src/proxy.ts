@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth-token')?.value;
   const isDashboardPath = pathname.startsWith('/dashboard');
-  const isProtectedApiPath = pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/') && pathname !== '/api/seed';
+  const isProtectedApiPath = pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/');
 
   if (!isDashboardPath && !isProtectedApiPath) {
     return NextResponse.next();

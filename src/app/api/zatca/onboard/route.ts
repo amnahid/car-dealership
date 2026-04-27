@@ -2,17 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import ZatcaConfig from '@/models/ZatcaConfig';
 import { getAuthPayload } from '@/lib/apiAuth';
-import { generateZatcaXML, getZatcaTimestamp } from '@/lib/zatca/xmlGenerator';
-import { hashInvoiceXML, generateInvoiceUUID } from '@/lib/zatca/invoiceHash';
-import { embedSignatureInXML, parseCertificate } from '@/lib/zatca/cryptoSigning';
-import { buildTLVBase64, buildTLVBase64Phase2 } from '@/lib/zatca/qrCode';
+import { ZatcaClient } from '@/lib/zatca/zatcaClient';
 import { ZATCA_INITIAL_PIH } from '@/lib/zatca/types';
-import { generateZatcaKeyPair, ZatcaCsrOptions, getOpensslCsrConfig } from '@/lib/zatca/onboarding';
-import { requestComplianceCsid, checkInvoiceCompliance, requestProductionCsid } from '@/lib/zatca/zatcaApi';
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,48 +22,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ZATCA config not found. Create config first.' }, { status: 400 });
     }
 
-    if (action === 'generate_keys') {
-      const csrOptions: ZatcaCsrOptions = {
-        commonName: config.sellerName,
-        organizationName: config.sellerName,
-        organizationUnit: 'Main Branch',
-        countryCode: 'SA',
-        trn: config.trn,
-        invoiceType: '1100',
-        address: `${config.address.streetName}, ${config.address.city}`,
-        businessCategory: 'Motor Vehicle Dealers',
-        environment: config.environment,
-      };
+    const client = new ZatcaClient(config);
 
-      const result = generateZatcaKeyPair(csrOptions);
+    if (action === 'generate_keys' || action === 'generate_csr') {
+      const { privateKey, csr } = await client.generateKeysAndCSR();
 
       await ZatcaConfig.updateOne(
         { _id: config._id },
-        { $set: { privateKey: result.privateKey, publicKey: result.publicKey } }
+        { $set: { privateKey, csr } }
       );
 
       return NextResponse.json({
-        message: 'Key pair generated successfully.',
-        publicKey: result.publicKey,
-        opensslCommand: result.opensslCommand,
-        note: 'Use the openssl command above to generate a ZATCA-compliant CSR, then submit it to the ZATCA sandbox portal.',
-      });
-    }
-
-    if (action === 'generate_csr') {
-      if (!config.privateKey) {
-        return NextResponse.json({ error: 'No private key found. Run Step 1 first.' }, { status: 400 });
-      }
-      const csrB64 = generateCsr({
-        privateKey: config.privateKey!,
-        sellerName: config.sellerName,
-        trn: config.trn,
-        address: config.address,
-        environment: config.environment,
-      });
-      return NextResponse.json({
-        message: 'CSR generated successfully.',
-        csrB64,
+        message: 'Keys and CSR generated successfully.',
+        privateKey,
+        csrB64: Buffer.from(csr).toString('base64'),
       });
     }
 
@@ -79,69 +43,60 @@ export async function POST(request: NextRequest) {
       const { otp } = body;
       if (!otp) return NextResponse.json({ error: 'OTP is required' }, { status: 400 });
 
-      const { privateKey, publicKey } = generateZatcaKeyPair({
-        commonName: config.sellerName,
-        organizationName: config.sellerName,
-        organizationUnit: config.trn,
-        countryCode: 'SA',
-        trn: config.trn,
-        invoiceType: '1100',
-        address: `${config.address?.streetName ?? ''}, ${config.address?.city ?? ''}`,
-        businessCategory: 'Motor Vehicle Dealers',
-        environment: config.environment,
-      });
-      await ZatcaConfig.updateOne({ _id: config._id }, { $set: { privateKey, publicKey } });
+      // 1. Generate keys and CSR
+      const { privateKey, csr } = await client.generateKeysAndCSR();
+      
+      // Update config with private key and CSR so they are persisted
+      await ZatcaConfig.updateOne({ _id: config._id }, { $set: { privateKey, csr } });
 
-      const csrB64 = generateCsr({
-        privateKey,
-        sellerName: config.sellerName,
-        trn: config.trn,
-        address: config.address,
-        environment: config.environment,
-      });
+      // 2. Request Compliance CSID (using the same instance that has the CSR in memory)
+      const requestId = await client.issueComplianceCertificate(otp);
+      const info = client.getEgsInfo();
 
-      const result = await requestComplianceCsid(csrB64, config.environment, otp);
       await ZatcaConfig.updateOne(
         { _id: config._id },
         {
           $set: {
-            complianceCsid: result.csid,
-            complianceCsidSecret: result.secret,
-            certificate: result.binarySecurityToken,
+            complianceCsid: info.compliance_certificate,
+            complianceCsidSecret: info.compliance_api_secret,
+            certificate: info.compliance_certificate,
           },
         }
       );
 
       return NextResponse.json({
         message: 'Auto-onboarding complete.',
-        requestId: result.requestId,
-        csid: result.csid,
-        dispositionMessage: result.dispositionMessage,
+        requestId,
+        csid: info.compliance_certificate,
       });
     }
 
     if (action === 'request_compliance_csid') {
-      const { csr, otp } = body;
-      if (!csr || !otp) return NextResponse.json({ error: 'CSR and OTP required' }, { status: 400 });
+      const { otp } = body;
+      if (!otp) return NextResponse.json({ error: 'OTP required' }, { status: 400 });
 
-      const result = await requestComplianceCsid(csr, config.environment, otp);
+      if (!config.csr) {
+          return NextResponse.json({ error: 'CSR not found. Generate keys/CSR first.' }, { status: 400 });
+      }
+
+      const requestId = await client.issueComplianceCertificate(otp);
+      const info = client.getEgsInfo();
 
       await ZatcaConfig.updateOne(
         { _id: config._id },
         {
           $set: {
-            complianceCsid: result.csid,
-            complianceCsidSecret: result.secret,
-            certificate: result.binarySecurityToken,
+            complianceCsid: info.compliance_certificate,
+            complianceCsidSecret: info.compliance_api_secret,
+            certificate: info.compliance_certificate,
           },
         }
       );
 
       return NextResponse.json({
         message: 'Compliance CSID obtained.',
-        requestId: result.requestId,
-        csid: result.csid,
-        dispositionMessage: result.dispositionMessage,
+        requestId,
+        csid: info.compliance_certificate,
       });
     }
 
@@ -150,98 +105,40 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Configuration incomplete — run onboarding first.' }, { status: 400 });
       }
 
-      const uuid = generateInvoiceUUID();
-      const now = new Date();
-      const issueTimestamp = getZatcaTimestamp(now);
-      
-      const qrData = {
-        sellerName: config.sellerNameAr || config.sellerName,
-        sellerTrn: config.trn,
-        issueTimestamp,
-        totalWithVat: '115.00',
-        vatTotal: '15.00',
-      };
-
-      // Step 1: generate XML with basic 5-tag QR placeholder
-      const tlvBasic = buildTLVBase64(qrData);
-      const rawXml = generateZatcaXML({
-        uuid,
-        invoiceNumber: 'INV-14',
-        invoiceType: 'Simplified',
-        issueDate: now,
-        seller: {
-          name: config.sellerName,
-          nameAr: config.sellerNameAr || config.sellerName,
-          trn: config.trn,
-          buildingNumber: config.address?.buildingNumber || '1234',
-          streetName: config.address?.streetName || 'Street',
-          district: config.address?.district || 'District',
-          city: config.address?.city || 'Riyadh',
-          postalCode: config.address?.postalCode || '12345',
-          countryCode: 'SA',
-        },
-        buyer: { name: 'Test Buyer' },
-        lineItems: [{
-          name: 'Test Item',
-          quantity: 1,
-          unitPrice: 100,
-          vatRate: 15,
-          vatAmount: 15,
-          totalAmount: 115,
-        }],
-        subtotal: 100,
-        vatTotal: 15,
-        totalWithVat: 115,
-        currency: 'SAR',
-        pih: ZATCA_INITIAL_PIH,
-      }, tlvBasic);
-
-      // Step 2: compute hash
-      const xmlHash = hashInvoiceXML(rawXml);
-
-      // Step 3: Embed signature and get raw signature bytes for QR
-      const { signedXml: xmlWithoutFinalQR, signatureValueRaw } = embedSignatureInXML(
-        rawXml,
-        config.privateKey,
-        config.certificate,
-        xmlHash
-      );
-
-      // Step 4: build Phase 2 QR (tags 1-9)
-      const certInfo = parseCertificate(config.certificate);
-      const tlvFull = buildTLVBase64Phase2({
-        ...qrData,
-        xmlHashBytes: Buffer.from(xmlHash, 'base64'),
-        ecdsaSigBytes: signatureValueRaw,
-        publicKeyBytes: certInfo.publicKeyRaw,
-        certSignatureBytes: certInfo.certSignatureRaw,
+      const result = await client.checkCompliance({
+          uuid: crypto.randomUUID(),
+          invoiceType: 'Simplified',
+          issueDate: new Date(),
+          seller: {
+              name: config.sellerName,
+              nameAr: config.sellerNameAr,
+              trn: config.trn,
+              buildingNumber: config.address.buildingNumber,
+              streetName: config.address.streetName,
+              district: config.address.district,
+              city: config.address.city,
+              postalCode: config.address.postalCode,
+              countryCode: 'SA'
+          },
+          buyer: { name: 'Test Buyer' },
+          lineItems: [{
+              name: 'Test Item',
+              quantity: 1,
+              unitPrice: 100,
+              vatRate: 15,
+              vatAmount: 15,
+              totalAmount: 115
+          }],
+          subtotal: 100,
+          vatTotal: 15,
+          totalWithVat: 115,
+          currency: 'SAR',
+          pih: ZATCA_INITIAL_PIH
       });
-
-      // Step 5: replace QR placeholder with full Phase 2 QR
-      const xml = xmlWithoutFinalQR.replace(
-        /(<cbc:ID>QR<\/cbc:ID>[\s\S]*?<cbc:EmbeddedDocumentBinaryObject[^>]*>)[^<]*(<\/cbc:EmbeddedDocumentBinaryObject>)/,
-        `$1${tlvFull}$2`
-      );
-
-      let result: unknown;
-      try {
-        result = await checkInvoiceCompliance(xml, xmlHash, uuid, {
-          csid: config.complianceCsid || '',
-          csidSecret: config.complianceCsidSecret || '',
-          environment: config.environment,
-        });
-      } catch (err) {
-        return NextResponse.json({
-          message: 'Compliance check failed.',
-          error: err instanceof Error ? err.message : String(err),
-          debug: { submittedHash: xmlHash },
-        });
-      }
 
       return NextResponse.json({
         message: 'Compliance check completed.',
-        result,
-        debug: { submittedHash: xmlHash },
+        result
       });
     }
 
@@ -249,19 +146,15 @@ export async function POST(request: NextRequest) {
       const { complianceRequestId } = body;
       if (!complianceRequestId) return NextResponse.json({ error: 'complianceRequestId required' }, { status: 400 });
 
-      const result = await requestProductionCsid(
-        config.complianceCsid!,
-        config.complianceCsidSecret!,
-        complianceRequestId,
-        config.environment
-      );
+      await client.issueProductionCertificate(complianceRequestId);
+      const info = client.getEgsInfo();
 
       await ZatcaConfig.updateOne(
         { _id: config._id },
         {
           $set: {
-            productionCsid: result.csid,
-            productionCsidSecret: result.secret,
+            productionCsid: info.production_certificate,
+            productionCsidSecret: info.production_api_secret,
             environment: 'production',
           },
         }
@@ -269,43 +162,18 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         message: 'Production CSID obtained.',
-        csid: result.csid,
+        csid: info.production_certificate,
       });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('ZATCA onboarding error:', error);
+    if (error.response && error.response.data) {
+        console.error('ZATCA API Error Data:', JSON.stringify(error.response.data, null, 2));
+    }
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
-type CsrConfig = { privateKey: string; sellerName: string; trn: string; address: { streetName: string; city: string }; environment: 'sandbox' | 'production' };
-
-function generateCsr(config: CsrConfig): string {
-  const tmpDir = os.tmpdir();
-  const ts = Date.now();
-  const keyPath = path.join(tmpDir, `zatca_key_${ts}.pem`);
-  const confPath = path.join(tmpDir, `zatca_csr_${ts}.conf`);
-  const csrPath = path.join(tmpDir, `zatca_csr_${ts}.pem`);
-  try {
-    fs.writeFileSync(keyPath, config.privateKey, { mode: 0o600 });
-    const csrConfig = getOpensslCsrConfig({
-      commonName: config.sellerName,
-      organizationName: config.sellerName,
-      organizationUnit: config.trn,
-      countryCode: 'SA',
-      trn: config.trn,
-      invoiceType: '1100',
-      address: `${config.address?.streetName ?? ''}, ${config.address?.city ?? ''}`,
-      businessCategory: 'Motor Vehicle Dealers',
-      environment: config.environment,
-    });
-    fs.writeFileSync(confPath, csrConfig);
-    execSync(`openssl req -new -key "${keyPath}" -out "${csrPath}" -config "${confPath}" -extensions req_ext`, { encoding: 'utf8' });
-    return execSync(`base64 -w 0 "${csrPath}"`, { encoding: 'utf8' }).trim();
-  } finally {
-    [keyPath, confPath, csrPath].forEach(f => { try { fs.unlinkSync(f); } catch { /* ignore */ } });
+    const detail = error.response?.data || null;
+    return NextResponse.json({ error: message, detail }, { status: 500 });
   }
 }

@@ -13,6 +13,7 @@ import Repair from '@/models/Repair';
 import Transaction from '@/models/Transaction';
 import { hashPassword } from '@/lib/auth';
 import mongoose from 'mongoose';
+import { getAuthPayload } from '@/lib/apiAuth';
 
 interface SeedUser {
   name: string;
@@ -543,6 +544,14 @@ async function seedTransactions(
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.normalizedRole !== 'Admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     if (process.env.ALLOW_SEEDING !== 'true') {
       return NextResponse.json({ error: 'Seeding is disabled in this environment. Set ALLOW_SEEDING=true to enable.' }, { status: 403 });
     }
@@ -608,8 +617,16 @@ const { created: usersCreated, existing: usersExisting } = await seedUsers(force
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const auth = await getAuthPayload(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (auth.normalizedRole !== 'Admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     await connectDB();
 
     const [users, suppliers, cars, customers, employees, rentals, cashSales, installmentSales, repairs, transactions] = await Promise.all([

@@ -23,6 +23,7 @@ export interface IZatcaConfigDocument extends Document {
   productionCsidSecret?: string;
   privateKey?: string;       // ECDSA private key (store encrypted)
   publicKey?: string;        // ECDSA public key
+  csr?: string;              // Certificate Signing Request
   certificate?: string;      // X.509 certificate (base64)
   // Previous Invoice Hash — maintains audit chain
   pih: string;

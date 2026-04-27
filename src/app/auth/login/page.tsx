@@ -76,16 +76,6 @@ export default function LoginPage() {
           </h2>
           <LoginForm />
         </div>
-        <p
-          style={{
-            textAlign: 'center',
-            fontSize: '12px',
-            color: '#9ca8b3',
-            marginTop: '16px',
-          }}
-        >
-          {t('defaultCredentials')}
-        </p>
       </div>
     </div>
   );

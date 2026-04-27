@@ -44,13 +44,22 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
-    if (body.password) {
-      body.password = await hashPassword(body.password);
-    } else {
-      delete body.password;
+    if (body.password !== undefined) {
+      return NextResponse.json(
+        { error: 'Password updates are not allowed in this endpoint. Use reset password action.' },
+        { status: 400 }
+      );
     }
 
-    const user = await User.findByIdAndUpdate(id, body, { new: true, runValidators: true }).select(
+    const updatePayload: Record<string, unknown> = {};
+    if (body.name !== undefined) updatePayload.name = body.name;
+    if (body.email !== undefined) updatePayload.email = String(body.email).toLowerCase();
+    if (body.role !== undefined) updatePayload.role = body.role;
+    if (body.phone !== undefined) updatePayload.phone = body.phone;
+    if (body.avatar !== undefined) updatePayload.avatar = body.avatar;
+    if (body.isActive !== undefined) updatePayload.isActive = body.isActive;
+
+    const user = await User.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true }).select(
       '-password'
     );
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });

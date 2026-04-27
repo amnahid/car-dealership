@@ -60,6 +60,7 @@ export interface ZatcaProcessResult {
   status: 'Cleared' | 'Reported' | 'Pending' | 'Failed';
   zatcaResponse?: object;
   errorMessage?: string;
+  clearedXml?: string;    // B2B cleared XML
   newPih: string;         // Updated PIH for next invoice
 }
 
