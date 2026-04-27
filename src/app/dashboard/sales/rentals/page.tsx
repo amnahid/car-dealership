@@ -47,6 +47,54 @@ export default function RentalsPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingRental, setEditingRental] = useState<Rental | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  const toggleSelectAll = () => {
+    const activeRentals = rentals.filter(r => r.status === 'Active');
+    if (selectedIds.size === activeRentals.length && activeRentals.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(activeRentals.map((r) => r._id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleBulkCancel = async () => {
+    if (!confirm(t('cancelConfirm'))) return;
+
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch('/api/sales/rentals/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel', ids: Array.from(selectedIds) }),
+      });
+
+      if (res.ok) {
+        setSelectedIds(new Set());
+        fetchRentals();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Bulk cancel failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; purchasePrice?: number }[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [employees, setEmployees] = useState<{ _id: string; name: string; designation: string; commissionRate: number }[]>([]);
@@ -163,6 +211,58 @@ export default function RentalsPage() {
         </select>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div
+          style={{
+            position: 'sticky',
+            top: '0',
+            zIndex: 10,
+            background: '#ffffff',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            border: '1px solid #28aaa9',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+            flexDirection: isRtl ? 'row-reverse' : 'row'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <span style={{ fontWeight: 600, color: '#28aaa9' }}>{selectedIds.size} {commonT('selected')}</span>
+            <button
+              onClick={handleBulkCancel}
+              disabled={bulkActionLoading}
+              style={{
+                height: '32px',
+                padding: '0 12px',
+                fontSize: '13px',
+                borderRadius: '3px',
+                border: '1px solid #dc3545',
+                background: '#ffffff',
+                color: '#dc3545',
+                cursor: 'pointer'
+              }}
+            >
+              {t('cancelRental')}
+            </button>
+          </div>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9ca8b3',
+              cursor: 'pointer',
+              fontSize: '13px'
+            }}
+          >
+            {commonT('cancel')}
+          </button>
+        </div>
+      )}
+
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
@@ -173,6 +273,19 @@ export default function RentalsPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '800px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
+                  <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={rentals.length > 0 && rentals.every(r => r.status === 'Cancelled' || selectedIds.has(r._id))}
+                      ref={(input) => {
+                        if (input) {
+                          const activeRentals = rentals.filter(r => r.status === 'Active');
+                          input.indeterminate = selectedIds.size > 0 && selectedIds.size < activeRentals.length;
+                        }
+                      }}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('car')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('rentalId')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
@@ -181,11 +294,20 @@ export default function RentalsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{cashT('zatca')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                 </tr>
-              </thead>
               <tbody style={{ borderBottom: '1px solid #eee' }}>
                 {rentals.map((rental) => (
-                  <tr key={rental._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                  <tr key={rental._id} style={{ borderBottom: '1px solid #f5f5f5', opacity: rental.status === 'Cancelled' ? 0.5 : 1, background: selectedIds.has(rental._id) ? '#28aaa905' : 'transparent' }}>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      {rental.status === 'Active' && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(rental._id)}
+                          onChange={() => toggleSelect(rental._id)}
+                        />
+                      )}
+                    </td>
                     <td style={{ padding: '8px', width: '60px' }}>
+              ...
                       {rental.car?.images?.[0] ? (
                         <img src={rental.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
                       ) : (

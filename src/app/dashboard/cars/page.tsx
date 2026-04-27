@@ -521,7 +521,7 @@ export default function CarsPage() {
                             <input
                               type="checkbox"
                               checked={selectedIds.has(car._id)}
-                              onChange={() => toggleSelect(car._id)}
+                              onChange={() => handleSelect(car._id)}
                             />
                           </td>
                           <td style={{ padding: '8px', width: '60px' }}>
