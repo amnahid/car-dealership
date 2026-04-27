@@ -143,15 +143,39 @@ function SubMenu({
 
 function isPathActive(href: string | undefined, pathname: string): boolean {
     if (!href) return false;
-    if (href === '/dashboard') return pathname === '/dashboard';
     
-    // Exact match
+    // Exact match is always preferred
     if (pathname === href) return true;
     
-    // Check if it's a sub-path, ensuring we don't match partial words
-    // e.g., /dashboard/sales should not match /dashboard/sales-report
-    // but should match /dashboard/sales/123
-    return pathname.startsWith(href + '/');
+    // For dashboard root, only match exact
+    if (href === '/dashboard') return pathname === '/dashboard';
+    
+    // Check for sub-paths, but ensure we are not matching the base path 
+    // when a more specific sibling path is available.
+    // e.g., if we are at /dashboard/sales/cash, we want /dashboard/sales/cash to be active,
+    // but /dashboard/sales should ONLY be active if we are exactly at /dashboard/sales
+    // or at a detail page like /dashboard/sales/[id] that isn't covered by other menu items.
+    
+    // If the pathname starts with this href, check if it's a detail page (like [id])
+    // or another specific submenu item.
+    if (pathname.startsWith(href + '/')) {
+      // If the current href is a base path like /dashboard/sales, 
+      // we only want it active if the next segment is NOT one of its siblings.
+      const subPath = pathname.substring(href.length + 1);
+      
+      // List of specific sub-segments that have their own menu items
+      // This is a bit of a heuristic but works for most Next.js dashboard structures
+      const siblingSubPaths = ['cash', 'installments', 'rentals', 'returns', 'invoices', 'suppliers', 'purchases', 'stock', 'expenses', 'incomes', 'reports'];
+      
+      const firstSegment = subPath.split('/')[0];
+      if (siblingSubPaths.includes(firstSegment)) {
+        return false;
+      }
+      
+      return true;
+    }
+    
+    return false;
   }
 
   function MenuItemComponent({ 
