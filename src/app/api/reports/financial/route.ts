@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
       carPurchaseCosts,
       repairCosts,
       transactionExpenses,
+      miscIncome,
       profitPerCar,
       salesByMonth,
     ] = await Promise.all([
@@ -86,7 +87,11 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
       ]),
       Transaction.aggregate([
-        { $match: { type: 'Expense', date: dateFilter, category: { $ne: 'Salary Payment' }, isDeleted: { $ne: true } } },
+        { $match: { type: 'Expense', date: dateFilter, category: { $nin: ['Salary Payment', 'Car Purchase', 'Car Repair'] }, isDeleted: { $ne: true } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } },
+      ]),
+      Transaction.aggregate([
+        { $match: { type: 'Income', date: dateFilter, category: { $nin: ['Cash Sale', 'Installment Payment', 'Rental Income'] }, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       CashSale.aggregate([
@@ -132,7 +137,8 @@ export async function GET(request: NextRequest) {
     const totalIncome =
       (cashSalesIncome[0]?.total || 0) +
       (installmentIncome[0]?.total || 0) +
-      (rentalIncome[0]?.total || 0);
+      (rentalIncome[0]?.total || 0) +
+      (miscIncome[0]?.total || 0);
 
     const totalExpense =
       (salaryExpenses[0]?.total || 0) +
@@ -151,6 +157,7 @@ export async function GET(request: NextRequest) {
         cashSales: cashSalesIncome[0]?.total || 0,
         installmentPayments: installmentIncome[0]?.total || 0,
         rentalIncome: rentalIncome[0]?.total || 0,
+        miscIncome: miscIncome[0]?.total || 0,
         salaryExpenses: salaryExpenses[0]?.total || 0,
         carPurchaseCosts: carPurchaseCosts[0]?.total || 0,
         repairCosts: repairCosts[0]?.total || 0,

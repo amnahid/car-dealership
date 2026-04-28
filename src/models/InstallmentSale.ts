@@ -114,6 +114,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
 );
 
 InstallmentSaleSchema.index({ status: 1 });
+InstallmentSaleSchema.index({ isDeleted: 1 });
 InstallmentSaleSchema.index({ car: 1 });
 InstallmentSaleSchema.index({ customer: 1 });
 InstallmentSaleSchema.index({ startDate: -1 });

@@ -54,6 +54,7 @@ const SupplierSchema = new Schema<ISupplierDocument>(
 );
 
 SupplierSchema.index({ status: 1 });
+SupplierSchema.index({ isDeleted: 1 });
 SupplierSchema.index({ createdAt: -1 });
 
 SupplierSchema.pre('save', async function (this: ISupplierDocument) {

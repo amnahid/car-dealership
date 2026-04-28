@@ -86,6 +86,7 @@ const CarSchema = new Schema(
 // Using 'any' due to TypeScript limitation with `model` field name conflict
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 CarSchema.index({ status: 1 });
+CarSchema.index({ isDeleted: 1 });
 CarSchema.index({ createdAt: -1 });
 CarSchema.index({ brand: 1 });
 CarSchema.index({ year: 1 });

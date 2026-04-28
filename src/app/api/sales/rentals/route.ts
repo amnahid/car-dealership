@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     const totalAmount = days * dailyRate;
     const vatInfo = calculateVat(totalAmount, ZATCA_VAT_RATE);
 

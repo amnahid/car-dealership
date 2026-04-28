@@ -11,7 +11,9 @@ export type TransactionCategory =
   | 'Rental Income'
   | 'Other Income'
   | 'Other Expense'
-  | 'Repair';
+  | 'Repair'
+  | 'Refund'
+  | 'Fee';
 
 export interface ITransactionDocument extends Document {
   transactionId: string;
@@ -34,7 +36,7 @@ const TransactionSchema = new Schema<ITransactionDocument>(
     type: { type: String, enum: ['Income', 'Expense'], required: true },
     category: {
       type: String,
-      enum: ['Car Purchase', 'Car Repair', 'Salary Payment', 'Office Expense', 'Cash Sale', 'Installment Payment', 'Rental Income', 'Other Income', 'Other Expense', 'Repair'],
+      enum: ['Car Purchase', 'Car Repair', 'Salary Payment', 'Office Expense', 'Cash Sale', 'Installment Payment', 'Rental Income', 'Other Income', 'Other Expense', 'Repair', 'Refund', 'Fee'],
       required: true,
     },
     amount: { type: Number, required: true, min: 0 },

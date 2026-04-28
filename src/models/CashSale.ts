@@ -74,6 +74,7 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
 );
 
 CashSaleSchema.index({ status: 1, saleDate: -1 });
+CashSaleSchema.index({ isDeleted: 1 });
 CashSaleSchema.index({ car: 1 });
 CashSaleSchema.index({ customer: 1 });
 CashSaleSchema.index({ saleDate: -1 });

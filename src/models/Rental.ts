@@ -81,6 +81,7 @@ const RentalSchema = new Schema<IRentalDocument>(
 );
 
 RentalSchema.index({ status: 1 });
+RentalSchema.index({ isDeleted: 1 });
 RentalSchema.index({ car: 1 });
 RentalSchema.index({ customer: 1 });
 RentalSchema.index({ startDate: -1 });
