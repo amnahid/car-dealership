@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Car from '@/models/Car';
 import CarPurchase from '@/models/CarPurchase';
@@ -100,56 +101,73 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { purchase, ...carData } = body;
 
-    const car = await Car.create({ ...carData, createdBy: auth.userId });
+    const session = await mongoose.startSession();
+    let car;
 
-    if (purchase && purchase.purchasePrice > 0) {
-      const supplierId = purchase.supplier;
-      
-      const transaction = await Transaction.create({
-        date: new Date(purchase.purchaseDate),
-        type: 'Expense',
-        category: 'Car Purchase',
-        amount: purchase.purchasePrice,
-        description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
-        referenceId: car.carId,
-        referenceType: 'CarPurchase',
-        createdBy: auth.userId,
+    try {
+      await session.withTransaction(async () => {
+        const cars = await Car.create([{ ...carData, createdBy: auth.userId }], { session });
+        car = cars[0];
+
+        if (purchase && purchase.purchasePrice > 0) {
+          const supplierId = purchase.supplier;
+          
+          const transactions = await Transaction.create([{
+            date: new Date(purchase.purchaseDate),
+            type: 'Expense',
+            category: 'Car Purchase',
+            amount: purchase.purchasePrice,
+            description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
+            referenceId: car.carId,
+            referenceType: 'CarPurchase',
+            createdBy: auth.userId,
+          }], { session });
+          
+          const transaction = transactions[0];
+
+          const carPurchases = await CarPurchase.create([{
+            car: car._id,
+            supplier: supplierId || undefined,
+            supplierName: purchase.supplierName,
+            supplierContact: purchase.supplierContact,
+            purchasePrice: purchase.purchasePrice,
+            purchaseDate: purchase.purchaseDate,
+            isNewCar: purchase.isNewCar ?? true,
+            conditionImages: purchase.conditionImages || [],
+            insuranceUrl: purchase.insuranceUrl,
+            insuranceExpiry: purchase.insuranceExpiry,
+            registrationUrl: purchase.registrationUrl,
+            registrationExpiry: purchase.registrationExpiry,
+            roadPermitUrl: purchase.roadPermitUrl,
+            roadPermitExpiry: purchase.roadPermitExpiry,
+            documentUrl: purchase.documentUrl,
+            notes: purchase.notes,
+            transactionId: transaction._id,
+            createdBy: auth.userId,
+          }], { session });
+          
+          const carPurchase = carPurchases[0];
+
+          car.purchase = carPurchase._id;
+          await car.save({ session });
+        }
+
+        await logActivity({
+          userId: auth.userId,
+          userName: auth.name,
+          action: `Created car ${car.carId}`,
+          module: 'Cars',
+          targetId: car._id.toString(),
+          details: `${car.brand} ${car.model} (${car.year})`,
+          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+        });
       });
-
-      const carPurchase = await CarPurchase.create({
-        car: car._id,
-        supplier: supplierId || undefined,
-        supplierName: purchase.supplierName,
-        supplierContact: purchase.supplierContact,
-        purchasePrice: purchase.purchasePrice,
-        purchaseDate: purchase.purchaseDate,
-        isNewCar: purchase.isNewCar ?? true,
-        conditionImages: purchase.conditionImages || [],
-        insuranceUrl: purchase.insuranceUrl,
-        insuranceExpiry: purchase.insuranceExpiry,
-        registrationUrl: purchase.registrationUrl,
-        registrationExpiry: purchase.registrationExpiry,
-        roadPermitUrl: purchase.roadPermitUrl,
-        roadPermitExpiry: purchase.roadPermitExpiry,
-        documentUrl: purchase.documentUrl,
-        notes: purchase.notes,
-        transactionId: transaction._id,
-        createdBy: auth.userId,
-      });
-
-      car.purchase = carPurchase._id;
-      await car.save();
+    } catch (txError) {
+      console.error('Car creation transaction failed:', txError);
+      throw txError;
+    } finally {
+      await session.endSession();
     }
-
-    await logActivity({
-      userId: auth.userId,
-      userName: auth.name,
-      action: `Created car ${car.carId}`,
-      module: 'Cars',
-      targetId: car._id.toString(),
-      details: `${car.brand} ${car.model} (${car.year})`,
-      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-    });
 
     return NextResponse.json({ car }, { status: 201 });
   } catch (error) {

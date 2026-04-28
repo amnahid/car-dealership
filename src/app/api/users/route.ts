@@ -7,6 +7,10 @@ import { logActivity } from '@/lib/activityLogger';
 import { sendUserCredentialsEmail, generateStrongPassword } from '@/lib/userCredentialsEmail';
 import { ROLE_OPTIONS, isAssignableRole } from '@/lib/rbac';
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthPayload(request);
@@ -29,17 +33,29 @@ export async function POST(request: NextRequest) {
     if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
-    const { name, email, password, role } = await request.json();
+    const body = await request.json();
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body.password === 'string' ? body.password : undefined;
+    const role = typeof body.role === 'string' ? body.role : '';
 
     if (!name || !email || !role) {
       return NextResponse.json({ error: 'Name, email, and role are required' }, { status: 400 });
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
     }
 
     if (!isAssignableRole(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (password !== undefined && password.length < 8) {
+      return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
+    }
+
+    const existing = await User.findOne({ email });
     if (existing) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
     }
@@ -61,7 +77,8 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send credentials email:', err);
     });
 
-    const { password: _, ...userWithoutPassword } = user.toObject();
+    const userWithoutPassword = user.toObject() as any;
+    delete userWithoutPassword.password;
     return NextResponse.json({
       user: userWithoutPassword,
       generatedPassword: password ? undefined : finalPassword,

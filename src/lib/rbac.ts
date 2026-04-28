@@ -56,6 +56,7 @@ const DASHBOARD_ACCESS_RULES: AccessRule[] = [
 const API_ACCESS_RULES: AccessRule[] = [
   { prefix: '/api/users', roles: ['Admin'] },
   { prefix: '/api/zatca', roles: ['Admin'] },
+  { prefix: '/api/seed', roles: ['Admin'] },
   { prefix: '/api/activity-logs', roles: FINANCE_AUDIT_ROLES },
   { prefix: '/api/notifications/logs', roles: FINANCE_AUDIT_ROLES },
 
@@ -97,6 +98,8 @@ const API_ACCESS_RULES: AccessRule[] = [
   { prefix: '/api/dashboard/stats', roles: ALL_ROLES },
   { prefix: '/api/upload', roles: ALL_ROLES },
 ];
+
+const PUBLIC_API_PREFIXES = ['/api/auth', '/api/cron'] as const;
 
 function isPathMatch(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -156,8 +159,12 @@ export function canAccessApiPath(role: UserRole, pathname: string, method: strin
   });
 
   if (!matchingRule) {
-    return true;
+    return false;
   }
 
   return matchingRule.roles.includes(role);
+}
+
+export function isPublicApiPath(pathname: string): boolean {
+  return PUBLIC_API_PREFIXES.some((prefix) => isPathMatch(pathname, prefix));
 }

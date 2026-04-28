@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
+import DataTransferButtons from '@/components/DataTransferButtons';
 import { useTranslations, useLocale } from 'next-intl';
 
 interface SalaryPayment {
@@ -161,9 +162,12 @@ export default function SalaryPaymentsPage() {
     <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('title')}</h2>
-        <button onClick={() => setShowAddModal(true)} style={{ background: '#28aaa9', color: '#fff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer' }}>
-          + {t('addNew')}
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <DataTransferButtons entityType="salaryPayments" onImportSuccess={fetchPayments} />
+          <button onClick={() => setShowAddModal(true)} style={{ background: '#28aaa9', color: '#fff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer' }}>
+            + {t('addNew')}
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

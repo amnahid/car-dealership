@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.role !== normalizedRole) {
-      user.role = normalizedRole;
-      await user.save();
+      await User.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
+      user.role = normalizedRole as any;
     }
 
     return NextResponse.json({

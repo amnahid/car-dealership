@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { hashPassword } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
 import { sendUserCredentialsEmail, generateStrongPassword } from '@/lib/userCredentialsEmail';
-import { isAssignableRole } from '@/lib/rbac';
+import { isAssignableRole, normalizeRole } from '@/lib/rbac';
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export async function GET(
   request: NextRequest,
@@ -18,6 +23,9 @@ export async function GET(
 
     await connectDB();
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+    }
     const user = await User.findById(id).select('-password');
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
     return NextResponse.json({ user });
@@ -38,6 +46,9 @@ export async function PUT(
 
     await connectDB();
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+    }
     const body = await request.json();
 
     if (body.role !== undefined && !isAssignableRole(body.role)) {
@@ -51,17 +62,63 @@ export async function PUT(
       );
     }
 
+    const existingUser = await User.findById(id).select('isActive role');
+    if (!existingUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    if (id === auth.userId) {
+      if (body.role !== undefined && body.role !== existingUser.role) {
+        return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 });
+      }
+      if (body.isActive === false) {
+        return NextResponse.json({ error: 'Cannot deactivate your own account' }, { status: 400 });
+      }
+    }
+
     const updatePayload: Record<string, unknown> = {};
-    if (body.name !== undefined) updatePayload.name = body.name;
-    if (body.email !== undefined) updatePayload.email = String(body.email).toLowerCase();
+    if (body.name !== undefined) {
+      if (typeof body.name !== 'string' || !body.name.trim()) {
+        return NextResponse.json({ error: 'Name must be a non-empty string' }, { status: 400 });
+      }
+      updatePayload.name = body.name.trim();
+    }
+    if (body.email !== undefined) {
+      const normalizedEmail = String(body.email).trim().toLowerCase();
+      if (!normalizedEmail || !isValidEmail(normalizedEmail)) {
+        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+      }
+      updatePayload.email = normalizedEmail;
+    }
     if (body.role !== undefined) updatePayload.role = body.role;
     if (body.phone !== undefined) updatePayload.phone = body.phone;
     if (body.avatar !== undefined) updatePayload.avatar = body.avatar;
-    if (body.isActive !== undefined) updatePayload.isActive = body.isActive;
+    if (body.isActive !== undefined) {
+      if (typeof body.isActive !== 'boolean') {
+        return NextResponse.json({ error: 'isActive must be a boolean' }, { status: 400 });
+      }
+      updatePayload.isActive = body.isActive;
+    }
 
-    const user = await User.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true }).select(
-      '-password'
-    );
+    const currentNormalizedRole = normalizeRole(existingUser.role);
+    const nextRole = body.role ?? existingUser.role;
+    const nextNormalizedRole = normalizeRole(nextRole);
+    const nextIsActive = body.isActive ?? existingUser.isActive;
+    const removingLastAdmin =
+      currentNormalizedRole === 'Admin' &&
+      existingUser.isActive &&
+      (nextNormalizedRole !== 'Admin' || nextIsActive === false);
+
+    if (removingLastAdmin) {
+      const remainingActiveAdmins = await User.countDocuments({
+        _id: { $ne: id },
+        role: 'Admin',
+        isActive: true,
+      });
+      if (remainingActiveAdmins === 0) {
+        return NextResponse.json({ error: 'Cannot modify the last active admin account' }, { status: 400 });
+      }
+    }
+
+    const user = await User.findByIdAndUpdate(id, updatePayload, { new: true, runValidators: true }).select('-password');
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     await logActivity({
@@ -91,9 +148,26 @@ export async function DELETE(
 
     await connectDB();
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+    }
 
     if (id === auth.userId) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
+    }
+
+    const existingUser = await User.findById(id).select('role isActive');
+    if (!existingUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    if (normalizeRole(existingUser.role) === 'Admin' && existingUser.isActive) {
+      const remainingActiveAdmins = await User.countDocuments({
+        _id: { $ne: id },
+        role: 'Admin',
+        isActive: true,
+      });
+      if (remainingActiveAdmins === 0) {
+        return NextResponse.json({ error: 'Cannot deactivate the last active admin account' }, { status: 400 });
+      }
     }
 
     const user = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });
@@ -133,12 +207,16 @@ export async function POST(
 
     await connectDB();
     const { id } = await params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+    }
 
     const user = await User.findById(id);
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const newPassword = generateStrongPassword(12);
     user.password = await hashPassword(newPassword);
+    user.passwordVersion = (user.passwordVersion ?? 1) + 1;
     await user.save();
 
     await logActivity({

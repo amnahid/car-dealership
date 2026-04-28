@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import ImageUpload from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
+import DataTransferButtons from '@/components/DataTransferButtons';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -126,12 +127,15 @@ export default function EmployeesPage() {
     <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('title')}</h2>
-        <button
-          onClick={() => { setEditingEmployee(null); setShowModal(true); }}
-          style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}
-        >
-          + {t('addNew')}
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <DataTransferButtons entityType="employees" onImportSuccess={fetchEmployees} />
+          <button
+            onClick={() => { setEditingEmployee(null); setShowModal(true); }}
+            style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}
+          >
+            + {t('addNew')}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import DataTransferButtons from '@/components/DataTransferButtons';
 
 interface ActivityLog {
   _id: string;
@@ -43,7 +44,10 @@ export default function ActivityLogsPage() {
 
   return (
     <div style={{ marginBottom: '24px' }}>
-      <h2 className="page-title" style={{ marginBottom: '24px', textAlign: isRtl ? 'right' : 'left' }}>{t('title')}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <h2 className="page-title" style={{ margin: 0 }}>{t('title')}</h2>
+        <DataTransferButtons entityType="activityLogs" showImport={false} />
+      </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (

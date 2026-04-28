@@ -930,6 +930,8 @@
     "selected": "selected",
     "deleteSelected": "Delete Selected",
     "deleteConfirm": "Are you sure you want to delete these items?",
-    "deleteActionUndone": "This action cannot be undone."
+    "deleteActionUndone": "This action cannot be undone.",
+    "export": "Export CSV",
+    "import": "Import CSV"
   }
 }

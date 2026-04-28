@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import DataTransferButtons from '@/components/DataTransferButtons';
 import { ROLE_OPTIONS } from '@/lib/rbac';
 
 interface User {
@@ -189,21 +190,24 @@ export default function UsersPage() {
         }}
       >
         <h2 className="page-title">{t('title')}</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{
-            background: '#28aaa9',
-            color: '#ffffff',
-            fontSize: '14px',
-            fontWeight: 500,
-            padding: '10px 16px',
-            borderRadius: '3px',
-            border: '1px solid #28aaa9',
-            cursor: 'pointer',
-          }}
-        >
-          + {t('addNew')}
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <DataTransferButtons entityType="users" showImport={false} />
+          <button
+            onClick={() => setShowForm(!showForm)}
+            style={{
+              background: '#28aaa9',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 500,
+              padding: '10px 16px',
+              borderRadius: '3px',
+              border: '1px solid #28aaa9',
+              cursor: 'pointer',
+            }}
+          >
+            + {t('addNew')}
+          </button>
+        </div>
       </div>
 
       {showForm && (

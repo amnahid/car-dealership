@@ -27,18 +27,21 @@ async function getUser() {
   try {
     const { payload } = await jwtVerify(token, getSecret());
     const userId = payload.userId as string;
+    const tokenPasswordVersion = payload.passwordVersion as number | undefined;
     if (!userId) return null;
+    if (typeof tokenPasswordVersion !== 'number') return null;
 
     await connectDB();
     const user = await User.findById(userId).select('-password');
     if (!user) return null;
+    if (user.isActive === false) return null;
+    if (user.passwordVersion !== tokenPasswordVersion) return null;
 
     const normalizedRole = normalizeRole(user.role);
     if (!normalizedRole) return null;
 
     if (user.role !== normalizedRole) {
-      user.role = normalizedRole;
-      await user.save();
+      await User.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
     }
 
     return {

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import EditRepairModal from '@/components/EditRepairModal';
+import DataTransferButtons from '@/components/DataTransferButtons';
 import { useTranslations, useLocale } from 'next-intl';
 
 interface Repair {
@@ -153,21 +154,24 @@ export default function RepairsPage() {
         }}
       >
         <h2 className="page-title">{t('title')}</h2>
-        <Link
-          href="/dashboard/repairs/new"
-          style={{
-            background: '#28aaa9',
-            color: '#ffffff',
-            fontSize: '14px',
-            fontWeight: 500,
-            padding: '10px 16px',
-            borderRadius: '3px',
-            textDecoration: 'none',
-            border: '1px solid #28aaa9',
-          }}
-        >
-          + {t('addNew')}
-        </Link>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <DataTransferButtons entityType="repairs" onImportSuccess={fetchRepairs} />
+          <Link
+            href="/dashboard/repairs/new"
+            style={{
+              background: '#28aaa9',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 500,
+              padding: '10px 16px',
+              borderRadius: '3px',
+              textDecoration: 'none',
+              border: '1px solid #28aaa9',
+            }}
+          >
+            + {t('addNew')}
+          </Link>
+        </div>
       </div>
 
       {selectedIds.size > 0 && (

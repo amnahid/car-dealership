@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
+import DataTransferButtons from '@/components/DataTransferButtons';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -147,19 +148,22 @@ export default function SuppliersPage() {
     <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title" style={{ margin: 0 }}>{t('title')}</h2>
-        <Link
-          href="/dashboard/cars/suppliers/new"
-          style={{
-            padding: '10px 20px',
-            background: '#28aaa9',
-            color: '#fff',
-            borderRadius: '6px',
-            textDecoration: 'none',
-            fontWeight: 500,
-          }}
-        >
-          + {t('addNew')}
-        </Link>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <DataTransferButtons entityType="suppliers" onImportSuccess={() => fetchSuppliers(pagination.page)} />
+          <Link
+            href="/dashboard/cars/suppliers/new"
+            style={{
+              padding: '10px 20px',
+              background: '#28aaa9',
+              color: '#fff',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontWeight: 500,
+            }}
+          >
+            + {t('addNew')}
+          </Link>
+        </div>
       </div>
 
       <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import DataTransferButtons from '@/components/DataTransferButtons';
 import { useTranslations, useLocale } from 'next-intl';
 
 interface Transaction {
@@ -163,7 +164,8 @@ export default function FinancePage() {
     <div style={{ marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('transactions')}</h2>
-        <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <DataTransferButtons entityType="transactions" onImportSuccess={fetchTransactions} />
           <Link href="/dashboard/finance/reports" style={{ background: '#f5a623', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('reports')}</Link>
           <Link href="/dashboard/finance/expenses" style={{ background: '#ec4561', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('expenses')}</Link>
           <Link href="/dashboard/finance/incomes" style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('incomes')}</Link>

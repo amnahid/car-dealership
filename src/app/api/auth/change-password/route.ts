@@ -4,6 +4,7 @@ import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { hashPassword } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +19,13 @@ export async function POST(request: NextRequest) {
     if (!currentPassword || !newPassword) {
       return NextResponse.json(
         { error: 'Current password and new password are required' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return NextResponse.json(
+        { error: 'New password must be at least 8 characters long' },
         { status: 400 }
       );
     }
@@ -37,8 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    user.password = await hashPassword(newPassword);
+    user.passwordVersion = (user.passwordVersion ?? 1) + 1;
     await user.save();
 
     await logActivity({

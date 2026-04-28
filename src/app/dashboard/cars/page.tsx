@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
+import DataTransferButtons from '@/components/DataTransferButtons';
 import { useDebounce } from '@/hooks/useDebounce';
 import { CarStatus } from '@/types';
 import { useTranslations, useLocale } from 'next-intl';
@@ -222,21 +223,24 @@ export default function CarsPage() {
         }}
       >
         <h2 className="page-title">{t('inventory')}</h2>
-        <Link
-          href="/dashboard/cars/new"
-          style={{
-            background: '#28aaa9',
-            color: '#ffffff',
-            fontSize: '14px',
-            fontWeight: 500,
-            padding: '10px 16px',
-            borderRadius: '3px',
-            textDecoration: 'none',
-            border: '1px solid #28aaa9',
-          }}
-        >
-          + {t('addNew')}
-        </Link>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          <DataTransferButtons entityType="cars" onImportSuccess={fetchCars} />
+          <Link
+            href="/dashboard/cars/new"
+            style={{
+              background: '#28aaa9',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 500,
+              padding: '10px 16px',
+              borderRadius: '3px',
+              textDecoration: 'none',
+              border: '1px solid #28aaa9',
+            }}
+          >
+            + {t('addNew')}
+          </Link>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>

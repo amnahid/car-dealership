@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { canAccessApiPath, canAccessDashboardPath, normalizeRole } from '@/lib/rbac';
+import { canAccessApiPath, canAccessDashboardPath, isPublicApiPath, normalizeRole } from '@/lib/rbac';
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth-token')?.value;
   const isDashboardPath = pathname.startsWith('/dashboard');
-  const isProtectedApiPath = pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/');
+  const isProtectedApiPath = pathname.startsWith('/api/') && !isPublicApiPath(pathname);
 
   if (!isDashboardPath && !isProtectedApiPath) {
     return NextResponse.next();
