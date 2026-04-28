@@ -530,7 +530,7 @@ export default function CarsPage() {
                           </td>
                           <td style={{ padding: '8px', width: '60px' }}>
                             {car.images?.[0] ? (
-                              <img src={car.images[0]} alt={car.carId} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                              <img src={car.images[0]} alt={car.carId} style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                             ) : (
                               <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px' }} />
                             )}

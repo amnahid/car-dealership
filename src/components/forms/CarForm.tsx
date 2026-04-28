@@ -71,6 +71,17 @@ const emptyPurchase: PurchaseData = {
   notes: '',
 };
 
+function formatDateForInput(dateString: string | undefined): string {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+  } catch {
+    return '';
+  }
+}
+
 export default function CarForm({ initialData, mode }: CarFormProps) {
   const t = useTranslations('CarForm');
   const commonT = useTranslations('Common');
@@ -114,15 +125,15 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
           supplierName: initialData.purchase.supplierName || '',
           supplierContact: initialData.purchase.supplierContact || '',
           purchasePrice: initialData.purchase.purchasePrice?.toString() || '',
-          purchaseDate: initialData.purchase.purchaseDate?.toString() || '',
+          purchaseDate: formatDateForInput(initialData.purchase.purchaseDate),
           isNewCar: initialData.purchase.isNewCar ?? true,
           conditionImages: initialData.purchase.conditionImages || [],
           insuranceUrl: initialData.purchase.insuranceUrl || '',
-          insuranceExpiry: initialData.purchase.insuranceExpiry?.toString() || '',
+          insuranceExpiry: formatDateForInput(initialData.purchase.insuranceExpiry),
           registrationUrl: initialData.purchase.registrationUrl || '',
-          registrationExpiry: initialData.purchase.registrationExpiry?.toString() || '',
+          registrationExpiry: formatDateForInput(initialData.purchase.registrationExpiry),
           roadPermitUrl: initialData.purchase.roadPermitUrl || '',
-          roadPermitExpiry: initialData.purchase.roadPermitExpiry?.toString() || '',
+          roadPermitExpiry: formatDateForInput(initialData.purchase.roadPermitExpiry),
           documentUrl: initialData.purchase.documentUrl || '',
           notes: initialData.purchase.notes || '',
         } : { ...emptyPurchase },

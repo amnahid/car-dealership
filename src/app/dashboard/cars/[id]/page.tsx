@@ -177,7 +177,7 @@ export default function CarDetailPage() {
               <div className="grid grid-cols-4 gap-2">
                 {car.purchase.conditionImages.map((img, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={img} alt={`Condition ${i + 1}`} className="w-full h-20 object-cover rounded" />
+                  <img key={i} src={img} alt={`Condition ${i + 1}`} className="w-full h-24 object-contain bg-gray-50 rounded border border-gray-100" />
                 ))}
               </div>
             </div>
@@ -275,7 +275,7 @@ export default function CarDetailPage() {
             <div className="grid grid-cols-3 gap-2">
               {car.images.map((img, i) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={img} alt={`Car ${i + 1}`} className="w-full h-24 object-cover rounded shadow-sm" />
+                <img key={i} src={img} alt={`Car ${i + 1}`} className="w-full h-24 object-contain bg-gray-50 rounded border border-gray-100 shadow-sm" />
               ))}
             </div>
           </div>
