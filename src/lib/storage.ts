@@ -33,7 +33,7 @@ export async function uploadFile(
   if (USE_VERCEL_BLOB && BLOB_TOKEN) {
     return uploadToVercelBlob(buffer, originalName, contentType, folder);
   }
-  return uploadToLocal(buffer, originalName, folder);
+  return uploadToLocal(buffer, originalName, contentType, folder);
 }
 
 export async function deleteFile(url: string): Promise<{ success: boolean; error?: string }> {
@@ -96,6 +96,7 @@ async function deleteFromVercelBlob(url: string): Promise<{ success: boolean; er
 async function uploadToLocal(
   buffer: Buffer,
   originalName: string,
+  contentType: string,
   folder: string
 ): Promise<UploadResult> {
   try {
@@ -106,14 +107,15 @@ async function uploadToLocal(
       fs.mkdirSync(targetDir, { recursive: true });
     }
 
-    const ext = path.extname(originalName);
+    let ext = path.extname(originalName);
     let baseName = path.basename(originalName, ext);
     
     if (!baseName || baseName === 'blob' || !ext) {
+      ext = contentType.includes('pdf') ? '.pdf' : '.jpg';
       baseName = `document_${Date.now()}`;
     }
     
-    const safeName = `${Date.now()}-${sanitizeFilename(baseName)}${ext || '.pdf'}`;
+    const safeName = `${Date.now()}-${sanitizeFilename(baseName)}${ext}`;
     const filePath = path.join(targetDir, safeName);
 
     fs.writeFileSync(filePath, buffer);
