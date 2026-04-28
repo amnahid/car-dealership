@@ -24,34 +24,33 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'delete') {
-      // Find cars to get their carIds and purchase IDs
-      const carsToDelete = await Car.find({ _id: { $in: ids } });
-      const purchaseIds = carsToDelete.map(c => c.purchase).filter(Boolean);
-      const carIds = carsToDelete.map(c => c.carId);
+      const carsToUpdate = await Car.find({ _id: { $in: ids } });
+      const carIds = carsToUpdate.map(c => c.carId);
 
-      // Delete associated purchases
-      if (purchaseIds.length > 0) {
-        await CarPurchase.deleteMany({ _id: { $in: purchaseIds } });
-      }
-
-      // Delete associated transactions
+      // Soft delete related transactions
       if (carIds.length > 0) {
-        await Transaction.deleteMany({ referenceId: { $in: carIds }, referenceType: 'CarPurchase' });
+        await Transaction.updateMany(
+          { referenceId: { $in: carIds }, referenceType: 'CarPurchase' },
+          { $set: { isDeleted: true } }
+        );
       }
 
-      // Delete cars
-      const result = await Car.deleteMany({ _id: { $in: ids } });
+      // Soft delete cars
+      const result = await Car.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isDeleted: true } }
+      );
 
       await logActivity({
         userId: auth.userId,
         userName: auth.name,
-        action: `Bulk deleted ${result.deletedCount} cars`,
+        action: `Bulk deleted ${result.modifiedCount} cars`,
         module: 'Cars',
         details: `IDs: ${ids.join(', ')}`,
         ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
       });
 
-      return NextResponse.json({ message: `Successfully deleted ${result.deletedCount} cars` });
+      return NextResponse.json({ message: `Successfully deleted ${result.modifiedCount} cars` });
     }
 
     if (action === 'update-status') {

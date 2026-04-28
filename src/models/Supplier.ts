@@ -19,6 +19,7 @@ export interface ISupplierDocument extends Document {
   salesAgent?: ISupplierSalesAgent;
   status: 'active' | 'inactive';
   notes?: string;
+  isDeleted: boolean;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -46,6 +47,7 @@ const SupplierSchema = new Schema<ISupplierDocument>(
       default: 'active',
     },
     notes: { type: String },
+    isDeleted: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

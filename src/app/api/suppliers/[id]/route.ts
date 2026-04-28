@@ -146,7 +146,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Supplier not found' }, { status: 404 });
     }
 
-    await Supplier.findByIdAndDelete(id);
+    await Supplier.findByIdAndUpdate(id, { isDeleted: true });
 
     return NextResponse.json({ message: 'Supplier deleted successfully' });
   } catch (error) {

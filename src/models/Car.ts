@@ -15,6 +15,7 @@ export interface ICarRaw {
   documents: string[];
   notes: string;
   totalRepairCost: number;
+  isDeleted: boolean;
   purchase?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -56,6 +57,7 @@ const CarSchema = new Schema(
     documents: [{ type: String }],
     notes: { type: String },
     totalRepairCost: { type: Number, default: 0 },
+    isDeleted: { type: Boolean, default: false },
     purchase: { type: Schema.Types.ObjectId, ref: 'CarPurchase' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     gpsProvider: {

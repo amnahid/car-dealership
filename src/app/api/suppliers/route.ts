@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     if (list === 'true') {
-      const query: Record<string, unknown> = { status: 'active' };
+      const query: Record<string, unknown> = { status: 'active', isDeleted: { $ne: true } };
       if (search) {
         query.$or = [
           { companyName: { $regex: search, $options: 'i' } },
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ suppliers });
     }
 
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = { isDeleted: { $ne: true } };
 
     if (search) {
       query.$or = [

@@ -172,19 +172,19 @@ export async function DELETE(
 
     await connectDB();
     const { id } = await params;
-    const car = await Car.findByIdAndUpdate(id, { status: 'Sold' }, { new: true });
+    const car = await Car.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
     if (!car) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
 
     await logActivity({
       userId: auth.userId,
       userName: auth.name,
-      action: `Archived car ${car.carId}`,
+      action: `Deleted car ${car.carId}`,
       module: 'Cars',
       targetId: car._id.toString(),
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    return NextResponse.json({ message: 'Car archived successfully' });
+    return NextResponse.json({ message: 'Car deleted successfully' });
   } catch (error) {
     console.error('Delete car error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

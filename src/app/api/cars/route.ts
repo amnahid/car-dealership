@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
     const color = searchParams.get('color');
     const status = searchParams.get('status');
 
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = {
+      isDeleted: { $ne: true }
+    };
     if (brand) query.brand = { $regex: brand, $options: 'i' };
     if (model) query.model = { $regex: model, $options: 'i' };
     if (year) query.year = parseInt(year);
