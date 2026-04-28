@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const client = new ZatcaClient(config);
 
     if (action === 'generate_keys' || action === 'generate_csr') {
-      const { privateKey, csr } = await client.generateKeysAndCSR();
+      const { privateKey, csr } = await client.generateKeysAndCSR('Amyal');
 
       await ZatcaConfig.updateOne(
         { _id: config._id },
@@ -43,13 +43,13 @@ export async function POST(request: NextRequest) {
       const { otp } = body;
       if (!otp) return NextResponse.json({ error: 'OTP is required' }, { status: 400 });
 
-      // 1. Generate keys and CSR
-      const { privateKey, csr } = await client.generateKeysAndCSR();
+      // Always generate a fresh CSR for auto_onboard to ensure it matches the current request
+      const { privateKey, csr } = await client.generateKeysAndCSR('Amyal');
       
-      // Update config with private key and CSR so they are persisted
+      // Update config with fresh private key and CSR
       await ZatcaConfig.updateOne({ _id: config._id }, { $set: { privateKey, csr } });
 
-      // 2. Request Compliance CSID (using the same instance that has the CSR in memory)
+      // Request Compliance CSID (using the same instance that has the NEW CSR in memory)
       const requestId = await client.issueComplianceCertificate(otp);
       const info = client.getEgsInfo();
 

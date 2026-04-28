@@ -20,10 +20,16 @@ export class ZatcaClient {
   constructor(config: IZatcaConfigDocument) {
     this.config = config;
     const extConfig = config as ExtendedConfig;
+    
+    // ZATCA expects certain formats. 
+    // EGS Serial Number (uuid) should be something like a unique device ID.
+    // custom_id (commonName) is often the TRN or a unique identifier.
     const egsUnit: EGSUnitInfo = {
-      uuid: extConfig.egsUuid || '12345678-1234-1234-1234-123456789012',
-      custom_id: extConfig.egsCustomId || 'EGS-1',
-      model: extConfig.egsModel || 'Model-1',
+      uuid: extConfig.egsUuid || '1-CarDealership|2-v1|3-6789', // Matches 1-SolutionName|2-Model|3-Serial pattern? 
+                                                              // Actually the package template prepends 1-SolutionName|2-Model|3-
+                                                              // So we just need the Serial part.
+      custom_id: extConfig.egsCustomId || config.trn, 
+      model: extConfig.egsModel || 'V1',
       CRN_number: extConfig.crnNumber || '1234567890',
       VAT_name: config.sellerName,
       VAT_number: config.trn,
@@ -51,7 +57,7 @@ export class ZatcaClient {
   /**
    * Step 1 & 2: Generate Keys and CSR
    */
-  async generateKeysAndCSR(solutionName: string = 'CarDealership'): Promise<{ privateKey: string; csr: string }> {
+  async generateKeysAndCSR(solutionName: string = 'Amyal'): Promise<{ privateKey: string; csr: string }> {
     const isProduction = this.config.environment === 'production';
     await this.egs.generateNewKeysAndCSR(isProduction, solutionName);
     const info = this.egs.get();
@@ -65,7 +71,8 @@ export class ZatcaClient {
    * Step 3: Issue Compliance CSID
    */
   async issueComplianceCertificate(otp: string): Promise<string> {
-    return await this.egs.issueComplianceCertificate(otp);
+    // Ensure OTP is a string and trimmed
+    return await this.egs.issueComplianceCertificate(String(otp).trim());
   }
 
   /**

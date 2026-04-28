@@ -1,0 +1,1 @@
+here is markdown file of migration plan MIGRATION_PLAN.md in root. read that first to start solving runtime errors i give next. if you make change anything related data you should see schema first.
