@@ -54,6 +54,7 @@ export interface IInstallmentSaleDocument extends Document {
   agentName?: string;
   agentCommission?: number;
   status: InstallmentSaleStatus;
+  isDeleted: boolean;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -105,6 +106,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'], default: 'Active' },
+    isDeleted: { type: Boolean, default: false },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

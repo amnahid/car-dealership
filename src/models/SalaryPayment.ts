@@ -11,6 +11,7 @@ export interface ISalaryPaymentDocument extends Document {
   year: number;
   paymentType: 'Monthly' | 'Bonus' | 'Advance' | 'Deduction';
   status: 'Active' | 'Cancelled';
+  isDeleted: boolean;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -31,6 +32,7 @@ const SalaryPaymentSchema = new Schema<ISalaryPaymentDocument>(
       default: 'Monthly',
     },
     status: { type: String, enum: ['Active', 'Cancelled'], default: 'Active' },
+    isDeleted: { type: Boolean, default: false },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

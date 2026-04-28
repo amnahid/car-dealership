@@ -22,6 +22,7 @@ export interface ICashSaleDocument extends Document {
   agentCommission?: number;
   saleDate: Date;
   status: 'Active' | 'Cancelled';
+  isDeleted: boolean;
   invoiceUrl?: string;
   // ZATCA fields
   invoiceType: ZatcaInvoiceType;
@@ -56,6 +57,7 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     agentCommission: { type: Number, default: 0, min: 0 },
     saleDate: { type: Date, required: true },
     status: { type: String, enum: ['Active', 'Cancelled'], default: 'Active' },
+    isDeleted: { type: Boolean, default: false },
     invoiceUrl: { type: String },
     invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
     buyerTrn: { type: String },

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const paymentType = searchParams.get('paymentType') || '';
 
     const query: Record<string, unknown> = {
-      status: { $ne: 'Cancelled' },
+      isDeleted: { $ne: true },
     };
 
     if (employeeId) query.employee = employeeId;
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       SalaryPayment.aggregate([
-        { $match: { month: now.getMonth() + 1, year: now.getFullYear(), status: { $ne: 'Cancelled' } } },
+        { $match: { month: now.getMonth() + 1, year: now.getFullYear(), status: { $ne: 'Cancelled' }, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
     ]);

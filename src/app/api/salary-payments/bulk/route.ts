@@ -23,15 +23,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'cancel') {
-      const payments = await SalaryPayment.find({ _id: { $in: ids }, status: 'Active' });
+      const payments = await SalaryPayment.find({ _id: { $in: ids }, isDeleted: { $ne: true } });
       const activeIds = payments.map(p => p._id);
       const paymentObjectIds = payments.map(p => p._id.toString());
 
       if (activeIds.length > 0) {
-        // Update status to Cancelled
+        // Soft delete
         await SalaryPayment.updateMany(
           { _id: { $in: activeIds } },
-          { $set: { status: 'Cancelled' } }
+          { $set: { isDeleted: true } }
         );
 
         // Soft delete associated transactions
@@ -46,15 +46,15 @@ export async function POST(request: NextRequest) {
         await logActivity({
           userId: auth.userId,
           userName: auth.name,
-          action: `Bulk cancelled ${activeIds.length} salary payments`,
+          action: `Bulk deleted ${activeIds.length} salary payments`,
           module: 'HRM',
           details: `IDs: ${activeIds.join(', ')}`,
           ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
         });
       }
 
-      return NextResponse.json({ 
-        message: `Successfully cancelled ${activeIds.length} payments.`,
+      return NextResponse.json({ message: `Successfully deleted ${activeIds.length} payments` });
+    }
         cancelledCount: activeIds.length
       });
     }

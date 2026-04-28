@@ -26,30 +26,20 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '15');
     const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || '';
     const customerId = searchParams.get('customer');
 
-    const statusFilter = { status: { $nin: ['Cancelled', 'Completed'] } };
-
-    let query: Record<string, unknown> = { ...statusFilter };
+    let query: Record<string, unknown> = { isDeleted: { $ne: true } };
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
     }
 
     if (search) {
-      query = {
-        $and: [
-          statusFilter,
-          {
-            $or: [
-              { customerName: { $regex: search, $options: 'i' } },
-              { carId: { $regex: search, $options: 'i' } },
-              { rentalId: { $regex: search, $options: 'i' } },
-            ]
-          }
-        ]
-      };
+      query.$or = [
+        { customerName: { $regex: search, $options: 'i' } },
+        { carId: { $regex: search, $options: 'i' } },
+        { rentalId: { $regex: search, $options: 'i' } },
+      ];
     }
 
     if (status) {

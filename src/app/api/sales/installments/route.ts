@@ -29,27 +29,18 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || '';
     const customerId = searchParams.get('customer');
 
-    const statusFilter = { status: { $ne: 'Cancelled' } };
-
-    let query: Record<string, unknown> = { ...statusFilter };
+    let query: Record<string, unknown> = { isDeleted: { $ne: true } };
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
     }
 
     if (search) {
-      query = {
-        $and: [
-          statusFilter,
-          {
-            $or: [
-              { customerName: { $regex: search, $options: 'i' } },
-              { carId: { $regex: search, $options: 'i' } },
-              { saleId: { $regex: search, $options: 'i' } },
-            ]
-          }
-        ]
-      };
+      query.$or = [
+        { customerName: { $regex: search, $options: 'i' } },
+        { carId: { $regex: search, $options: 'i' } },
+        { saleId: { $regex: search, $options: 'i' } },
+      ];
     }
 
     if (status) {

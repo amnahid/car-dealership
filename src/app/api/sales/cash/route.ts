@@ -29,30 +29,18 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const customerId = searchParams.get('customer');
 
-    const statusFilter = { status: { $ne: 'Cancelled' } };
-
-    let query: Record<string, unknown> = { ...statusFilter };
+    let query: Record<string, unknown> = { isDeleted: { $ne: true } };
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
     }
 
     if (search) {
-      query = {
-        $and: [
-          statusFilter,
-          {
-            $or: [
-              { customerName: { $regex: search, $options: 'i' } },
-              { carId: { $regex: search, $options: 'i' } },
-              { saleId: { $regex: search, $options: 'i' } },
-            ]
-          }
-        ]
-      };
-      if (customerId) {
-        (query.$and as Record<string, unknown>[]).push({ customer: new mongoose.Types.ObjectId(customerId) });
-      }
+      query.$or = [
+        { customerName: { $regex: search, $options: 'i' } },
+        { carId: { $regex: search, $options: 'i' } },
+        { saleId: { $regex: search, $options: 'i' } },
+      ];
     }
 
     const skip = (page - 1) * limit;

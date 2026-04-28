@@ -24,16 +24,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'cancel') {
-      const rentals = await Rental.find({ _id: { $in: ids }, status: 'Active' });
+      const rentals = await Rental.find({ _id: { $in: ids }, isDeleted: { $ne: true } });
       const activeIds = rentals.map(r => r._id);
       const carIds = rentals.map(r => r.car);
       const rentalObjectIds = rentals.map(r => r._id.toString());
 
       if (activeIds.length > 0) {
-        // Update status to Cancelled
+        // Soft delete
         await Rental.updateMany(
           { _id: { $in: activeIds } },
-          { $set: { status: 'Cancelled' } }
+          { $set: { isDeleted: true } }
         );
 
         // Revert cars status to In Stock
@@ -54,15 +54,15 @@ export async function POST(request: NextRequest) {
         await logActivity({
           userId: auth.userId,
           userName: auth.name,
-          action: `Bulk cancelled ${activeIds.length} rentals`,
-          module: 'Sales',
+          action: `Bulk deleted ${activeIds.length} rentals`,
+          module: 'Rental',
           details: `IDs: ${activeIds.join(', ')}`,
           ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
         });
       }
 
-      return NextResponse.json({ 
-        message: `Successfully cancelled ${activeIds.length} rentals.`,
+      return NextResponse.json({ message: `Successfully deleted ${activeIds.length} rentals` });
+    }
         cancelledCount: activeIds.length
       });
     }

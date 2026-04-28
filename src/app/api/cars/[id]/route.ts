@@ -69,6 +69,16 @@ export async function PUT(
         car = await Car.findById(id).session(session);
         if (!car) throw new Error('Car not found');
 
+        // Prevent manual status changes for critical states
+        if (carData.status && carData.status !== car.status) {
+          if (['Sold', 'Rented'].includes(car.status)) {
+            throw new Error(`Cannot manually change status of a ${car.status} car. Use the appropriate sale or rental workflow.`);
+          }
+          if (['Sold', 'Rented'].includes(carData.status)) {
+            throw new Error(`Cannot manually set status to ${carData.status}. Use the appropriate sale or rental workflow.`);
+          }
+        }
+
         if (Object.keys(carData).length > 0) {
           Object.assign(car, carData);
           await car.save({ session });
@@ -172,8 +182,29 @@ export async function DELETE(
 
     await connectDB();
     const { id } = await params;
+
+    // Check for active sales or rentals
+    const [activeCash, activeInstallment, activeRental] = await Promise.all([
+      (await import('@/models/CashSale')).default.findOne({ car: id, status: 'Active' }),
+      (await import('@/models/InstallmentSale')).default.findOne({ car: id, status: { $in: ['Active', 'Defaulted'] } }),
+      (await import('@/models/Rental')).default.findOne({ car: id, status: 'Active' }),
+    ]);
+
+    if (activeCash || activeInstallment || activeRental) {
+      return NextResponse.json({ 
+        error: 'Cannot delete car with an active sale or rental. Cancel the sale/rental first.' 
+      }, { status: 400 });
+    }
+
     const car = await Car.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
     if (!car) return NextResponse.json({ error: 'Car not found' }, { status: 404 });
+
+    // Soft delete associated data to keep reports clean
+    await Promise.all([
+      Repair.updateMany({ car: id }, { isDeleted: true }),
+      VehicleDocument.deleteMany({ car: id }), // Documents don't have isDeleted, so we remove them or they linger
+      Transaction.updateMany({ referenceId: car.carId, referenceType: 'CarPurchase' }, { isDeleted: true })
+    ]);
 
     await logActivity({
       userId: auth.userId,

@@ -20,6 +20,7 @@ export interface IRentalDocument extends Document {
   totalAmountWithVat: number;
   securityDeposit: number;
   status: RentalStatus;
+  isDeleted: boolean;
   returnDate?: Date;
   actualReturnDate?: Date;
   lateFee?: number;
@@ -57,6 +58,7 @@ const RentalSchema = new Schema<IRentalDocument>(
     totalAmountWithVat: { type: Number, default: 0, min: 0 },
     securityDeposit: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: ['Active', 'Completed', 'Cancelled'], default: 'Active' },
+    isDeleted: { type: Boolean, default: false },
     returnDate: { type: Date },
     actualReturnDate: { type: Date },
     lateFee: { type: Number, default: 0, min: 0 },

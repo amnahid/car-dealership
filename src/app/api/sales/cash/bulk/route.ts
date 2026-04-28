@@ -24,16 +24,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'cancel') {
-      const sales = await CashSale.find({ _id: { $in: ids }, status: 'Active' });
+      const sales = await CashSale.find({ _id: { $in: ids }, isDeleted: { $ne: true } });
       const activeIds = sales.map(s => s._id);
       const carIds = sales.map(s => s.car);
       const saleObjectIds = sales.map(s => s._id.toString());
 
       if (activeIds.length > 0) {
-        // Update status to Cancelled
+        // Soft delete
         await CashSale.updateMany(
           { _id: { $in: activeIds } },
-          { $set: { status: 'Cancelled' } }
+          { $set: { isDeleted: true } }
         );
 
         // Revert cars status to In Stock
@@ -54,15 +54,15 @@ export async function POST(request: NextRequest) {
         await logActivity({
           userId: auth.userId,
           userName: auth.name,
-          action: `Bulk cancelled ${activeIds.length} cash sales`,
+          action: `Bulk deleted ${activeIds.length} cash sales`,
           module: 'Sales',
           details: `IDs: ${activeIds.join(', ')}`,
           ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
         });
       }
 
-      return NextResponse.json({ 
-        message: `Successfully cancelled ${activeIds.length} cash sales.`,
+      return NextResponse.json({ message: `Successfully deleted ${activeIds.length} sales` });
+    }
         cancelledCount: activeIds.length
       });
     }

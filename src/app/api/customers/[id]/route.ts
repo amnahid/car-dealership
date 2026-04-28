@@ -134,6 +134,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid customer ID' }, { status: 400 });
     }
 
+    // Check for active sales or rentals
+    const [activeCash, activeInstallment, activeRental] = await Promise.all([
+      (await import('@/models/CashSale')).default.findOne({ customer: id, status: 'Active' }),
+      (await import('@/models/InstallmentSale')).default.findOne({ customer: id, status: { $in: ['Active', 'Defaulted'] } }),
+      (await import('@/models/Rental')).default.findOne({ customer: id, status: 'Active' }),
+    ]);
+
+    if (activeCash || activeInstallment || activeRental) {
+      return NextResponse.json({ 
+        error: 'Cannot delete customer with active sales or rentals. Cancel or complete them first.' 
+      }, { status: 400 });
+    }
+
     const customer = await Customer.findByIdAndUpdate(
       id,
       { isDeleted: true },
