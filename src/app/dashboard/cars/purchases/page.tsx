@@ -210,7 +210,9 @@ export default function PurchasesPage() {
                   {purchase.car?.images?.[0] ? (
                     <img src={purchase.car.images[0]} alt={purchase.car.brand} style={{ width: '60px', height: '45px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                   ) : (
-                    <div style={{ width: '60px', height: '45px', background: '#eee', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>No Image</div>
+                    <div style={{ width: '60px', height: '45px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '12px' }}>🚗</span>
+                    </div>
                   )}
                 </td>
                 <td style={tdStyle}>

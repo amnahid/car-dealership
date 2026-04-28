@@ -130,7 +130,9 @@ export default function StockPage() {
                       {car.images?.[0] ? (
                         <img src={car.images[0]} alt={car.carId} style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                       ) : (
-                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px' }} />
+                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '12px' }}>🚗</span>
+                        </div>
                       )}
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 500, color: '#28aaa9' }}>{car.carId}</td>
