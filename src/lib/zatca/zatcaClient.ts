@@ -22,12 +22,10 @@ export class ZatcaClient {
     const extConfig = config as ExtendedConfig;
     
     // ZATCA expects certain formats. 
-    // EGS Serial Number (uuid) should be something like a unique device ID.
-    // custom_id (commonName) is often the TRN or a unique identifier.
+    // EGS Serial Number (uuid) should be a unique identifier for this unit.
+    // The package template will wrap this as: 1-SolutionName|2-Model|3-Serial
     const egsUnit: EGSUnitInfo = {
-      uuid: extConfig.egsUuid || '1-CarDealership|2-v1|3-6789', // Matches 1-SolutionName|2-Model|3-Serial pattern? 
-                                                              // Actually the package template prepends 1-SolutionName|2-Model|3-
-                                                              // So we just need the Serial part.
+      uuid: extConfig.egsUuid || '6789', 
       custom_id: extConfig.egsCustomId || config.trn, 
       model: extConfig.egsModel || 'V1',
       CRN_number: extConfig.crnNumber || '1234567890',
@@ -50,7 +48,7 @@ export class ZatcaClient {
       production_api_secret: config.productionCsidSecret,
     };
 
-    const env = config.environment === 'production' ? 'production' : 'simulation';
+    const env = config.environment === 'production' ? 'production' : 'development';
     this.egs = new EGS(egsUnit, env);
   }
 
