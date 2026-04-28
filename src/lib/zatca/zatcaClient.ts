@@ -35,6 +35,7 @@ export class ZatcaClient {
       branch_industry: 'Automotive',
       location: {
         city: config.address.city,
+        city_subdivision: config.address.district,
         street: config.address.streetName,
         building: config.address.buildingNumber,
         plot_identification: '1234',
@@ -148,11 +149,14 @@ export class ZatcaClient {
    * Check compliance (Step 3 verification)
    */
   async checkCompliance(data: ZatcaInvoiceData): Promise<Record<string, unknown>> {
+    const isStandard = data.invoiceType === 'Standard';
+    const invoiceCode = isStandard ? '0100000' : '0200000';
+
     const invoice = new ZATCAInvoice({
         props: {
           egs_info: this.egs.get(),
           invoice_type: ZATCAInvoiceTypes.INVOICE,
-          invoice_code: '0200000',
+          invoice_code: invoiceCode as "0100000" | "0200000",
           invoice_counter_number: 1,
           invoice_serial_number: 'TEST-COMPLIANCE',
           issue_date: data.issueDate.toISOString().split('T')[0],
