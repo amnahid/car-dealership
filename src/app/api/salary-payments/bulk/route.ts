@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (action === 'cancel') {
       const payments = await SalaryPayment.find({ _id: { $in: ids }, status: 'Active' });
       const activeIds = payments.map(p => p._id);
-      const paymentIds = payments.map(p => p.paymentId);
+      const paymentObjectIds = payments.map(p => p._id.toString());
 
       if (activeIds.length > 0) {
         // Update status to Cancelled
@@ -34,11 +34,14 @@ export async function POST(request: NextRequest) {
           { $set: { status: 'Cancelled' } }
         );
 
-        // Delete associated transactions
-        await Transaction.deleteMany({
-          referenceId: { $in: paymentIds },
-          referenceType: 'SalaryPayment'
-        });
+        // Soft delete associated transactions
+        await Transaction.updateMany(
+          {
+            referenceId: { $in: paymentObjectIds },
+            referenceType: 'SalaryPayment'
+          },
+          { $set: { isDeleted: true } }
+        );
 
         await logActivity({
           userId: auth.userId,

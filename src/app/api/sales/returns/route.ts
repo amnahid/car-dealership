@@ -140,6 +140,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Original sale not found' }, { status: 404 });
     }
 
+    const existingReturn = await PurchaseReturn.findOne({ originalSaleId, status: { $ne: 'Rejected' } });
+    if (existingReturn) {
+      return NextResponse.json({ error: 'An active return request already exists for this sale' }, { status: 400 });
+    }
+
     const newReturn = await PurchaseReturn.create({
       originalSale: Sale._id,
       originalSaleId,

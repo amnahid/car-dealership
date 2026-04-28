@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       const sales = await InstallmentSale.find({ _id: { $in: ids }, status: 'Active' });
       const activeIds = sales.map(s => s._id);
       const carIds = sales.map(s => s.car);
-      const saleIds = sales.map(s => s.saleId);
+      const saleObjectIds = sales.map(s => s._id.toString());
 
       if (activeIds.length > 0) {
         // Update status to Cancelled
@@ -42,11 +42,14 @@ export async function POST(request: NextRequest) {
           { $set: { status: 'In Stock' } }
         );
 
-        // Delete associated transactions (purchase and payments)
-        await Transaction.deleteMany({
-          referenceId: { $in: saleIds },
-          referenceType: { $in: ['InstallmentSale', 'InstallmentPayment'] }
-        });
+        // Soft delete associated transactions (purchase and payments)
+        await Transaction.updateMany(
+          {
+            referenceId: { $in: saleObjectIds },
+            referenceType: { $in: ['InstallmentSale', 'InstallmentPayment'] }
+          },
+          { $set: { isDeleted: true } }
+        );
 
         await logActivity({
           userId: auth.userId,
