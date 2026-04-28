@@ -333,7 +333,7 @@ export async function PATCH(
         carModel: carData?.model,
         customerName: sale.customerName,
         customerPhone: sale.customerPhone,
-        customerAddress: customerData?.address,
+        customerAddress: customerData ? `${customerData.buildingNumber} ${customerData.streetName}, ${customerData.district}, ${customerData.city} ${customerData.postalCode}` : '',
         salePrice: sale.salePrice,
         discountAmount: sale.discountAmount,
         finalPrice: sale.finalPrice,

@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         carModel: (carData as any)?.model,
         customerName: (sale as any).customerName,
         customerPhone: (sale as any).customerPhone,
-        customerAddress: (customerData as any)?.address,
+        customerAddress: (customerData as any) ? `${(customerData as any).buildingNumber} ${(customerData as any).streetName}, ${(customerData as any).district}, ${(customerData as any).city} ${(customerData as any).postalCode}` : '',
         salePrice: (sale as any).salePrice,
         discountType: (sale as any).discountType,
         discountValue: (sale as any).discountValue,

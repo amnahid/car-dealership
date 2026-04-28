@@ -555,7 +555,7 @@
     "profilePhoto": "Profile Photo",
     "buildingNumber": "Building Number",
     "streetName": "Street Name",
-    "district": "District / Neighborhood",
+    "district": "District",
     "city": "City",
     "postalCode": "Postal Code",
     "otherId": "Secondary ID (CRN/Other)",

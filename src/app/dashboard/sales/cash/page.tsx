@@ -381,6 +381,7 @@ export default function CashSalesPage() {
 function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: Customer[]; employees: any[]; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('CashSales');
   const commonT = useTranslations('Common');
+  const customersT = useTranslations('Customers');
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
@@ -388,7 +389,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', address: '' });
+  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
     const car = cars.find(c => c.carId === carId);
@@ -411,7 +412,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
   };
 
   const handleAddCustomer = async () => {
-    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.address) {
+    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.buildingNumber || !newCustomer.streetName || !newCustomer.city || !newCustomer.postalCode) {
       alert(commonT('fillRequired'));
       return;
     }
@@ -427,7 +428,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
       const created = data.customer || data;
       setForm({ ...form, customer: created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
       setShowCustomerModal(false);
-      setNewCustomer({ fullName: '', phone: '', email: '', address: '' });
+      setNewCustomer({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
       onSave();
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
@@ -570,8 +571,24 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
                 <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={inputStyle} placeholder={commonT('email')} />
               </div>
               <div>
-                <label style={labelStyle}>{commonT('address')} *</label>
-                <input required value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} style={inputStyle} placeholder={commonT('address')} />
+                <label style={labelStyle}>{customersT('buildingNumber')} *</label>
+                <input required value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
+              </div>
+              <div>
+                <label style={labelStyle}>{customersT('streetName')} *</label>
+                <input required value={newCustomer.streetName} onChange={(e) => setNewCustomer({ ...newCustomer, streetName: e.target.value })} style={inputStyle} placeholder={customersT('streetName')} />
+              </div>
+              <div>
+                <label style={labelStyle}>{customersT('district')}</label>
+                <input value={newCustomer.district} onChange={(e) => setNewCustomer({ ...newCustomer, district: e.target.value })} style={inputStyle} placeholder={customersT('district')} />
+              </div>
+              <div>
+                <label style={labelStyle}>{customersT('city')} *</label>
+                <input required value={newCustomer.city} onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })} style={inputStyle} placeholder={customersT('city')} />
+              </div>
+              <div>
+                <label style={labelStyle}>{customersT('postalCode')} *</label>
+                <input required value={newCustomer.postalCode} onChange={(e) => setNewCustomer({ ...newCustomer, postalCode: e.target.value })} style={inputStyle} placeholder={customersT('postalCode')} />
               </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>

@@ -385,6 +385,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
+  const customersT = useTranslations('Customers');
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
@@ -392,7 +393,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', address: '' });
+  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
     const car = cars.find(c => c.carId === carId);
@@ -415,7 +416,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
   };
 
   const handleAddCustomer = async () => {
-    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.address) {
+    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.buildingNumber || !newCustomer.streetName || !newCustomer.city || !newCustomer.postalCode) {
       alert(commonT('fillRequired'));
       return;
     }
@@ -431,7 +432,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
       const created = data.customer || data;
       setForm({ ...form, customer: created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
       setShowCustomerModal(false);
-      setNewCustomer({ fullName: '', phone: '', email: '', address: '' });
+      setNewCustomer({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
       onSave();
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
@@ -590,11 +591,26 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
                   <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={inputStyle} placeholder={commonT('email')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>{commonT('address')} *</label>
-                  <input required value={newCustomer.address} onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })} style={inputStyle} placeholder={commonT('address')} />
+                  <label style={labelStyle}>{customersT('buildingNumber')} *</label>
+                  <input required value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                <div>
+                  <label style={labelStyle}>{customersT('streetName')} *</label>
+                  <input required value={newCustomer.streetName} onChange={(e) => setNewCustomer({ ...newCustomer, streetName: e.target.value })} style={inputStyle} placeholder={customersT('streetName')} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{customersT('district')}</label>
+                  <input value={newCustomer.district} onChange={(e) => setNewCustomer({ ...newCustomer, district: e.target.value })} style={inputStyle} placeholder={customersT('district')} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{customersT('city')} *</label>
+                  <input required value={newCustomer.city} onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })} style={inputStyle} placeholder={customersT('city')} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{customersT('postalCode')} *</label>
+                  <input required value={newCustomer.postalCode} onChange={(e) => setNewCustomer({ ...newCustomer, postalCode: e.target.value })} style={inputStyle} placeholder={customersT('postalCode')} />
+                </div>
+                </div>              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                 <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('cancel')}</button>
                 <button type="button" onClick={handleAddCustomer} disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : cashT('addCustomer')}</button>
               </div>

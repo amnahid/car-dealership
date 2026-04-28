@@ -177,7 +177,9 @@ export default function CustomerDetailPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Address</span>
-              <span style={{ color: '#2a3142', textAlign: 'right', maxWidth: '200px' }}>{customer.address}</span>
+              <span style={{ color: '#2a3142', textAlign: 'right', maxWidth: '200px' }}>
+                {customer.buildingNumber} {customer.streetName}, {customer.district}, {customer.city} {customer.postalCode}
+              </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Customer Type</span>
