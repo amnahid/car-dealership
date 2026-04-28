@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
 import Transaction from '@/models/Transaction';
+import Car from '@/models/Car';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import mongoose from 'mongoose';
@@ -88,6 +89,7 @@ export async function POST(
           updatedSale.status = 'Completed';
           updatedSale.nextPaymentDate = null as unknown as Date;
           updatedSale.nextPaymentAmount = 0;
+          await Car.findByIdAndUpdate(updatedSale.car, { status: 'Sold' }, { session });
         }
         await updatedSale.save({ session });
 

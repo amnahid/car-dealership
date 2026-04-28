@@ -11,10 +11,29 @@ import mongoose from 'mongoose';
 
 async function updateCarRepairCost(carId: string, session?: mongoose.ClientSession) {
   const result = await Repair.aggregate([
-    { $match: { car: new mongoose.Types.ObjectId(carId) } },
+    { $match: { car: new mongoose.Types.ObjectId(carId), isDeleted: { $ne: true } } },
     { $group: { _id: null, total: { $sum: '$totalCost' } } },
   ]).session(session || null);
-  await Car.findByIdAndUpdate(carId, { totalRepairCost: result[0]?.total || 0 }, { session });
+  
+  const pendingRepairs = await Repair.countDocuments({
+    car: new mongoose.Types.ObjectId(carId),
+    status: { $in: ['Pending', 'In Progress'] },
+    isDeleted: { $ne: true }
+  }).session(session || null);
+
+  const car = await Car.findById(carId).session(session || null);
+  let newStatus = car?.status;
+  
+  if (pendingRepairs > 0 && car?.status === 'In Stock') {
+    newStatus = 'Under Repair';
+  } else if (pendingRepairs === 0 && car?.status === 'Under Repair') {
+    newStatus = 'In Stock';
+  }
+
+  await Car.findByIdAndUpdate(carId, { 
+    totalRepairCost: result[0]?.total || 0,
+    status: newStatus 
+  }, { session });
 }
 
 export async function GET(request: NextRequest) {
@@ -80,6 +99,12 @@ export async function POST(request: NextRequest) {
 
     try {
       await session.withTransaction(async () => {
+        const carCheck = await Car.findById(body.car).session(session);
+        if (!carCheck) throw new Error('Car not found');
+        if (!['In Stock', 'Under Repair'].includes(carCheck.status)) {
+          throw new Error(`Car cannot be repaired in its current status: ${carCheck.status}`);
+        }
+
         const repairs = await Repair.create([{ ...body, createdBy: auth.userId }], { session });
         repair = repairs[0];
 

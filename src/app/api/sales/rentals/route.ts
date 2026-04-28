@@ -123,6 +123,10 @@ export async function POST(request: NextRequest) {
 
     try {
       await session.withTransaction(async () => {
+        const carCheck = await Car.findById(car).session(session);
+        if (!carCheck) throw new Error('Car not found');
+        if (carCheck.status !== 'In Stock') throw new Error('Car is not available for rent');
+
         const rentals = await Rental.create([{
           car: car,
           carId,

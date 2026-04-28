@@ -10,10 +10,29 @@ import mongoose from 'mongoose';
 
 async function updateCarRepairCost(carObjectId: string) {
   const result = await Repair.aggregate([
-    { $match: { car: new mongoose.Types.ObjectId(carObjectId) } },
+    { $match: { car: new mongoose.Types.ObjectId(carObjectId), isDeleted: { $ne: true } } },
     { $group: { _id: null, total: { $sum: '$totalCost' } } },
   ]);
-  await Car.findByIdAndUpdate(carObjectId, { totalRepairCost: result[0]?.total || 0 });
+
+  const pendingRepairs = await Repair.countDocuments({
+    car: new mongoose.Types.ObjectId(carObjectId),
+    status: { $in: ['Pending', 'In Progress'] },
+    isDeleted: { $ne: true }
+  });
+
+  const car = await Car.findById(carObjectId);
+  let newStatus = car?.status;
+  
+  if (pendingRepairs > 0 && car?.status === 'In Stock') {
+    newStatus = 'Under Repair';
+  } else if (pendingRepairs === 0 && car?.status === 'Under Repair') {
+    newStatus = 'In Stock';
+  }
+
+  await Car.findByIdAndUpdate(carObjectId, { 
+    totalRepairCost: result[0]?.total || 0,
+    status: newStatus
+  });
 }
 
 export async function GET(
