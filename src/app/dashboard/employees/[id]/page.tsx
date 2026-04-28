@@ -100,7 +100,7 @@ export default function EmployeeDetailPage() {
           <div className="text-center mb-6">
             {employee.photo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={employee.photo} alt={employee.name} className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-white shadow-sm" />
+              <img src={employee.photo} alt={employee.name} className="w-32 h-32 rounded-full mx-auto object-contain bg-gray-50 border-4 border-white shadow-sm" />
             ) : (
               <div className="w-32 h-32 rounded-full bg-indigo-50 flex items-center justify-center mx-auto text-indigo-300 text-4xl font-bold border-4 border-white shadow-sm">
                 {employee.name.charAt(0)}

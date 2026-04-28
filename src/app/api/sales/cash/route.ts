@@ -195,11 +195,20 @@ export async function POST(request: NextRequest) {
         saleId: (sale as any).saleId,
         invoiceType,
         issueDate: new Date(saleDate),
+        supplyDate: new Date(saleDate),
         buyer: {
           name: customerName,
           trn: buyerTrn,
-          address: (customerData as any)?.address,
-          city: '',
+          buildingNumber: (customerData as any)?.buildingNumber,
+          streetName: (customerData as any)?.streetName,
+          district: (customerData as any)?.district,
+          city: (customerData as any)?.city,
+          postalCode: (customerData as any)?.postalCode,
+          countryCode: (customerData as any)?.countryCode || 'SA',
+          otherId: (customerData as any)?.otherId ? {
+            id: (customerData as any).otherId,
+            type: (customerData as any).otherIdType || 'CRN'
+          } : undefined
         },
         lineItems: [{
           name: `${(carData as any)?.brand || ''} ${(carData as any)?.model || ''} (${carId})`.trim(),

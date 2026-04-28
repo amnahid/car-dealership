@@ -141,8 +141,7 @@ export async function PUT(
           buyer: {
             name: rental.customerName,
             trn: (rental as any).buyerTrn || '',
-            address: customerDoc?.address,
-            city: '',
+            streetName: customerDoc?.address || 'Street',
           },
           lineItems: [{
             name: rentalDesc,

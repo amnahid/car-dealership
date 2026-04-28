@@ -135,8 +135,12 @@ export default function ReturnDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Car Information</h3>
-          {ret.car?.images?.[0] && (
-            <img src={ret.car.images[0]} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '4px', marginBottom: '16px' }} />
+          {ret.car?.images?.[0] ? (
+            <img src={ret.car.images[0]} alt="" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px', marginBottom: '16px' }} />
+          ) : (
+            <div style={{ width: '100%', height: '150px', background: '#f8f9fa', borderRadius: '4px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '24px' }}>🚗</span>
+            </div>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px' }}>
             <div><span style={{ color: '#9ca8b3' }}>Car ID:</span></div>
@@ -152,7 +156,7 @@ export default function ReturnDetailPage() {
           <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '16px', fontWeight: 600 }}>Customer Information</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
             {ret.customer?.profilePhoto ? (
-              <img src={ret.customer.profilePhoto} alt="" style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '50%' }} />
+              <img src={ret.customer.profilePhoto} alt="" style={{ width: '64px', height: '64px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '50%' }} />
             ) : (
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '24px', fontWeight: 600 }}>
                 {ret.customerName?.[0] || '?'}

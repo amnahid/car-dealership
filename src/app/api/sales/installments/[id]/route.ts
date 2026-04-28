@@ -104,11 +104,20 @@ export async function PUT(
           saleId: sale.saleId,
           invoiceType: (sale.invoiceType as 'Standard' | 'Simplified') || 'Simplified',
           issueDate: new Date(sale.startDate),
+          supplyDate: new Date(sale.startDate),
           buyer: {
             name: sale.customerName,
             trn: (sale as any).buyerTrn || '',
-            address: customerDoc?.address,
-            city: '',
+            buildingNumber: (customerDoc as any)?.buildingNumber,
+            streetName: (customerDoc as any)?.streetName,
+            district: (customerDoc as any)?.district,
+            city: (customerDoc as any)?.city,
+            postalCode: (customerDoc as any)?.postalCode,
+            countryCode: (customerDoc as any)?.countryCode || 'SA',
+            otherId: (customerDoc as any)?.otherId ? {
+              id: (customerDoc as any).otherId,
+              type: (customerDoc as any).otherIdType || 'CRN'
+            } : undefined
           },
           lineItems: [{
             name: carDoc ? `${carDoc.brand} ${carDoc.model} (${sale.carId})`.trim() : sale.carId,

@@ -208,7 +208,7 @@ export default function PurchasesPage() {
               <tr key={purchase._id} style={{ background: '#fff' }}>
                 <td style={{ ...tdStyle, width: '80px' }}>
                   {purchase.car?.images?.[0] ? (
-                    <img src={purchase.car.images[0]} alt={purchase.car.brand} style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img src={purchase.car.images[0]} alt={purchase.car.brand} style={{ width: '60px', height: '45px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                   ) : (
                     <div style={{ width: '60px', height: '45px', background: '#eee', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>No Image</div>
                   )}

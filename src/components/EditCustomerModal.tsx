@@ -10,7 +10,12 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
-  address: string;
+  buildingNumber: string;
+  streetName: string;
+  district: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
   nationalIdDocument?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
@@ -20,6 +25,8 @@ interface Customer {
   notes?: string;
   customerType?: 'Individual' | 'Business';
   vatRegistrationNumber?: string;
+  otherId?: string;
+  otherIdType?: 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH';
 }
 
 interface EditCustomerModalProps {
@@ -38,7 +45,12 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     fullName: customer.fullName,
     phone: customer.phone,
     email: customer.email || '',
-    address: customer.address,
+    buildingNumber: customer.buildingNumber || '',
+    streetName: customer.streetName || '',
+    district: customer.district || '',
+    city: customer.city || '',
+    postalCode: customer.postalCode || '',
+    countryCode: customer.countryCode || 'SA',
     nationalIdDocument: customer.nationalIdDocument || '',
     drivingLicenseDocument: customer.drivingLicenseDocument || '',
     iqamaDocument: customer.iqamaDocument || '',
@@ -48,6 +60,8 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     notes: customer.notes || '',
     customerType: customer.customerType || 'Individual' as 'Individual' | 'Business',
     vatRegistrationNumber: customer.vatRegistrationNumber || '',
+    otherId: customer.otherId || '',
+    otherIdType: customer.otherIdType || 'CRN' as 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH',
   });
   const [loading, setLoading] = useState(false);
 
@@ -85,7 +99,7 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '600px', maxWidth: '90%', maxHeight: '90vh', overflow: 'auto', textAlign: isRtl ? 'right' : 'left' }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '700px', maxWidth: '90%', maxHeight: '90vh', overflow: 'auto', textAlign: isRtl ? 'right' : 'left' }}>
         <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('editCustomer')} - {customer.customerId}</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #e9ecef', display: 'flex', justifyContent: 'center' }}>
@@ -115,17 +129,58 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
             </div>
             <div>
               <label style={labelStyle}>{t('customerType')}</label>
-              <select value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value as 'Individual' | 'Business', vatRegistrationNumber: e.target.value === 'Individual' ? '' : form.vatRegistrationNumber })} style={{ ...inputStyle, background: '#fff' }}>
+              <select value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value as 'Individual' | 'Business' })} style={{ ...inputStyle, background: '#fff' }}>
                 <option value="Individual">{t('individual')}</option>
                 <option value="Business">{t('business')}</option>
               </select>
             </div>
-            {form.customerType === 'Business' && (
+            <div>
+              <label style={labelStyle}>{t('vatTrn')}</label>
+              <input value={form.vatRegistrationNumber} onChange={(e) => setForm({ ...form, vatRegistrationNumber: e.target.value })} placeholder="3xxxxxxxxxxxxxx3" style={inputStyle} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
               <div>
-                <label style={labelStyle}>{t('vatTrn')}</label>
-                <input value={form.vatRegistrationNumber} onChange={(e) => setForm({ ...form, vatRegistrationNumber: e.target.value })} placeholder={t('vatTrnPlaceholder')} style={inputStyle} />
+                <label style={labelStyle}>{t('otherIdType')}</label>
+                <select value={form.otherIdType} onChange={(e) => setForm({ ...form, otherIdType: e.target.value as any })} style={{ ...inputStyle, background: '#fff' }}>
+                  <option value="CRN">CRN</option>
+                  <option value="MOM">MOM</option>
+                  <option value="MLSD">MLSD</option>
+                  <option value="SAGIA">SAGIA</option>
+                  <option value="OTH">OTH</option>
+                </select>
               </div>
-            )}
+              <div>
+                <label style={labelStyle}>{t('otherId')}</label>
+                <input value={form.otherId} onChange={(e) => setForm({ ...form, otherId: e.target.value })} style={inputStyle} />
+              </div>
+            </div>
+          </div>
+
+          <h4 style={{ margin: '20px 0 10px', color: '#2a3142', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>{t('address')}</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
+            <div>
+              <label style={labelStyle}>{t('buildingNumber')} *</label>
+              <input required value={form.buildingNumber} onChange={(e) => setForm({ ...form, buildingNumber: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('streetName')} *</label>
+              <input required value={form.streetName} onChange={(e) => setForm({ ...form, streetName: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('district')} *</label>
+              <input required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('city')} *</label>
+              <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('postalCode')} *</label>
+              <input required value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} style={inputStyle} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
               <label style={labelStyle}>{t('emergencyContactName')}</label>
               <input value={form.emergencyContactName} onChange={(e) => setForm({ ...form, emergencyContactName: e.target.value })} style={inputStyle} />
@@ -135,10 +190,7 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
               <input value={form.emergencyContactPhone} onChange={(e) => setForm({ ...form, emergencyContactPhone: e.target.value })} style={inputStyle} />
             </div>
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={labelStyle}>{t('address')} *</label>
-            <input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={inputStyle} />
-          </div>
+
           <div style={{ marginBottom: '20px', paddingTop: '20px', borderTop: '1px solid #e9ecef' }}>
             <label style={labelStyle}>{t('documents')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>

@@ -16,8 +16,16 @@ export interface ZatcaSellerInfo {
 export interface ZatcaBuyerInfo {
   name: string;
   trn?: string;          // Required for Standard (B2B) invoices
-  address?: string;
+  buildingNumber?: string;
+  streetName?: string;
+  district?: string;
   city?: string;
+  postalCode?: string;
+  countryCode?: string;  // Default to 'SA'
+  otherId?: {
+    id: string;
+    type: 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH';
+  };
 }
 
 export interface ZatcaLineItem {
@@ -34,6 +42,7 @@ export interface ZatcaInvoiceData {
   invoiceNumber?: string; // Sequential invoice ID (BT-1)
   invoiceType: ZatcaInvoiceType;
   issueDate: Date;
+  supplyDate?: Date;      // Supply date (KSA-5)
   seller: ZatcaSellerInfo;
   buyer: ZatcaBuyerInfo;
   lineItems: ZatcaLineItem[];

@@ -64,15 +64,29 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { fullName, phone, email, address, nationalIdDocument, drivingLicenseDocument, iqamaDocument, emergencyContactName, emergencyContactPhone, notes, profilePhoto, customerType, vatRegistrationNumber } = body;
+    const { 
+      fullName, phone, email, 
+      buildingNumber, streetName, district, city, postalCode, countryCode,
+      nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
+      emergencyContactName, emergencyContactPhone, 
+      notes, profilePhoto, customerType, vatRegistrationNumber,
+      otherId, otherIdType
+    } = body;
 
-    if (!fullName || !phone || !address) {
-      return NextResponse.json({ error: 'Full name, phone, and address are required' }, { status: 400 });
+    if (!fullName || !phone || !buildingNumber || !streetName || !district || !city || !postalCode) {
+      return NextResponse.json({ error: 'Full name, phone, and full address are required' }, { status: 400 });
     }
 
     const customer = await Customer.findByIdAndUpdate(
       id,
-      { fullName, phone, email, address, nationalIdDocument, drivingLicenseDocument, iqamaDocument, emergencyContactName, emergencyContactPhone, notes, profilePhoto, customerType, vatRegistrationNumber },
+      { 
+        fullName, phone, email, 
+        buildingNumber, streetName, district, city, postalCode, countryCode: countryCode || 'SA',
+        nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
+        emergencyContactName, emergencyContactPhone, 
+        notes, profilePhoto, customerType, vatRegistrationNumber,
+        otherId, otherIdType
+      },
       { new: true }
     );
 

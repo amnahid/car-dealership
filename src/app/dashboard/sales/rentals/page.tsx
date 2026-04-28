@@ -313,18 +313,22 @@ export default function RentalsPage() {
                     </td>
                     <td style={{ padding: '8px', width: '60px' }}>
                       {rental.car?.images?.[0] ? (
-                        <img src={rental.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                        <img src={rental.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                       ) : (
-                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span></div>
+                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span>
+                        </div>
                       )}
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{rental.rentalId}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {rental.customer?.profilePhoto ? (
-                          <img src={rental.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%' }} />
+                          <img src={rental.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '50%' }} />
                         ) : (
-                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>{rental.customerName?.[0] || '?'}</div>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+                            {rental.customerName?.[0] || '?'}
+                          </div>
                         )}
                         <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
                           <div>{rental.customerName}</div>

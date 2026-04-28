@@ -553,6 +553,13 @@
     "vatTrn": "VAT / TRN",
     "vatTrnPlaceholder": "15-digit VAT number",
     "profilePhoto": "Profile Photo",
+    "buildingNumber": "Building Number",
+    "streetName": "Street Name",
+    "district": "District / Neighborhood",
+    "city": "City",
+    "postalCode": "Postal Code",
+    "otherId": "Secondary ID (CRN/Other)",
+    "otherIdType": "ID Type",
     "documents": "Documents",
     "deleteConfirm": "Are you sure you want to delete this customer?",
     "deleteActionUndone": "This action cannot be undone. Continue?"

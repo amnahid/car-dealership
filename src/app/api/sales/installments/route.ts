@@ -232,11 +232,20 @@ export async function POST(request: NextRequest) {
         saleId: (sale as any).saleId,
         invoiceType: (invoiceType as 'Standard' | 'Simplified') || 'Simplified',
         issueDate: new Date(startDate),
+        supplyDate: new Date(startDate),
         buyer: {
           name: customerName,
           trn: buyerTrn,
-          address: (customerDoc as any)?.address,
-          city: '',
+          buildingNumber: (customerDoc as any)?.buildingNumber,
+          streetName: (customerDoc as any)?.streetName,
+          district: (customerDoc as any)?.district,
+          city: (customerDoc as any)?.city,
+          postalCode: (customerDoc as any)?.postalCode,
+          countryCode: (customerDoc as any)?.countryCode || 'SA',
+          otherId: (customerDoc as any)?.otherId ? {
+            id: (customerDoc as any).otherId,
+            type: (customerDoc as any).otherIdType || 'CRN'
+          } : undefined
         },
         lineItems: [{
           name: carDoc ? `${(carDoc as any).brand} ${(carDoc as any).model} (${carId})`.trim() : carId,

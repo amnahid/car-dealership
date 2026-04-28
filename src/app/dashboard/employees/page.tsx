@@ -266,7 +266,7 @@ export default function EmployeesPage() {
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{emp.employeeId}</td>
                     <td style={{ padding: '12px' }}>
                       {emp.photo ? (
-                        <img src={emp.photo} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        <img src={emp.photo} alt={emp.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'contain', background: '#f8f9fa' }} />
                       ) : (
                         <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#9ca8b3', fontWeight: 600 }}>
                           {emp.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}

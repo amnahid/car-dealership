@@ -75,17 +75,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { fullName, phone, email, address, nationalIdDocument, drivingLicenseDocument, iqamaDocument, emergencyContactName, emergencyContactPhone, notes, profilePhoto, customerType, vatRegistrationNumber } = body;
+    const { 
+      fullName, phone, email, 
+      buildingNumber, streetName, district, city, postalCode, countryCode,
+      nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
+      emergencyContactName, emergencyContactPhone, 
+      notes, profilePhoto, customerType, vatRegistrationNumber,
+      otherId, otherIdType
+    } = body;
 
-    if (!fullName || !phone || !address) {
-      return NextResponse.json({ error: 'Full name, phone, and address are required' }, { status: 400 });
+    if (!fullName || !phone || !buildingNumber || !streetName || !district || !city || !postalCode) {
+      return NextResponse.json({ error: 'Full name, phone, and full address are required' }, { status: 400 });
     }
 
     const customer = await Customer.create({
       fullName,
       phone,
       email,
-      address,
+      buildingNumber,
+      streetName,
+      district,
+      city,
+      postalCode,
+      countryCode: countryCode || 'SA',
       nationalIdDocument,
       drivingLicenseDocument,
       iqamaDocument,
@@ -95,6 +107,8 @@ export async function POST(request: NextRequest) {
       profilePhoto,
       customerType: customerType || 'Individual',
       vatRegistrationNumber,
+      otherId,
+      otherIdType,
       createdBy: user.userId,
     });
 

@@ -553,6 +553,13 @@
     "vatTrn": "الرقم الضريبي",
     "vatTrnPlaceholder": "رقم ضريبي من 15 خانة",
     "profilePhoto": "الصورة الشخصية",
+    "buildingNumber": "رقم المبنى",
+    "streetName": "اسم الشارع",
+    "district": "الحي",
+    "city": "المدينة",
+    "postalCode": "الرمز البريدي",
+    "otherId": "هوية ثانوية (سجل تجاري/أخرى)",
+    "otherIdType": "نوع الهوية",
     "documents": "المستندات",
     "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذا العميل؟",
     "deleteActionUndone": "هذا الإجراء لا يمكن التراجع عنه. هل تريد المتابعة؟"

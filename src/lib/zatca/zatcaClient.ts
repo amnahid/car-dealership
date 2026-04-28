@@ -28,7 +28,7 @@ export class ZatcaClient {
       uuid: extConfig.egsUuid || '6789', 
       custom_id: extConfig.egsCustomId || config.trn, 
       model: extConfig.egsModel || 'V1',
-      CRN_number: extConfig.crnNumber || '1234567890',
+      CRN_number: extConfig.crnNumber || '1010000000', // Must be 10 digits for schemeID="CRN"
       VAT_name: config.sellerName,
       VAT_number: config.trn,
       branch_name: 'Main',
@@ -49,7 +49,7 @@ export class ZatcaClient {
       production_api_secret: config.productionCsidSecret,
     };
 
-    const env = config.environment === 'production' ? 'production' : 'development';
+    const env = config.environment === 'production' ? 'production' : 'simulation';
     this.egs = new EGS(egsUnit, env);
   }
 
@@ -89,26 +89,39 @@ export class ZatcaClient {
     const invoiceType = ZATCAInvoiceTypes.INVOICE; 
     const invoiceCode = isStandard ? '0100000' : '0200000';
 
-    const invoice = new ZATCAInvoice({
-      props: {
-        egs_info: this.egs.get(),
-        invoice_type: invoiceType,
-        invoice_code: invoiceCode as "0100000" | "0200000",
-        invoice_counter_number: 1, 
-        invoice_serial_number: data.invoiceNumber || data.uuid.substring(0, 8),
-        issue_date: data.issueDate.toISOString().split('T')[0],
-        issue_time: data.issueDate.toISOString().split('T')[1].split('.')[0],
-        previous_invoice_hash: data.pih || ZATCA_INITIAL_PIH,
-        payment_method: ZATCAPaymentMethods.CASH,
-        line_items: data.lineItems.map((item, index) => ({
-          id: String(index + 1),
-          name: item.name,
-          quantity: item.quantity,
-          tax_exclusive_price: item.unitPrice,
-          VAT_percent: (item.vatRate / 100) as 0.15 | 0.05,
-        })),
+    const props: any = {
+      egs_info: {
+        ...this.egs.get(),
+        customer_info: {
+          buyer_name: data.buyer.name,
+          vat_number: data.buyer.trn,
+          street: data.buyer.streetName || 'Street Name',
+          building: data.buyer.buildingNumber || '1234',
+          city: data.buyer.city || 'Riyadh',
+          city_subdivision: data.buyer.district || 'District',
+          postal_zone: data.buyer.postalCode || '12345',
+          CRN_number: data.buyer.otherId?.id || '1010000001',
+        }
       },
-    });
+      invoice_type: invoiceType,
+      invoice_code: invoiceCode as "0100000" | "0200000",
+      invoice_counter_number: 1, 
+      invoice_serial_number: data.invoiceNumber || data.uuid.substring(0, 8),
+      issue_date: data.issueDate.toISOString().split('T')[0],
+      issue_time: data.issueDate.toISOString().split('T')[1].split('.')[0],
+      actual_delivery_date: (data.supplyDate || data.issueDate).toISOString().split('T')[0],
+      previous_invoice_hash: data.pih || ZATCA_INITIAL_PIH,
+      payment_method: ZATCAPaymentMethods.CASH,
+      line_items: data.lineItems.map((item, index) => ({
+        id: String(index + 1),
+        name: item.name,
+        quantity: item.quantity,
+        tax_exclusive_price: item.unitPrice,
+        VAT_percent: (item.vatRate / 100) as 0.15 | 0.05,
+      })),
+    };
+
+    const invoice = new ZATCAInvoice({ props });
 
     // Sign the invoice
     const isProduction = !!this.config.productionCsid;
@@ -148,33 +161,58 @@ export class ZatcaClient {
   /**
    * Check compliance (Step 3 verification)
    */
-  async checkCompliance(data: ZatcaInvoiceData): Promise<Record<string, unknown>> {
-    const isStandard = data.invoiceType === 'Standard';
+  async checkCompliance(
+    data: ZatcaInvoiceData, 
+    specificType?: ZATCAInvoiceTypes, 
+    isStandard: boolean = false
+  ): Promise<Record<string, unknown>> {
+    const invoiceType = specificType || ZATCAInvoiceTypes.INVOICE;
     const invoiceCode = isStandard ? '0100000' : '0200000';
+    const isCreditOrDebit = invoiceType === ZATCAInvoiceTypes.CREDIT_NOTE || invoiceType === ZATCAInvoiceTypes.DEBIT_NOTE;
 
-    const invoice = new ZATCAInvoice({
-        props: {
-          egs_info: this.egs.get(),
-          invoice_type: ZATCAInvoiceTypes.INVOICE,
-          invoice_code: invoiceCode as "0100000" | "0200000",
-          invoice_counter_number: 1,
-          invoice_serial_number: 'TEST-COMPLIANCE',
-          issue_date: data.issueDate.toISOString().split('T')[0],
-          issue_time: data.issueDate.toISOString().split('T')[1].split('.')[0],
-          previous_invoice_hash: data.pih || ZATCA_INITIAL_PIH,
-          payment_method: ZATCAPaymentMethods.CASH,
-          line_items: data.lineItems.map((item, index) => ({
-            id: String(index + 1),
-            name: item.name,
-            quantity: item.quantity,
-            tax_exclusive_price: item.unitPrice,
-            VAT_percent: (item.vatRate / 100) as 0.15 | 0.05,
-          })),
-        },
-      });
+    const props: any = {
+      egs_info: {
+        ...this.egs.get(),
+        customer_info: {
+          buyer_name: data.buyer.name || 'Test Buyer',
+          vat_number: data.buyer.trn,
+          street: data.buyer.streetName || 'Street Name',
+          building: data.buyer.buildingNumber || '1234',
+          city: data.buyer.city || 'Riyadh',
+          city_subdivision: data.buyer.district || 'District',
+          postal_zone: data.buyer.postalCode || '12345',
+          CRN_number: data.buyer.otherId?.id || '1010000001',
+        }
+      },
+      invoice_type: invoiceType,
+      invoice_code: invoiceCode as "0100000" | "0200000",
+      invoice_counter_number: 1,
+      invoice_serial_number: `CLE-${invoiceType}-${isStandard ? 'STD' : 'SIM'}-${Date.now()}`,
+      issue_date: data.issueDate.toISOString().split('T')[0],
+      issue_time: data.issueDate.toISOString().split('T')[1].split('.')[0],
+      actual_delivery_date: (data.supplyDate || data.issueDate).toISOString().split('T')[0],
+      previous_invoice_hash: data.pih || ZATCA_INITIAL_PIH,
+      payment_method: ZATCAPaymentMethods.CASH,
+      line_items: data.lineItems.map((item, index) => ({
+        id: String(index + 1),
+        name: item.name,
+        quantity: item.quantity,
+        tax_exclusive_price: item.unitPrice,
+        VAT_percent: (item.vatRate / 100) as 0.15 | 0.05,
+      })),
+    };
 
-      const { signed_invoice_string, invoice_hash } = this.egs.signInvoice(invoice, false);
-      return await this.egs.checkInvoiceCompliance(signed_invoice_string, invoice_hash);
+    if (isCreditOrDebit) {
+      props.cancelation = {
+        canceled_serial_invoice_number: 'INV-123',
+        payment_method: ZATCAPaymentMethods.CASH,
+        reason: 'Correction',
+      };
+    }
+
+    const invoice = new ZATCAInvoice({ props });
+    const { signed_invoice_string, invoice_hash } = this.egs.signInvoice(invoice, false);
+    return await this.egs.checkInvoiceCompliance(signed_invoice_string, invoice_hash);
   }
 
   /**

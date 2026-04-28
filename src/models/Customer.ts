@@ -7,7 +7,12 @@ export interface ICustomerDocument extends Document {
   fullName: string;
   phone: string;
   email?: string;
-  address: string;
+  buildingNumber: string;
+  streetName: string;
+  district: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
   nationalIdDocument?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
@@ -15,7 +20,9 @@ export interface ICustomerDocument extends Document {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   customerType: CustomerType;
-  vatRegistrationNumber?: string; // TRN (15-digit) — required for Business type (B2B invoices)
+  vatRegistrationNumber?: string; // TRN (15-digit)
+  otherId?: string;               // Secondary ID (e.g., CRN)
+  otherIdType?: 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH';
   notes?: string;
   isDeleted: boolean;
   createdBy: mongoose.Types.ObjectId;
@@ -27,7 +34,12 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     fullName: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     email: { type: String, trim: true },
-    address: { type: String, required: true, trim: true },
+    buildingNumber: { type: String, required: true, trim: true },
+    streetName: { type: String, required: true, trim: true },
+    district: { type: String, required: true, trim: true },
+    city: { type: String, required: true, trim: true },
+    postalCode: { type: String, required: true, trim: true },
+    countryCode: { type: String, default: 'SA' },
     nationalIdDocument: { type: String },
     drivingLicenseDocument: { type: String },
     iqamaDocument: { type: String },
@@ -36,6 +48,8 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     emergencyContactPhone: { type: String, trim: true },
     customerType: { type: String, enum: ['Individual', 'Business'], default: 'Individual' },
     vatRegistrationNumber: { type: String, trim: true },
+    otherId: { type: String, trim: true },
+    otherIdType: { type: String, enum: ['CRN', 'MOM', 'MLSD', 'SAGIA', 'OTH'], default: 'CRN' },
     notes: { type: String },
     isDeleted: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },

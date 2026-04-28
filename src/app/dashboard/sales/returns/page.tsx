@@ -248,18 +248,22 @@ export default function ReturnsPage() {
                   <tr key={ret._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '8px', width: '60px' }}>
                       {ret.car?.images?.[0] ? (
-                        <img src={ret.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} />
+                        <img src={ret.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                       ) : (
-                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span></div>
+                        <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span>
+                        </div>
                       )}
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{ret.returnId}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {ret.customer?.profilePhoto ? (
-                          <img src={ret.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '50%' }} />
+                          <img src={ret.customer.profilePhoto} alt="" style={{ width: '32px', height: '32px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '50%' }} />
                         ) : (
-                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>{ret.customerName?.[0] || '?'}</div>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#28aaa9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+                            {ret.customerName?.[0] || '?'}
+                          </div>
                         )}
                         <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
                           <div>{ret.customerName}</div>

@@ -105,40 +105,58 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Configuration incomplete — run onboarding first.' }, { status: 400 });
       }
 
-      const result = await client.checkCompliance({
-          uuid: crypto.randomUUID(),
-          invoiceType: 'Simplified',
-          issueDate: new Date(),
-          seller: {
-              name: config.sellerName,
-              nameAr: config.sellerNameAr,
-              trn: config.trn,
-              buildingNumber: config.address.buildingNumber,
-              streetName: config.address.streetName,
-              district: config.address.district,
-              city: config.address.city,
-              postalCode: config.address.postalCode,
-              countryCode: 'SA'
-          },
-          buyer: { name: 'Test Buyer' },
-          lineItems: [{
-              name: 'Test Item',
-              quantity: 1,
-              unitPrice: 100,
-              vatRate: 15,
-              vatAmount: 15,
-              totalAmount: 115
-          }],
-          subtotal: 100,
-          vatTotal: 15,
-          totalWithVat: 115,
-          currency: 'SAR',
-          pih: ZATCA_INITIAL_PIH
-      });
+      const { ZATCAInvoiceTypes } = await import('zatca-xml-ts');
+      
+      const commonData: any = {
+        issueDate: new Date(),
+        pih: ZATCA_INITIAL_PIH,
+        buyer: {
+          name: 'Test Buyer',
+          streetName: 'Test Street',
+          buildingNumber: '1234',
+          city: 'Riyadh',
+          district: 'Test District',
+          postalCode: '12345',
+          otherId: { id: '1010000001', type: 'CRN' }
+        },
+        lineItems: [{
+            name: 'Test Item',
+            quantity: 1,
+            unitPrice: 100,
+            vatRate: 15,
+            vatAmount: 15,
+            totalAmount: 115
+        }]
+      };
+
+      // ZATCA required compliance steps
+      const steps = [
+          { name: 'Simplified Invoice', type: ZATCAInvoiceTypes.INVOICE, isStandard: false },
+          { name: 'Simplified Credit Note', type: ZATCAInvoiceTypes.CREDIT_NOTE, isStandard: false },
+          { name: 'Simplified Debit Note', type: ZATCAInvoiceTypes.DEBIT_NOTE, isStandard: false },
+          { name: 'Standard Invoice', type: ZATCAInvoiceTypes.INVOICE, isStandard: true },
+          { name: 'Standard Credit Note', type: ZATCAInvoiceTypes.CREDIT_NOTE, isStandard: true },
+          { name: 'Standard Debit Note', type: ZATCAInvoiceTypes.DEBIT_NOTE, isStandard: true },
+      ];
+
+      const results = [];
+      for (const step of steps) {
+          try {
+              const res = await client.checkCompliance(commonData, step.type, step.isStandard);
+              results.push({ step: step.name, status: 'Success', result: res });
+          } catch (err: any) {
+              results.push({ 
+                  step: step.name, 
+                  status: 'Failed', 
+                  error: err.message, 
+                  detail: err.response?.data 
+              });
+          }
+      }
 
       return NextResponse.json({
-        message: 'Compliance check completed.',
-        result
+        message: 'Comprehensive compliance check completed.',
+        results
       });
     }
 
@@ -146,8 +164,23 @@ export async function POST(request: NextRequest) {
       const { complianceRequestId } = body;
       if (!complianceRequestId) return NextResponse.json({ error: 'complianceRequestId required' }, { status: 400 });
 
-      await client.issueProductionCertificate(complianceRequestId);
-      const info = client.getEgsInfo();
+      // To get a production CSID, we need a CSR with "ZATCA-Code-Signing" instead of "PREZATCA-Code-Signing"
+      // We temporarily tell the client we are in production to generate the correct CSR
+      (config as any).environment = 'production';
+      const productionClient = new ZatcaClient(config);
+      
+      const { privateKey, csr } = await productionClient.generateKeysAndCSR('Amyal');
+
+      // Update config with the production-ready CSR and Private Key
+      // Note: The private key might have changed, and it MUST match the new CSR
+      await ZatcaConfig.updateOne(
+        { _id: config._id },
+        { $set: { privateKey, csr, environment: 'production' } }
+      );
+
+      // Now request the production certificate using the compliance credentials
+      await productionClient.issueProductionCertificate(complianceRequestId);
+      const info = productionClient.getEgsInfo();
 
       await ZatcaConfig.updateOne(
         { _id: config._id },
@@ -155,7 +188,8 @@ export async function POST(request: NextRequest) {
           $set: {
             productionCsid: info.production_certificate,
             productionCsidSecret: info.production_api_secret,
-            environment: 'production',
+            // Also update the main certificate to the production one
+            certificate: info.production_certificate,
           },
         }
       );

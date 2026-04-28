@@ -14,7 +14,12 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
-  address: string;
+  buildingNumber: string;
+  streetName: string;
+  district: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
   nationalIdDocument?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
@@ -23,6 +28,10 @@ interface Customer {
   emergencyContactPhone?: string;
   notes?: string;
   createdAt: string;
+  customerType?: 'Individual' | 'Business';
+  vatRegistrationNumber?: string;
+  otherId?: string;
+  otherIdType?: 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH';
 }
 
 export default function CustomersPage() {
@@ -137,6 +146,10 @@ export default function CustomersPage() {
     } catch (err) { console.error(err); }
   };
 
+  const formatAddress = (c: Customer) => {
+    return `${c.buildingNumber} ${c.streetName}, ${c.district}, ${c.city}, ${c.postalCode}`;
+  };
+
   return (
     <div style={{ marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
@@ -181,58 +194,6 @@ export default function CustomersPage() {
         />
       </div>
 
-      {selectedIds.size > 0 && (
-        <div
-          style={{
-            position: 'sticky',
-            top: '0',
-            zIndex: 10,
-            background: '#ffffff',
-            padding: '12px 16px',
-            marginBottom: '16px',
-            border: '1px solid #28aaa9',
-            borderRadius: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            flexDirection: isRtl ? 'row-reverse' : 'row'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-            <span style={{ fontWeight: 600, color: '#28aaa9' }}>{selectedIds.size} {commonT('selected')}</span>
-            <button
-              onClick={handleBulkDelete}
-              disabled={bulkActionLoading}
-              style={{
-                height: '32px',
-                padding: '0 12px',
-                fontSize: '13px',
-                borderRadius: '3px',
-                border: '1px solid #dc3545',
-                background: '#ffffff',
-                color: '#dc3545',
-                cursor: 'pointer'
-              }}
-            >
-              {commonT('deleteSelected')}
-            </button>
-          </div>
-          <button
-            onClick={() => setSelectedIds(new Set())}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#9ca8b3',
-              cursor: 'pointer',
-              fontSize: '13px'
-            }}
-          >
-            {commonT('cancel')}
-          </button>
-        </div>
-      )}
-
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>
@@ -240,73 +201,41 @@ export default function CustomersPage() {
           <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>{t('noCustomersFound')}</div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', fontSize: '14px', minWidth: '800px', direction: isRtl ? 'rtl' : 'ltr' }}>
+            <table style={{ width: '100%', fontSize: '14px', minWidth: '1000px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
                   <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
-                    <input
-                      type="checkbox"
-                      checked={customers.length > 0 && selectedIds.size === customers.length}
-                      ref={(input) => {
-                        if (input) {
-                          input.indeterminate = selectedIds.size > 0 && selectedIds.size < customers.length;
-                        }
-                      }}
-                      onChange={toggleSelectAll}
-                    />
+                    <input type="checkbox" checked={customers.length > 0 && selectedIds.size === customers.length} onChange={toggleSelectAll} />
                   </th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customerId')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('photo')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('fullName')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('phone')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('email')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('address')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('created')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('customerId')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('fullName')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('phone')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('customerType')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('address')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{commonT('actions')}</th>
                 </tr>
               </thead>
-              <tbody style={{ borderBottom: '1px solid #eee' }}>
+              <tbody>
                 {customers.map((customer) => (
-                  <tr key={customer._id} style={{ borderBottom: '1px solid #f5f5f5', background: selectedIds.has(customer._id) ? '#28aaa905' : 'transparent' }}>
+                  <tr key={customer._id} style={{ borderBottom: '1px solid #f5f5f5' }}>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(customer._id)}
-                        onChange={() => toggleSelect(customer._id)}
-                      />
+                      <input type="checkbox" checked={selectedIds.has(customer._id)} onChange={() => toggleSelect(customer._id)} />
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{customer.customerId}</td>
                     <td style={{ padding: '12px' }}>
-                      {customer.profilePhoto ? (
-                        <img src={customer.profilePhoto} alt={customer.fullName} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      ) : (
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#e5e5e5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', color: '#9ca8b3', fontWeight: 600 }}>
-                          {customer.fullName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {customer.profilePhoto && <img src={customer.profilePhoto} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />}
+                            {customer.fullName}
                         </div>
-                      )}
                     </td>
-                    <td style={{ padding: '12px' }}>{customer.fullName}</td>
                     <td style={{ padding: '12px' }}>{customer.phone}</td>
-                    <td style={{ padding: '12px' }}>{customer.email || '-'}</td>
-                    <td style={{ padding: '12px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{customer.address}</td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{new Date(customer.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
+                    <td style={{ padding: '12px' }}>{customer.customerType || 'Individual'}</td>
+                    <td style={{ padding: '12px', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatAddress(customer)}</td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-                        <button
-                          onClick={() => { setEditingCustomer(customer); setShowModal(true); }}
-                          style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
-                        >
-                          {commonT('edit')}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(customer._id)}
-                          style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
-                        >
-                          {commonT('delete')}
-                        </button>
-                        <Link href={`/dashboard/customers/${customer._id}`} style={{ color: '#28aaa9', textDecoration: 'none', fontSize: '14px' }}>
-                          {commonT('view')}
-                        </Link>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => { setEditingCustomer(customer); setShowModal(true); }} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer' }}>{commonT('edit')}</button>
+                        <button onClick={() => handleDelete(customer._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer' }}>{commonT('delete')}</button>
+                        <Link href={`/dashboard/customers/${customer._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</Link>
                       </div>
                     </td>
                   </tr>
@@ -317,32 +246,9 @@ export default function CustomersPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}
-          >
-            {commonT('prev')}
-          </button>
-          <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>
-            {commonT('page', { page, total: totalPages })}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}
-          >
-            {commonT('next')}
-          </button>
-        </div>
-      )}
-
       {showModal && !editingCustomer && (
         <CustomerModal
-          customer={null}
-          onClose={() => { setShowModal(false); setEditingCustomer(null); }}
+          onClose={() => setShowModal(false)}
           onSave={() => { setShowModal(false); fetchCustomers(); }}
         />
       )}
@@ -358,98 +264,105 @@ export default function CustomersPage() {
   );
 }
 
-function CustomerModal({ customer, onClose, onSave }: { customer: Customer | null; onClose: () => void; onSave: () => void }) {
+function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
   const t = useTranslations('Customers');
   const commonT = useTranslations('Common');
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
   const [form, setForm] = useState({
-    fullName: customer?.fullName || '',
-    phone: customer?.phone || '',
-    email: customer?.email || '',
-    address: customer?.address || '',
-    nationalIdDocument: customer?.nationalIdDocument || '',
-    drivingLicenseDocument: customer?.drivingLicenseDocument || '',
-    iqamaDocument: customer?.iqamaDocument || '',
-    profilePhoto: customer?.profilePhoto || '',
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    notes: '',
+    fullName: '',
+    phone: '',
+    email: '',
+    buildingNumber: '',
+    streetName: '',
+    district: '',
+    city: '',
+    postalCode: '',
+    countryCode: 'SA',
+    customerType: 'Individual' as 'Individual' | 'Business',
+    vatRegistrationNumber: '',
+    otherId: '',
+    otherIdType: 'CRN' as 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH',
+    profilePhoto: '',
   });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const url = customer ? `/api/customers/${customer._id}` : '/api/customers';
-      const method = customer ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
+      const res = await fetch('/api/customers', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || 'Failed to save');
-        return;
-      }
-
+      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
       onSave();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); } finally { setLoading(false); }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', background: '#ffffff', textAlign: isRtl ? 'right' : 'left'
+  };
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: '14px', fontWeight: 500, color: '#2a3142', marginBottom: '4px', textAlign: isRtl ? 'right' : 'left'
   };
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '600px', maxWidth: '90%', textAlign: isRtl ? 'right' : 'left' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{customer ? t('editCustomer') : t('addCustomer')}</h3>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '700px', maxWidth: '90%', maxHeight: '90vh', overflow: 'auto' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{t('addCustomer')}</h3>
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <ImageUpload value={form.profilePhoto} onChange={(url) => setForm({ ...form, profilePhoto: url })} folder="customers" label={form.fullName || t('photo')} size={80} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+            <div>
+              <label style={labelStyle}>{t('fullName')} *</label>
+              <input required value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('phone')} *</label>
+              <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('customerType')}</label>
+              <select value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value as any })} style={{ ...inputStyle, background: '#fff' }}>
+                <option value="Individual">{t('individual')}</option>
+                <option value="Business">{t('business')}</option>
+              </select>
+            </div>
+            <div>
+                <label style={labelStyle}>{t('vatTrn')}</label>
+                <input value={form.vatRegistrationNumber} onChange={(e) => setForm({ ...form, vatRegistrationNumber: e.target.value })} placeholder="3xxxxxxxxxxxxxx3" style={inputStyle} />
+            </div>
           </div>
+
+          <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '15px' }}>{t('address')}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{t('fullName')} *</label>
-              <input required value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
+              <label style={labelStyle}>{t('buildingNumber')} *</label>
+              <input required value={form.buildingNumber} onChange={(e) => setForm({ ...form, buildingNumber: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{t('phone')} *</label>
-              <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
+              <label style={labelStyle}>{t('streetName')} *</label>
+              <input required value={form.streetName} onChange={(e) => setForm({ ...form, streetName: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{t('email')}</label>
-              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
+              <label style={labelStyle}>{t('district')} *</label>
+              <input required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('city')} *</label>
+              <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('postalCode')} *</label>
+              <input required value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} style={inputStyle} />
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '8px', color: '#6c757d' }}>{t('nationalId')}</label>
-              <DocumentUpload value={form.nationalIdDocument} onChange={(url) => setForm({ ...form, nationalIdDocument: url })} label={t('nationalId')} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '8px', color: '#6c757d' }}>{t('drivingLicense')}</label>
-              <DocumentUpload value={form.drivingLicenseDocument} onChange={(url) => setForm({ ...form, drivingLicenseDocument: url })} label={t('drivingLicense')} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '8px', color: '#6c757d' }}>{t('iqama')}</label>
-              <DocumentUpload value={form.iqamaDocument} onChange={(url) => setForm({ ...form, iqamaDocument: url })} label={t('iqama')} />
-            </div>
-          </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>{t('address')} *</label>
-            <input required value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
-          </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('cancel')}</button>
-            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+            <button type="button" onClick={onClose} style={{ padding: '10px 20px', border: '1px solid #ced4da', background: '#fff', cursor: 'pointer' }}>{commonT('cancel')}</button>
+            <button type="submit" disabled={loading} style={{ padding: '10px 20px', border: 'none', background: '#28aaa9', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer' }}>
               {loading ? commonT('loading') : commonT('save')}
             </button>
           </div>
