@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     const cars = await Car.aggregate([
+      { $match: { isDeleted: { $ne: true } } },
       // Join with CarPurchase to get purchasePrice
       {
         $lookup: {

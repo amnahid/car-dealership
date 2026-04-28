@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       SalaryPayment.aggregate([
-        { $match: { month: now.getMonth() + 1, year: now.getFullYear() } },
+        { $match: { month: now.getMonth() + 1, year: now.getFullYear(), status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
     ]);

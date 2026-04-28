@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     const [result] = await Car.aggregate([
+      { $match: { isDeleted: { $ne: true } } },
       {
         $lookup: {
           from: 'carpurchases',

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     switch (type) {
       case 'cars':
-        data = await Car.find({}).lean();
+        data = await Car.find({ isDeleted: { $ne: true } }).lean();
         break;
       case 'customers':
         data = await Customer.find({ isDeleted: { $ne: true } }).lean();
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
         data = await Employee.find({ isActive: true }).lean();
         break;
       case 'suppliers':
-        data = await Supplier.find({ status: 'active' }).lean();
+        data = await Supplier.find({ isDeleted: { $ne: true } }).lean();
         break;
       case 'repairs':
         data = await Repair.find({ isDeleted: { $ne: true } }).lean();

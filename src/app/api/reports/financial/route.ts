@@ -62,15 +62,15 @@ export async function GET(request: NextRequest) {
       salesByMonth,
     ] = await Promise.all([
       CashSale.aggregate([
-        { $match: { saleDate: dateFilter } },
+        { $match: { saleDate: dateFilter, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$finalPrice' } } },
       ]),
       InstallmentSale.aggregate([
-        { $match: { startDate: dateFilter } },
+        { $match: { startDate: dateFilter, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$totalPaid' } } },
       ]),
       Rental.aggregate([
-        { $match: { startDate: dateFilter } },
+        { $match: { startDate: dateFilter, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]),
       SalaryPayment.aggregate([
@@ -78,11 +78,11 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       Car.aggregate([
-        { $match: { createdAt: dateFilter } },
+        { $match: { createdAt: dateFilter, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$purchasePrice' } } },
       ]),
       Car.aggregate([
-        { $match: { createdAt: dateFilter } },
+        { $match: { createdAt: dateFilter, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
       ]),
       Transaction.aggregate([
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: '$amount' } } },
       ]),
       CashSale.aggregate([
-        { $match: { saleDate: dateFilter } },
+        { $match: { saleDate: dateFilter, status: { $ne: 'Cancelled' } } },
         {
           $lookup: {
             from: 'cars',
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, avgProfit: { $avg: '$profit' }, totalProfit: { $sum: '$profit' } } },
       ]),
       CashSale.aggregate([
-        { $match: { saleDate: dateFilter } },
+        { $match: { saleDate: dateFilter, status: { $ne: 'Cancelled' } } },
         {
           $group: {
             _id: { $month: '$saleDate' },

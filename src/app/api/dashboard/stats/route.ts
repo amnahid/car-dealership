@@ -36,22 +36,22 @@ export async function GET(request: NextRequest) {
         monthlyCashRevenueAgg, monthlyRentalRevenueAgg, monthlySalariesAgg,
         installmentStatsAgg,
       ] = await Promise.all([
-        Car.countDocuments(),
-        Car.countDocuments({ status: 'In Stock' }),
-        Car.countDocuments({ status: 'Under Repair' }),
-        Car.countDocuments({ status: 'Sold' }),
-        Car.countDocuments({ status: 'Rented' }),
-        Car.countDocuments({ status: 'Reserved' }),
-        CashSale.countDocuments(),
+        Car.countDocuments({ isDeleted: { $ne: true } }),
+        Car.countDocuments({ status: 'In Stock', isDeleted: { $ne: true } }),
+        Car.countDocuments({ status: 'Under Repair', isDeleted: { $ne: true } }),
+        Car.countDocuments({ status: 'Sold', isDeleted: { $ne: true } }),
+        Car.countDocuments({ status: 'Rented', isDeleted: { $ne: true } }),
+        Car.countDocuments({ status: 'Reserved', isDeleted: { $ne: true } }),
+        CashSale.countDocuments({ status: { $ne: 'Cancelled' } }),
         InstallmentSale.countDocuments({ status: 'Active' }),
         Rental.countDocuments({ status: 'Active' }),
         VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
         CashSale.aggregate([
-          { $match: { saleDate: { $gte: startOfMonth } } },
+          { $match: { saleDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
           { $group: { _id: null, total: { $sum: '$finalPrice' } } },
         ]),
         Rental.aggregate([
-          { $match: { startDate: { $gte: startOfMonth } } },
+          { $match: { startDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
           { $group: { _id: null, total: { $sum: '$totalAmount' } } },
         ]),
         Transaction.aggregate([
@@ -122,20 +122,20 @@ export async function GET(request: NextRequest) {
       expenseByCategoryAgg,
       monthlyTrendsAgg,
     ] = await Promise.all([
-      Car.countDocuments(),
-      Car.countDocuments({ status: 'In Stock' }),
-      Car.countDocuments({ status: 'Under Repair' }),
-      Car.countDocuments({ status: 'Sold' }),
-      Car.countDocuments({ status: 'Rented' }),
-      Car.countDocuments({ status: 'Reserved' }),
-      CashSale.countDocuments(),
+      Car.countDocuments({ isDeleted: { $ne: true } }),
+      Car.countDocuments({ status: 'In Stock', isDeleted: { $ne: true } }),
+      Car.countDocuments({ status: 'Under Repair', isDeleted: { $ne: true } }),
+      Car.countDocuments({ status: 'Sold', isDeleted: { $ne: true } }),
+      Car.countDocuments({ status: 'Rented', isDeleted: { $ne: true } }),
+      Car.countDocuments({ status: 'Reserved', isDeleted: { $ne: true } }),
+      CashSale.countDocuments({ status: { $ne: 'Cancelled' } }),
       InstallmentSale.countDocuments({ status: 'Active' }),
       Rental.countDocuments({ status: 'Active' }),
-      CashSale.aggregate([{ $group: { _id: null, total: { $sum: '$finalPrice' } } }]),
-      InstallmentSale.aggregate([{ $group: { _id: null, total: { $sum: '$totalPaid' } } }]),
+      CashSale.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, total: { $sum: '$finalPrice' } } }]),
+      InstallmentSale.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, total: { $sum: '$totalPaid' } } }]),
       Rental.aggregate([{ $match: { status: 'Completed' } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
       CashSale.aggregate([
-        { $match: { saleDate: { $gte: startOfMonth } } },
+        { $match: { saleDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$finalPrice' } } }
       ]),
       InstallmentSale.aggregate([
@@ -145,16 +145,16 @@ export async function GET(request: NextRequest) {
         { $group: { _id: null, total: { $sum: '$paymentSchedule.amount' } } }
       ]),
       Rental.aggregate([
-        { $match: { startDate: { $gte: startOfMonth } } },
+        { $match: { startDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } }
       ]),
-      Car.aggregate([{ $group: { _id: null, total: { $sum: '$totalRepairCost' } } }]),
+      Car.aggregate([{ $match: { isDeleted: { $ne: true } } }, { $group: { _id: null, total: { $sum: '$totalRepairCost' } } }]),
       Transaction.aggregate([
         { $match: { type: 'Expense', category: 'Salary Payment', isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       CashSale.aggregate([
-        { $match: { saleDate: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) } } },
+        { $match: { saleDate: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }, status: { $ne: 'Cancelled' } } },
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m', date: '$saleDate' } },
