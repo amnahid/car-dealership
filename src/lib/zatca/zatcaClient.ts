@@ -95,12 +95,12 @@ export class ZatcaClient {
         customer_info: {
           buyer_name: data.buyer.name,
           vat_number: data.buyer.trn,
-          street: data.buyer.streetName || 'Street Name',
+          street: data.buyer.streetName || 'Street',
           building: data.buyer.buildingNumber || '1234',
           city: data.buyer.city || 'Riyadh',
           city_subdivision: data.buyer.district || 'District',
           postal_zone: data.buyer.postalCode || '12345',
-          CRN_number: data.buyer.otherId?.id || '1010000001',
+          CRN_number: data.buyer.otherId?.id || (isStandard && !data.buyer.trn ? '1010000001' : undefined),
         }
       },
       invoice_type: invoiceType,
@@ -176,12 +176,12 @@ export class ZatcaClient {
         customer_info: {
           buyer_name: data.buyer.name || 'Test Buyer',
           vat_number: data.buyer.trn,
-          street: data.buyer.streetName || 'Street Name',
+          street: data.buyer.streetName || 'Street',
           building: data.buyer.buildingNumber || '1234',
           city: data.buyer.city || 'Riyadh',
           city_subdivision: data.buyer.district || 'District',
           postal_zone: data.buyer.postalCode || '12345',
-          CRN_number: data.buyer.otherId?.id || '1010000001',
+          CRN_number: data.buyer.otherId?.id || (isStandard && !data.buyer.trn ? '1010000001' : undefined),
         }
       },
       invoice_type: invoiceType,

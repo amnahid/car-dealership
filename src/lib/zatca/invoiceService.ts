@@ -27,6 +27,7 @@ export interface ZatcaSaleInput {
   saleId: string;
   invoiceType: ZatcaInvoiceType;
   issueDate: Date;
+  supplyDate: Date;
   buyer: ZatcaBuyerInfo;
   lineItems: ZatcaLineItem[];
   subtotal: number;
@@ -78,6 +79,7 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
     invoiceNumber: input.saleId,
     invoiceType: input.invoiceType,
     issueDate: input.issueDate,
+    supplyDate: input.supplyDate,
     seller,
     buyer: input.buyer,
     lineItems: input.lineItems,
