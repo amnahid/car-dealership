@@ -12,7 +12,7 @@ services:
     networks:
       - car-network
     volumes:
-      - ./public/uploads:/app/public/uploads
+      - /var/lib/car-dealership/uploads:/app/public/uploads
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4000', function(r){process.exit(0)}).on('error', function(){process.exit(1)})"]
       interval: 30s
@@ -28,7 +28,7 @@ services:
       - "81:81"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./public/uploads:/app/public/uploads:ro
+      - /var/lib/car-dealership/uploads:/app/public/uploads:ro
     depends_on:
       app:
         condition: service_healthy

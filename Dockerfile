@@ -33,7 +33,8 @@ COPY --from=builder /app/.next/static ./.next/static
 
 RUN mkdir -p public/uploads && \
     mkdir -p .next/cache && \
-    chown -R nextjs:nodejs public/uploads .next/cache
+    chown -R nextjs:nodejs public/uploads .next/cache && \
+    chown -R nextjs:nodejs .next
 
 USER nextjs
 
