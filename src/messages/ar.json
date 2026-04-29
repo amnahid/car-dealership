@@ -408,6 +408,7 @@
     "inStock": "في المخزون",
     "underRepair": "قيد الإصلاح",
     "reserved": "محجوز",
+    "onInstallment": "على أقساط",
     "sold": "مباع",
     "rented": "مؤجر",
     "defaulted": "متعثر",

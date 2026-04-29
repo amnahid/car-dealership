@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
         underRepair: statusMap['Under Repair'] || 0,
         rented: statusMap['Rented'] || 0,
         reserved: statusMap['Reserved'] || 0,
+        onInstallment: statusMap['On Installment'] || 0,
         defaulted: statusMap['Defaulted'] || 0,
       },
       inStockStats: {

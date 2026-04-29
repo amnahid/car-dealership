@@ -27,7 +27,7 @@ export interface ICar {
   sequenceNumber?: string;
   chassisNumber: string;
   color: string;
-  status: 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented' | 'Defaulted';
+  status: 'In Stock' | 'Under Repair' | 'Reserved' | 'On Installment' | 'Sold' | 'Rented' | 'Defaulted';
   images: string[];
   documents: string[];
   notes: string;
@@ -91,7 +91,7 @@ export interface IActivityLog {
   createdAt: Date;
 }
 
-export type CarStatus = 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented' | 'Defaulted';
+export type CarStatus = 'In Stock' | 'Under Repair' | 'Reserved' | 'On Installment' | 'Sold' | 'Rented' | 'Defaulted';
 export type DocumentType = 'Insurance' | 'Road Permit' | 'Registration Card';
 export type RepairStatus = 'Pending' | 'In Progress' | 'Completed';
 export type SaleType = 'Cash' | 'Installment' | 'Rental';

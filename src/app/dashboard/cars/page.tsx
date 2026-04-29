@@ -51,7 +51,7 @@ export default function CarsPage() {
   type Tab = typeof TABS[number];
 
   const [cars, setCars] = useState<Car[]>([]);
-  const [stats, setStats] = useState({ inStock: 0, sold: 0, underRepair: 0, rented: 0, reserved: 0, defaulted: 0, totalPurchaseValue: 0, totalRepairCost: 0, totalCost: 0 });
+  const [stats, setStats] = useState({ inStock: 0, sold: 0, underRepair: 0, rented: 0, reserved: 0, onInstallment: 0, defaulted: 0, totalPurchaseValue: 0, totalRepairCost: 0, totalCost: 0 });
   const [stockReport, setStockReport] = useState<{ brand: string; count: number; value: number; models: Record<string, number> }[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>(TABS[0]);
@@ -146,6 +146,7 @@ export default function CarsPage() {
         underRepair: data.statusCounts?.underRepair || 0,
         rented: data.statusCounts?.rented || 0,
         reserved: data.statusCounts?.reserved || 0,
+        onInstallment: data.statusCounts?.onInstallment || 0,
         defaulted: data.statusCounts?.defaulted || 0,
         totalPurchaseValue: data.inStockStats?.totalPurchaseValue || 0,
         totalRepairCost: data.inStockStats?.totalRepairCost || 0,
@@ -249,6 +250,7 @@ export default function CarsPage() {
           { label: statusT('inStock'), value: stats.inStock, color: '#28aaa9', key: 'In Stock' },
           { label: statusT('underRepair'), value: stats.underRepair, color: '#f5a623', key: 'Under Repair' },
           { label: statusT('reserved'), value: stats.reserved, color: '#38a4f8', key: 'Reserved' },
+          { label: statusT('onInstallment'), value: stats.onInstallment, color: '#6f42c1', key: 'On Installment' },
           { label: statusT('sold'), value: stats.sold, color: '#42ca7f', key: 'Sold' },
           { label: statusT('rented'), value: stats.rented, color: '#8b5cf6', key: 'Rented' },
           { label: statusT('defaulted'), value: stats.defaulted, color: '#ec4561', key: 'Defaulted' },
@@ -338,7 +340,7 @@ export default function CarsPage() {
                   }}
                 >
                   <option value="">{commonT('status')}</option>
-                  {['In Stock', 'Under Repair', 'Reserved', 'Sold', 'Rented'].map((s) => (
+                  {['In Stock', 'Under Repair', 'Reserved', 'On Installment', 'Sold', 'Rented', 'Defaulted'].map((s) => (
                     <option key={s} value={s}>
                       {statusT(s.replace(' ', '').charAt(0).toLowerCase() + s.replace(' ', '').slice(1))}
                     </option>
@@ -477,7 +479,7 @@ export default function CarsPage() {
               }}
             >
               <option value="">{t('allStatuses')}</option>
-              {['In Stock', 'Under Repair', 'Reserved', 'Sold', 'Rented', 'Defaulted'].map((s) => (
+              {['In Stock', 'Under Repair', 'Reserved', 'On Installment', 'Sold', 'Rented', 'Defaulted'].map((s) => (
                 <option key={s} value={s}>
                   {statusT(s.replace(' ', '').charAt(0).toLowerCase() + s.replace(' ', '').slice(1))}
                 </option>

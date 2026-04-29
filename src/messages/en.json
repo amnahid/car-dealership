@@ -408,6 +408,7 @@
     "inStock": "In Stock",
     "underRepair": "Under Repair",
     "reserved": "Reserved",
+    "onInstallment": "On Installment",
     "sold": "Sold",
     "rented": "Rented",
     "defaulted": "Defaulted",

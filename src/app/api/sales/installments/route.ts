@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
         sale = sales[0];
 
         await Car.findByIdAndUpdate(car, { 
-          status: 'Reserved',
+          status: 'On Installment',
           tafweedStatus: tafweedData.status,
           tafweedAuthorizedTo: tafweedData.authorizedTo,
           tafweedDriverIqama: tafweedData.driverIqama,

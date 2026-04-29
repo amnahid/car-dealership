@@ -14,6 +14,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
     'In Stock': { label: t('inStock'), background: '#42ca7f', color: '#ffffff' },
     'Under Repair': { label: t('underRepair'), background: '#f8b425', color: '#ffffff' },
     Reserved: { label: t('reserved'), background: '#38a4f8', color: '#ffffff' },
+    'On Installment': { label: t('onInstallment'), background: '#6f42c1', color: '#ffffff' },
     Sold: { label: t('sold'), background: '#adb5bd', color: '#ffffff' },
     Rented: { label: t('rented'), background: '#9c27b0', color: '#ffffff' },
     Defaulted: { label: t('defaulted'), background: '#ec4561', color: '#ffffff' },

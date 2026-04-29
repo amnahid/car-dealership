@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
         } else if (!hasAnyOverdue && sale.status === 'Defaulted') {
           await Promise.all([
             InstallmentSale.updateOne({ _id: sale._id }, { $set: { status: 'Active' } }),
-            Car.updateOne({ _id: sale.car }, { $set: { status: 'Reserved' } }),
+            Car.updateOne({ _id: sale.car }, { $set: { status: 'On Installment' } }),
           ]);
         }
       } catch (err) {
