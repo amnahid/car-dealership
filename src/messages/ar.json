@@ -570,7 +570,7 @@
     "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذا العميل؟",
     "deleteActionUndone": "هذا الإجراء لا يمكن التراجع عنه. هل تريد المتابعة؟"
     },
-    "DocumentForm": {
+    "RepairForm": {
     "car": "السيارة",
     "selectCar": "اختر سيارة",
     "repairDate": "تاريخ الإصلاح",

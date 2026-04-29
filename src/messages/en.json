@@ -570,7 +570,7 @@
     "deleteConfirm": "Are you sure you want to delete this customer?",
     "deleteActionUndone": "This action cannot be undone. Continue?"
     },
-    "DocumentForm": {
+    "RepairForm": {
     "car": "Car",
     "selectCar": "Select a car",
     "repairDate": "Repair Date",
