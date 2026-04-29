@@ -55,6 +55,12 @@ export interface IInstallmentSaleDocument extends Document {
   agentCommission?: number;
   status: InstallmentSaleStatus;
   isDeleted: boolean;
+  tafweedStatus?: 'Active' | 'Expired';
+  tafweedAuthorizedTo?: string;
+  tafweedDriverIqama?: string;
+  tafweedDurationMonths?: number;
+  tafweedExpiryDate?: Date;
+  driverLicenseExpiryDate?: Date;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -107,6 +113,12 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     agentCommission: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },
+    tafweedStatus: { type: String, enum: ['Active', 'Expired'], default: 'Active' },
+    tafweedAuthorizedTo: { type: String, trim: true },
+    tafweedDriverIqama: { type: String, trim: true },
+    tafweedDurationMonths: { type: Number, min: 1 },
+    tafweedExpiryDate: { type: Date },
+    driverLicenseExpiryDate: { type: Date },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

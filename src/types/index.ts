@@ -24,6 +24,7 @@ export interface ICar {
   model: string;
   year: number;
   engineNumber: string;
+  sequenceNumber?: string;
   chassisNumber: string;
   color: string;
   status: 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented';
@@ -31,6 +32,12 @@ export interface ICar {
   documents: string[];
   notes: string;
   totalRepairCost: number;
+  tafweedStatus?: 'None' | 'Active' | 'Expired';
+  tafweedAuthorizedTo?: string;
+  tafweedDriverIqama?: string;
+  tafweedDurationMonths?: number;
+  tafweedExpiryDate?: Date;
+  driverLicenseExpiryDate?: Date;
   createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -89,7 +96,7 @@ export type DocumentType = 'Insurance' | 'Road Permit' | 'Registration Card';
 export type RepairStatus = 'Pending' | 'In Progress' | 'Completed';
 export type SaleType = 'Cash' | 'Installment' | 'Rental';
 export type InstallmentPaymentStatus = 'Pending' | 'Paid' | 'Overdue' | 'Failed';
-export type RentalStatus = 'Active' | 'Completed' | 'Cancelled';
+export type RentalStatus = 'Active' | 'Completed' | 'Cancelled' | 'Overdue';
 
 export interface ICustomer {
   _id: Types.ObjectId;
@@ -100,6 +107,7 @@ export interface ICustomer {
   address: string;
   nationalId?: string;
   drivingLicense?: string;
+  licenseExpiryDate?: Date;
   profilePhoto?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;

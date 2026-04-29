@@ -50,10 +50,17 @@ interface Car {
   color: string;
   status: CarStatus;
   engineNumber: string;
+  sequenceNumber?: string;
   chassisNumber: string;
   notes: string;
   totalRepairCost: number;
   images: string[];
+  tafweedStatus?: 'None' | 'Active' | 'Expired';
+  tafweedAuthorizedTo?: string;
+  tafweedDriverIqama?: string;
+  tafweedDurationMonths?: number;
+  tafweedExpiryDate?: string;
+  driverLicenseExpiryDate?: string;
   purchase?: Purchase;
 }
 
@@ -128,6 +135,46 @@ export default function CarDetailPage() {
           </button>
         </div>
       </div>
+
+      {car.tafweedStatus && car.tafweedStatus !== 'None' && (
+        <div className="card" style={{ padding: '24px', borderLeft: car.tafweedStatus === 'Active' ? '4px solid #42ca7f' : '4px solid #ec4561' }}>
+          <h3 className="font-semibold text-gray-800 mb-4">Vehicle Authorization (Tafweed)</h3>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+            <div>
+              <div className="text-gray-500">Authorized Driver</div>
+              <div className="font-medium text-gray-800">{car.tafweedAuthorizedTo || '-'}</div>
+            </div>
+            <div>
+              <div className="text-gray-500">Iqama Number</div>
+              <div className="font-medium text-gray-800">{car.tafweedDriverIqama || '-'}</div>
+            </div>
+            <div>
+              <div className="text-gray-500">Expiration Date</div>
+              <div className={`font-medium ${car.tafweedStatus === 'Expired' ? 'text-red-600' : 'text-gray-800'}`}>
+                {car.tafweedExpiryDate ? new Date(car.tafweedExpiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-500">Duration</div>
+              <div className="font-medium text-gray-800">
+                {car.tafweedDurationMonths ? `${car.tafweedDurationMonths} months` : '-'}
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-500">Driver License Expiry</div>
+              <div className="font-medium text-gray-800">
+                {car.driverLicenseExpiryDate ? new Date(car.driverLicenseExpiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-500">Tafweed Status</div>
+              <div className={`font-semibold ${car.tafweedStatus === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
+                {car.tafweedStatus}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {car.purchase && (
         <div className="card" style={{ padding: '24px' }}>
@@ -258,6 +305,7 @@ export default function CarDetailPage() {
             {[
               [t('chassisNumber'), car.chassisNumber],
               [t('engineNumber'), car.engineNumber],
+              [t('sequenceNumber'), car.sequenceNumber],
               [t('color'), car.color],
               [t('totalRepairCost'), formatCurrency(car.totalRepairCost || 0)],
             ].map(([label, value]) => (

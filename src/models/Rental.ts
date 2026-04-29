@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export type RentalStatus = 'Active' | 'Completed' | 'Cancelled';
+export type RentalStatus = 'Active' | 'Completed' | 'Cancelled' | 'Overdue';
 export type ZatcaInvoiceType = 'Standard' | 'Simplified';
 export type ZatcaStatus = 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
 
@@ -21,6 +21,12 @@ export interface IRentalDocument extends Document {
   securityDeposit: number;
   status: RentalStatus;
   isDeleted: boolean;
+  tafweedStatus?: 'Active' | 'Expired';
+  tafweedAuthorizedTo?: string;
+  tafweedDriverIqama?: string;
+  tafweedDurationMonths?: number;
+  tafweedExpiryDate?: Date;
+  driverLicenseExpiryDate?: Date;
   returnDate?: Date;
   actualReturnDate?: Date;
   lateFee?: number;
@@ -57,8 +63,14 @@ const RentalSchema = new Schema<IRentalDocument>(
     vatAmount: { type: Number, default: 0, min: 0 },
     totalAmountWithVat: { type: Number, default: 0, min: 0 },
     securityDeposit: { type: Number, default: 0, min: 0 },
-    status: { type: String, enum: ['Active', 'Completed', 'Cancelled'], default: 'Active' },
+    status: { type: String, enum: ['Active', 'Completed', 'Cancelled', 'Overdue'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },
+    tafweedStatus: { type: String, enum: ['Active', 'Expired'], default: 'Active' },
+    tafweedAuthorizedTo: { type: String, trim: true },
+    tafweedDriverIqama: { type: String, trim: true },
+    tafweedDurationMonths: { type: Number, min: 1 },
+    tafweedExpiryDate: { type: Date },
+    driverLicenseExpiryDate: { type: Date },
     returnDate: { type: Date },
     actualReturnDate: { type: Date },
     lateFee: { type: Number, default: 0, min: 0 },

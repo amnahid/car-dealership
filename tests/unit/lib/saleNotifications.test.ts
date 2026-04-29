@@ -1,4 +1,21 @@
 jest.mock('twilio');
+jest.mock('../../../src/lib/notificationLogger', () => ({
+  logNotification: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../../../src/lib/email', () => {
+  const actual = jest.requireActual('../../../src/lib/email');
+  return {
+    ...actual,
+    sendEmail: jest.fn().mockResolvedValue({ success: true }),
+  };
+});
+jest.mock('../../../src/lib/sms', () => {
+  const actual = jest.requireActual('../../../src/lib/sms');
+  return {
+    ...actual,
+    sendExpirySms: jest.fn().mockResolvedValue({ success: true, messageId: 'SM_TEST' }),
+  };
+});
 
 describe('saleNotifications.ts', () => {
   beforeEach(() => {
@@ -106,7 +123,14 @@ describe('saleNotifications.ts', () => {
           carId: 'CAR-001',
           carBrand: 'Toyota',
           carModel: 'Camry',
+          salePrice: 25000,
+          discountType: 'flat',
+          discountValue: 0,
+          discountAmount: 0,
           finalPrice: 25000,
+          vatRate: 15,
+          vatAmount: 3750,
+          finalPriceWithVat: 28750,
         }
       );
 
@@ -127,7 +151,14 @@ describe('saleNotifications.ts', () => {
           carId: 'CAR-001',
           carBrand: 'Toyota',
           carModel: 'Camry',
+          salePrice: 25000,
+          discountType: 'flat',
+          discountValue: 0,
+          discountAmount: 0,
           finalPrice: 25000,
+          vatRate: 15,
+          vatAmount: 3750,
+          finalPriceWithVat: 28750,
         }
       );
 
@@ -154,6 +185,9 @@ describe('saleNotifications.ts', () => {
           endDate: '2025-02-05',
           totalAmount: 500,
           dailyRate: 100,
+          vatRate: 15,
+          vatAmount: 75,
+          finalPriceWithVat: 575,
         }
       );
 

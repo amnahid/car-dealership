@@ -81,10 +81,20 @@ export async function POST(
         }
 
         // Recalculate next payment info based on new state
-        const nextPending = updatedSale.paymentSchedule.find(p => p.status === 'Pending');
-        if (nextPending) {
-          updatedSale.nextPaymentDate = nextPending.dueDate;
-          updatedSale.nextPaymentAmount = nextPending.amount;
+        const schedule = updatedSale.paymentSchedule || [];
+        const nextUnpaid = schedule.find(p => p.status !== 'Paid');
+
+        if (nextUnpaid) {
+          updatedSale.nextPaymentDate = nextUnpaid.dueDate;
+          updatedSale.nextPaymentAmount = nextUnpaid.amount;
+
+          // Check if there are any remaining overdue installments
+          const hasOverdue = schedule.some(p => p.status === 'Overdue');
+          if (!hasOverdue && updatedSale.status === 'Defaulted') {
+            updatedSale.status = 'Active';
+          } else if (hasOverdue) {
+            updatedSale.status = 'Defaulted';
+          }
         } else {
           updatedSale.status = 'Completed';
           updatedSale.nextPaymentDate = null as unknown as Date;

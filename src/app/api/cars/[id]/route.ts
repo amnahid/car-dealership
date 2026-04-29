@@ -10,6 +10,7 @@ import User from '@/models/User';
 import Supplier from '@/models/Supplier';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { getTafweedStatus } from '@/lib/tafweed';
 
 export async function GET(
   _request: NextRequest,
@@ -37,7 +38,12 @@ export async function GET(
       VehicleDocument.find({ car: id }).sort({ expiryDate: 1 }).lean(),
     ]);
 
-    return NextResponse.json({ car, repairs, documents });
+    const carWithTafweedStatus = {
+      ...car,
+      tafweedStatus: getTafweedStatus((car as any).tafweedExpiryDate ?? null),
+    };
+
+    return NextResponse.json({ car: carWithTafweedStatus, repairs, documents });
   } catch (error) {
     console.error('Get car error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

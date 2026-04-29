@@ -23,6 +23,9 @@ export interface ICashSaleDocument extends Document {
   saleDate: Date;
   status: 'Active' | 'Cancelled';
   isDeleted: boolean;
+  registrationDriverName?: string;
+  registrationDriverIqama?: string;
+  registrationDriverLicenseExpiryDate?: Date;
   invoiceUrl?: string;
   // ZATCA fields
   invoiceType: ZatcaInvoiceType;
@@ -58,6 +61,9 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     saleDate: { type: Date, required: true },
     status: { type: String, enum: ['Active', 'Cancelled'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },
+    registrationDriverName: { type: String, trim: true },
+    registrationDriverIqama: { type: String, trim: true },
+    registrationDriverLicenseExpiryDate: { type: Date },
     invoiceUrl: { type: String },
     invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
     buyerTrn: { type: String },

@@ -21,6 +21,7 @@ interface Sale {
   totalPaid: number;
   remainingAmount: number;
   status: 'Active' | 'Completed' | 'Defaulted' | 'Cancelled';
+  currentInstallmentStatus?: string;
   nextPaymentDate: string;
   notes?: string;
   interestRate?: number;
@@ -300,6 +301,7 @@ export default function InstallmentsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('total')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('paid')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('installmentStatus')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('zatca')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
@@ -345,6 +347,19 @@ export default function InstallmentsPage() {
                     <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.totalPrice)}</td>
                     <td style={{ padding: '12px', color: '#42ca7f', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.totalPaid)}</td>
                     <td style={{ padding: '12px' }}>
+                      <span style={{ 
+                        padding: '4px 8px', 
+                        borderRadius: '3px', 
+                        fontSize: '11px', 
+                        fontWeight: 600, 
+                        background: sale.currentInstallmentStatus === 'Overdue' ? '#fdecea' : sale.currentInstallmentStatus === 'Paid' ? '#e6f4ea' : '#fff8e1', 
+                        color: sale.currentInstallmentStatus === 'Overdue' ? '#ec4561' : sale.currentInstallmentStatus === 'Paid' ? '#42ca7f' : '#f5a623',
+                        border: `1px solid ${sale.currentInstallmentStatus === 'Overdue' ? '#ec456130' : sale.currentInstallmentStatus === 'Paid' ? '#42ca7f30' : '#f5a62330'}`
+                      }}>
+                        {sale.currentInstallmentStatus === 'Overdue' ? commonT('overdue') : sale.currentInstallmentStatus === 'Paid' ? commonT('paid') : commonT('pending')}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(sale.status) + '20', color: getStatusColor(sale.status) }}>{getStatusLabel(sale.status)}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
@@ -389,7 +404,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '', lateFeePercent: '2', invoiceType: 'Simplified', buyerTrn: '', agreementDocument: '', agentName: '', agentCommission: '' });
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '', lateFeePercent: '2', invoiceType: 'Simplified', buyerTrn: '', agreementDocument: '', agentName: '', agentCommission: '', tafweedAuthorizedTo: '', tafweedDriverIqama: '', tafweedExpiryDate: '', tafweedDurationMonths: '12' });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -565,6 +580,27 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
                   <input value={form.buyerTrn} onChange={(e) => setForm({ ...form, buyerTrn: e.target.value })} placeholder={cashT('vatPlaceholder')} style={inputStyle} />
                 </div>
               )}
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Vehicle Authorization (Tafweed) *</div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={labelStyle}>Driver's Full Name</label>
+              <input value={form.tafweedAuthorizedTo} onChange={(e) => setForm({ ...form, tafweedAuthorizedTo: e.target.value })} style={inputStyle} placeholder="Leave blank to use customer name" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={labelStyle}>Driver's Iqama Number *</label>
+                <input value={form.tafweedDriverIqama} onChange={(e) => setForm({ ...form, tafweedDriverIqama: e.target.value })} style={inputStyle} placeholder="Driver's Iqama" required />
+              </div>
+              <div>
+                <label style={labelStyle}>Tafweed Expiration Date *</label>
+                <input type="date" value={form.tafweedExpiryDate} onChange={(e) => setForm({ ...form, tafweedExpiryDate: e.target.value })} style={inputStyle} required />
+              </div>
+              <div>
+                <label style={labelStyle}>Authorization Duration (Months) *</label>
+                <input type="number" min="1" value={form.tafweedDurationMonths} onChange={(e) => setForm({ ...form, tafweedDurationMonths: e.target.value })} style={inputStyle} required />
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>

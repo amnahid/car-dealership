@@ -8,6 +8,7 @@ export interface ICarRaw {
   carModel: string;
   year: number;
   engineNumber: string;
+  sequenceNumber?: string;
   chassisNumber: string;
   color: string;
   status: 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented';
@@ -16,6 +17,12 @@ export interface ICarRaw {
   notes: string;
   totalRepairCost: number;
   isDeleted: boolean;
+  tafweedStatus?: 'None' | 'Active' | 'Expired';
+  tafweedAuthorizedTo?: string;
+  tafweedDriverIqama?: string;
+  tafweedDurationMonths?: number;
+  tafweedExpiryDate?: Date;
+  driverLicenseExpiryDate?: Date;
   purchase?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -46,6 +53,7 @@ const CarSchema = new Schema(
     model: { type: String, required: true, trim: true },
     year: { type: Number, required: true },
     engineNumber: { type: String, trim: true },
+    sequenceNumber: { type: String, trim: true },
     chassisNumber: { type: String, required: true, unique: true, trim: true },
     color: { type: String, trim: true },
     status: {
@@ -58,6 +66,12 @@ const CarSchema = new Schema(
     notes: { type: String },
     totalRepairCost: { type: Number, default: 0 },
     isDeleted: { type: Boolean, default: false },
+    tafweedStatus: { type: String, enum: ['None', 'Active', 'Expired'], default: 'None' },
+    tafweedAuthorizedTo: { type: String, trim: true },
+    tafweedDriverIqama: { type: String, trim: true },
+    tafweedDurationMonths: { type: Number, min: 1 },
+    tafweedExpiryDate: { type: Date },
+    driverLicenseExpiryDate: { type: Date },
     purchase: { type: Schema.Types.ObjectId, ref: 'CarPurchase' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     gpsProvider: {

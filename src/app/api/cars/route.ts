@@ -8,6 +8,7 @@ import User from '@/models/User';
 import Supplier from '@/models/Supplier';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { getTafweedStatus } from '@/lib/tafweed';
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,8 +51,13 @@ export async function GET(request: NextRequest) {
         .lean(),
     ]);
 
+    const carsWithTafweedStatus = (cars as Array<Record<string, unknown>>).map((car) => ({
+      ...car,
+      tafweedStatus: getTafweedStatus((car.tafweedExpiryDate as Date | string | null | undefined) ?? null),
+    }));
+
     return NextResponse.json({
-      cars,
+      cars: carsWithTafweedStatus,
       pagination: { total, page, limit, pages: Math.ceil(total / limit) },
     });
   } catch (error) {

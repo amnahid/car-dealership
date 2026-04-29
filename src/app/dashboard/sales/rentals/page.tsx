@@ -19,7 +19,8 @@ interface Rental {
   dailyRate: number;
   totalAmount: number;
   securityDeposit: number;
-  status: 'Active' | 'Completed' | 'Cancelled';
+  status: 'Active' | 'Completed' | 'Cancelled' | 'Overdue';
+  currentStatus?: string;
   notes?: string;
   returnDate?: string;
   actualReturnDate?: string;
@@ -170,6 +171,7 @@ export default function RentalsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active': return '#28aaa9';
+      case 'Overdue': return '#ec4561';
       case 'Completed': return '#42ca7f';
       case 'Cancelled': return '#ec4561';
       default: return '#9ca8b3';
@@ -210,6 +212,7 @@ export default function RentalsPage() {
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
           <option value="">{cashT('allStatus')}</option>
           <option value="Active">{t('statuses.active')}</option>
+          <option value="Overdue">{t('statuses.overdue')}</option>
           <option value="Completed">{t('statuses.completed')}</option>
           <option value="Cancelled">{t('statuses.cancelled')}</option>
         </select>
@@ -338,7 +341,7 @@ export default function RentalsPage() {
                     </td>
                     <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.totalAmount)}</td>
                     <td style={{ padding: '12px' }}>
-                      <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(rental.status) + '20', color: getStatusColor(rental.status) }}>{getStatusLabel(rental.status)}</span>
+                      <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(rental.currentStatus || rental.status) + '20', color: getStatusColor(rental.currentStatus || rental.status) }}>{getStatusLabel(rental.currentStatus || rental.status)}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
                       <ZatcaStatusBadge status={rental.zatcaStatus} saleId={rental._id} saleType="Rental" t={cashT} />
@@ -382,7 +385,7 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', startDate: '', endDate: '', dailyRate: '', securityDeposit: '0', notes: '', lateFee: '0', agreementDocument: '', invoiceType: 'Simplified', buyerTrn: '', agentName: '', agentCommission: '' });
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', startDate: '', endDate: '', dailyRate: '', securityDeposit: '0', notes: '', lateFee: '0', agreementDocument: '', invoiceType: 'Simplified', buyerTrn: '', agentName: '', agentCommission: '', tafweedAuthorizedTo: '', tafweedDriverIqama: '', tafweedExpiryDate: '', tafweedDurationMonths: '12' });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -566,6 +569,27 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
                   <input value={form.buyerTrn} onChange={(e) => setForm({ ...form, buyerTrn: e.target.value })} placeholder={cashT('vatPlaceholder')} style={inputStyle} />
                 </div>
               )}
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Vehicle Authorization (Tafweed) *</div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={labelStyle}>Driver's Full Name</label>
+              <input value={form.tafweedAuthorizedTo} onChange={(e) => setForm({ ...form, tafweedAuthorizedTo: e.target.value })} style={inputStyle} placeholder="Leave blank to use customer name" />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={labelStyle}>Driver's Iqama Number *</label>
+                <input value={form.tafweedDriverIqama} onChange={(e) => setForm({ ...form, tafweedDriverIqama: e.target.value })} style={inputStyle} placeholder="Driver's Iqama" required />
+              </div>
+              <div>
+                <label style={labelStyle}>Tafweed Expiration Date *</label>
+                <input type="date" value={form.tafweedExpiryDate} onChange={(e) => setForm({ ...form, tafweedExpiryDate: e.target.value })} style={inputStyle} required />
+              </div>
+              <div>
+                <label style={labelStyle}>Authorization Duration (Months) *</label>
+                <input type="number" min="1" value={form.tafweedDurationMonths} onChange={(e) => setForm({ ...form, tafweedDurationMonths: e.target.value })} style={inputStyle} required />
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>

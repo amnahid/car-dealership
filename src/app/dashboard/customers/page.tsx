@@ -32,6 +32,7 @@ interface Customer {
   vatRegistrationNumber?: string;
   otherId?: string;
   otherIdType?: 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH';
+  licenseExpiryDate?: string;
 }
 
 export default function CustomersPage() {
@@ -284,6 +285,7 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
     vatRegistrationNumber: '',
     otherId: '',
     otherIdType: 'CRN' as 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH',
+    licenseExpiryDate: '',
     profilePhoto: '',
   });
   const [loading, setLoading] = useState(false);
@@ -333,6 +335,10 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
             <div>
                 <label style={labelStyle}>{t('vatTrn')}</label>
                 <input value={form.vatRegistrationNumber} onChange={(e) => setForm({ ...form, vatRegistrationNumber: e.target.value })} placeholder="3xxxxxxxxxxxxxx3" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('licenseExpiry')}</label>
+              <input type="date" value={form.licenseExpiryDate} onChange={(e) => setForm({ ...form, licenseExpiryDate: e.target.value })} style={inputStyle} />
             </div>
           </div>
 

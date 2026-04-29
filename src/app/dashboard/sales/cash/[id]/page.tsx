@@ -31,6 +31,9 @@ interface Sale {
   zatcaQRCode?: string;
   zatcaHash?: string;
   zatcaErrorMessage?: string;
+  registrationDriverName?: string;
+  registrationDriverIqama?: string;
+  registrationDriverLicenseExpiryDate?: string;
 }
 
 export default function CashSaleDetailPage() {
@@ -144,6 +147,20 @@ export default function CashSaleDetailPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Phone</span>
               <span style={{ color: '#2a3142' }}>{sale.customerPhone}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Registered Driver</span>
+              <span style={{ color: '#2a3142' }}>{sale.registrationDriverName || sale.customerName}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Driver Iqama</span>
+              <span style={{ color: '#2a3142' }}>{sale.registrationDriverIqama || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>License Expiry</span>
+              <span style={{ color: '#2a3142' }}>
+                {sale.registrationDriverLicenseExpiryDate ? new Date(sale.registrationDriverLicenseExpiryDate).toLocaleDateString() : '-'}
+              </span>
             </div>
           </div>
         </div>

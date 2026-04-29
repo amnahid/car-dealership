@@ -12,7 +12,12 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
-  address: string;
+  buildingNumber: string;
+  streetName: string;
+  district: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
   nationalIdDocument?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
@@ -23,6 +28,7 @@ interface Customer {
   createdAt: string;
   customerType?: 'Individual' | 'Business';
   vatRegistrationNumber?: string;
+  licenseExpiryDate?: string;
 }
 
 export default function CustomerDetailPage() {
@@ -193,6 +199,12 @@ export default function CustomerDetailPage() {
                 <span style={{ color: '#2a3142', fontFamily: 'monospace' }}>{customer.vatRegistrationNumber}</span>
               </div>
             )}
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Driver License Expiry</span>
+              <span style={{ color: '#2a3142' }}>
+                {customer.licenseExpiryDate ? new Date(customer.licenseExpiryDate).toLocaleDateString() : '-'}
+              </span>
+            </div>
           </div>
         </div>
 

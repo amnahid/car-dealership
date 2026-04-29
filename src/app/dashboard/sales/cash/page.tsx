@@ -385,7 +385,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', salePrice: '', discountType: 'flat' as 'flat' | 'percentage', discountValue: '0', agentName: '', agentCommission: '', saleDate: new Date().toISOString().split('T')[0], notes: '', invoiceType: 'Simplified', buyerTrn: '' });
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', salePrice: '', discountType: 'flat' as 'flat' | 'percentage', discountValue: '0', agentName: '', agentCommission: '', saleDate: new Date().toISOString().split('T')[0], notes: '', invoiceType: 'Simplified', buyerTrn: '', registrationDriverName: '', registrationDriverIqama: '' });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -544,6 +544,29 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
                   <input value={form.buyerTrn} onChange={(e) => setForm({ ...form, buyerTrn: e.target.value })} placeholder={t('vatPlaceholder')} style={inputStyle} />
                 </div>
               )}
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>
+              Vehicle Registration (Paid Upfront)
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={labelStyle}>Registered Driver Name</label>
+              <input
+                value={form.registrationDriverName}
+                onChange={(e) => setForm({ ...form, registrationDriverName: e.target.value })}
+                style={inputStyle}
+                placeholder="Leave blank to use customer name"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Driver's Iqama Number</label>
+              <input
+                value={form.registrationDriverIqama}
+                onChange={(e) => setForm({ ...form, registrationDriverIqama: e.target.value })}
+                style={inputStyle}
+                placeholder="Optional"
+              />
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>

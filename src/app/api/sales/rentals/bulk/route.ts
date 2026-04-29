@@ -63,9 +63,6 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ message: `Successfully deleted ${activeIds.length} rentals` });
     }
-        cancelledCount: activeIds.length
-      });
-    }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {

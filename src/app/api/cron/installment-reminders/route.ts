@@ -55,17 +55,29 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        for (const payment of (sale.paymentSchedule || [])) {
+        let hasOverdueUpdate = false;
+        const currentPaymentSchedule = sale.paymentSchedule || [];
+
+        for (let i = 0; i < currentPaymentSchedule.length; i++) {
+          const payment = currentPaymentSchedule[i];
           const dueDate = new Date(payment.dueDate);
           const isPaid = payment.status === 'Paid';
 
           if (isPaid) {
-            skipped++;
             continue;
           }
 
           const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           const daysOverdue = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+          // Auto-update status to Overdue in DB if past due date
+          if (daysOverdue > 0 && payment.status !== 'Overdue') {
+            await InstallmentSale.updateOne(
+              { _id: sale._id, 'paymentSchedule.installmentNumber': payment.installmentNumber },
+              { $set: { 'paymentSchedule.$.status': 'Overdue' } }
+            );
+            hasOverdueUpdate = true;
+          }
 
           const customerInfo = {
             name: sale.customerName,
@@ -99,6 +111,19 @@ export async function GET(request: NextRequest) {
             });
             overdueSent++;
           }
+        }
+
+        // If there are overdue installments, we might want to update the sale status to Defaulted
+        // Check for ANY overdue installment in the schedule
+        const hasAnyOverdue = currentPaymentSchedule.some(p => {
+          const dueDate = new Date(p.dueDate);
+          return p.status !== 'Paid' && dueDate < now;
+        });
+
+        if (hasAnyOverdue && sale.status === 'Active') {
+          await InstallmentSale.updateOne({ _id: sale._id }, { $set: { status: 'Defaulted' } });
+        } else if (!hasAnyOverdue && sale.status === 'Defaulted') {
+          await InstallmentSale.updateOne({ _id: sale._id }, { $set: { status: 'Active' } });
         }
       } catch (err) {
         errors.push(`Error processing sale ${sale.saleId}: ${err instanceof Error ? err.message : 'Unknown error'}`);

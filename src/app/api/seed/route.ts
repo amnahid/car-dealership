@@ -31,16 +31,16 @@ const DEFAULT_USERS: SeedUser[] = [
 ];
 
 const SAMPLE_CARS = [
-  { brand: 'Toyota', model: 'Camry', year: 2023, color: 'Silver', chassisNumber: 'CH-Toy-001', engineNumber: 'ENG-Toy-001', status: 'In Stock' as const, purchasePrice: 2500000 },
-  { brand: 'Honda', model: 'Civic', year: 2022, color: 'White', chassisNumber: 'CH-Hon-002', engineNumber: 'ENG-Hon-002', status: 'Rented' as const, purchasePrice: 2200000 },
-  { brand: 'Toyota', model: 'Corolla', year: 2023, color: 'Black', chassisNumber: 'CH-Toy-003', engineNumber: 'ENG-Toy-003', status: 'In Stock' as const, purchasePrice: 2100000 },
-  { brand: 'Hyundai', model: 'Elantra', year: 2022, color: 'Red', chassisNumber: 'CH-Hyu-004', engineNumber: 'ENG-Hyu-004', status: 'Sold' as const, purchasePrice: 1800000 },
-  { brand: 'Kia', model: 'Sportage', year: 2023, color: 'Blue', chassisNumber: 'CH-Kia-005', engineNumber: 'ENG-Kia-005', status: 'Under Repair' as const, purchasePrice: 2800000 },
-  { brand: 'Toyota', model: 'RAV4', year: 2023, color: 'Gray', chassisNumber: 'CH-Toy-006', engineNumber: 'ENG-Toy-006', status: 'In Stock' as const, purchasePrice: 3200000 },
-  { brand: 'Honda', model: 'Accord', year: 2022, color: 'White', chassisNumber: 'CH-Hon-007', engineNumber: 'ENG-Hon-007', status: 'Rented' as const, purchasePrice: 2600000 },
-  { brand: 'Nissan', model: 'Altima', year: 2023, color: 'Black', chassisNumber: 'CH-Nis-008', engineNumber: 'ENG-Nis-008', status: 'In Stock' as const, purchasePrice: 2400000 },
-  { brand: 'Hyundai', model: 'Tucson', year: 2022, color: 'Silver', chassisNumber: 'CH-Hyu-009', engineNumber: 'ENG-Hyu-009', status: 'Sold' as const, purchasePrice: 2700000 },
-  { brand: 'Kia', model: 'Seltos', year: 2023, color: 'Red', chassisNumber: 'CH-Kia-010', engineNumber: 'ENG-Kia-010', status: 'In Stock' as const, purchasePrice: 2000000 },
+  { brand: 'Toyota', model: 'Camry', year: 2023, color: 'Silver', chassisNumber: 'CH-Toy-001', engineNumber: 'ENG-Toy-001', sequenceNumber: 'SEQ-Toy-001', status: 'In Stock' as const, purchasePrice: 2500000 },
+  { brand: 'Honda', model: 'Civic', year: 2022, color: 'White', chassisNumber: 'CH-Hon-002', engineNumber: 'ENG-Hon-002', sequenceNumber: 'SEQ-Hon-002', status: 'Rented' as const, purchasePrice: 2200000 },
+  { brand: 'Toyota', model: 'Corolla', year: 2023, color: 'Black', chassisNumber: 'CH-Toy-003', engineNumber: 'ENG-Toy-003', sequenceNumber: 'SEQ-Toy-003', status: 'In Stock' as const, purchasePrice: 2100000 },
+  { brand: 'Hyundai', model: 'Elantra', year: 2022, color: 'Red', chassisNumber: 'CH-Hyu-004', engineNumber: 'ENG-Hyu-004', sequenceNumber: 'SEQ-Hyu-004', status: 'Sold' as const, purchasePrice: 1800000 },
+  { brand: 'Kia', model: 'Sportage', year: 2023, color: 'Blue', chassisNumber: 'CH-Kia-005', engineNumber: 'ENG-Kia-005', sequenceNumber: 'SEQ-Kia-005', status: 'Under Repair' as const, purchasePrice: 2800000 },
+  { brand: 'Toyota', model: 'RAV4', year: 2023, color: 'Gray', chassisNumber: 'CH-Toy-006', engineNumber: 'ENG-Toy-006', sequenceNumber: 'SEQ-Toy-006', status: 'In Stock' as const, purchasePrice: 3200000 },
+  { brand: 'Honda', model: 'Accord', year: 2022, color: 'White', chassisNumber: 'CH-Hon-007', engineNumber: 'ENG-Hon-007', sequenceNumber: 'SEQ-Hon-007', status: 'Rented' as const, purchasePrice: 2600000 },
+  { brand: 'Nissan', model: 'Altima', year: 2023, color: 'Black', chassisNumber: 'CH-Nis-008', engineNumber: 'ENG-Nis-008', sequenceNumber: 'SEQ-Nis-008', status: 'In Stock' as const, purchasePrice: 2400000 },
+  { brand: 'Hyundai', model: 'Tucson', year: 2022, color: 'Silver', chassisNumber: 'CH-Hyu-009', engineNumber: 'ENG-Hyu-009', sequenceNumber: 'SEQ-Hyu-009', status: 'Sold' as const, purchasePrice: 2700000 },
+  { brand: 'Kia', model: 'Seltos', year: 2023, color: 'Red', chassisNumber: 'CH-Kia-010', engineNumber: 'ENG-Kia-010', sequenceNumber: 'SEQ-Kia-010', status: 'In Stock' as const, purchasePrice: 2000000 },
 ];
 
 const SAMPLE_CUSTOMERS = [

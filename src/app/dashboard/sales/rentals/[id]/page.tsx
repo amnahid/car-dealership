@@ -29,6 +29,12 @@ interface Rental {
   zatcaErrorMessage?: string;
   zatcaQRCode?: string;
   zatcaHash?: string;
+  tafweedStatus?: 'Active' | 'Expired';
+  tafweedAuthorizedTo?: string;
+  tafweedDriverIqama?: string;
+  tafweedDurationMonths?: number;
+  tafweedExpiryDate?: string;
+  driverLicenseExpiryDate?: string;
 }
 
 export default function RentalDetailPage() {
@@ -131,6 +137,38 @@ export default function RentalDetailPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Phone</span>
               <span style={{ color: '#2a3142' }}>{rental.customerPhone}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Tafweed Authorization</h3>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Status</span>
+              <span style={{ color: rental.tafweedStatus === 'Expired' ? '#ec4561' : '#28aaa9', fontWeight: 600 }}>
+                {rental.tafweedStatus || 'Active'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Authorized Driver</span>
+              <span style={{ color: '#2a3142' }}>{rental.tafweedAuthorizedTo || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Driver Iqama</span>
+              <span style={{ color: '#2a3142' }}>{rental.tafweedDriverIqama || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Duration</span>
+              <span style={{ color: '#2a3142' }}>{rental.tafweedDurationMonths ? `${rental.tafweedDurationMonths} months` : '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Tafweed Expiry</span>
+              <span style={{ color: '#2a3142' }}>{rental.tafweedExpiryDate ? new Date(rental.tafweedExpiryDate).toLocaleDateString() : '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Driver License Expiry</span>
+              <span style={{ color: '#2a3142' }}>{rental.driverLicenseExpiryDate ? new Date(rental.driverLicenseExpiryDate).toLocaleDateString() : '-'}</span>
             </div>
           </div>
         </div>

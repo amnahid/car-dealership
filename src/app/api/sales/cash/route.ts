@@ -92,6 +92,8 @@ export async function POST(request: NextRequest) {
       saleDate, notes,
       invoiceType = 'Simplified',
       buyerTrn,
+      registrationDriverName,
+      registrationDriverIqama,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !salePrice || !saleDate) {
@@ -115,6 +117,9 @@ export async function POST(request: NextRequest) {
         if (!carCheck) throw new Error('Car not found');
         if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
 
+        const customerDocInTx = await Customer.findById(customer).session(session).lean();
+        if (!customerDocInTx) throw new Error('Customer not found');
+
         const sales = await CashSale.create([{
           car: car,
           carId,
@@ -135,12 +140,27 @@ export async function POST(request: NextRequest) {
           notes,
           invoiceType,
           zatcaStatus: 'Pending',
+          registrationDriverName: registrationDriverName || customerName,
+          registrationDriverIqama: registrationDriverIqama || '',
+          registrationDriverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate
+            ? new Date((customerDocInTx as any).licenseExpiryDate)
+            : undefined,
           createdBy: user.userId,
         }], { session });
         
         sale = sales[0];
 
-        await Car.findByIdAndUpdate(car, { status: 'Sold' }, { session });
+        await Car.findByIdAndUpdate(car, {
+          status: 'Sold',
+          tafweedStatus: 'None',
+          tafweedAuthorizedTo: registrationDriverName || customerName,
+          tafweedDriverIqama: registrationDriverIqama || '',
+          tafweedDurationMonths: undefined,
+          tafweedExpiryDate: undefined,
+          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate
+            ? new Date((customerDocInTx as any).licenseExpiryDate)
+            : undefined,
+        }, { session });
         
         await Transaction.create([{
           date: new Date(saleDate),
@@ -154,7 +174,7 @@ export async function POST(request: NextRequest) {
           createdBy: user.userId,
         }], { session });
 
-        customerData = await Customer.findById(customer).session(session).lean();
+        customerData = customerDocInTx;
         carData = await Car.findById(car).session(session).lean();
 
         await logActivity({

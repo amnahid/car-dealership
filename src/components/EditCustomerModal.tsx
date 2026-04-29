@@ -27,6 +27,7 @@ interface Customer {
   vatRegistrationNumber?: string;
   otherId?: string;
   otherIdType?: 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH';
+  licenseExpiryDate?: string;
 }
 
 interface EditCustomerModalProps {
@@ -62,6 +63,7 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     vatRegistrationNumber: customer.vatRegistrationNumber || '',
     otherId: customer.otherId || '',
     otherIdType: customer.otherIdType || 'CRN' as 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH',
+    licenseExpiryDate: customer.licenseExpiryDate ? customer.licenseExpiryDate.split('T')[0] : '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -153,6 +155,10 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
                 <label style={labelStyle}>{t('otherId')}</label>
                 <input value={form.otherId} onChange={(e) => setForm({ ...form, otherId: e.target.value })} style={inputStyle} />
               </div>
+            </div>
+            <div>
+              <label style={labelStyle}>{t('licenseExpiry')}</label>
+              <input type="date" value={form.licenseExpiryDate} onChange={(e) => setForm({ ...form, licenseExpiryDate: e.target.value })} style={inputStyle} />
             </div>
           </div>
 

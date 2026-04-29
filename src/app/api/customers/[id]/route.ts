@@ -68,7 +68,7 @@ export async function PUT(
       fullName, phone, email, 
       buildingNumber, streetName, district, city, postalCode, countryCode,
       nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
-      emergencyContactName, emergencyContactPhone, 
+      emergencyContactName, emergencyContactPhone, licenseExpiryDate,
       notes, profilePhoto, customerType, vatRegistrationNumber,
       otherId, otherIdType
     } = body;
@@ -83,7 +83,7 @@ export async function PUT(
         fullName, phone, email, 
         buildingNumber, streetName, district, city, postalCode, countryCode: countryCode || 'SA',
         nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
-        emergencyContactName, emergencyContactPhone, 
+        emergencyContactName, emergencyContactPhone, licenseExpiryDate,
         notes, profilePhoto, customerType, vatRegistrationNumber,
         otherId, otherIdType
       },

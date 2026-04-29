@@ -8,6 +8,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import { sendInstallmentConfirmationNotifications } from '@/lib/saleNotifications';
 import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
+import { validateTafweedAuthorization } from '@/lib/tafweed';
 import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || '';
     const customerId = searchParams.get('customer');
 
-    let query: Record<string, unknown> = { isDeleted: { $ne: true } };
+    const query: Record<string, unknown> = { isDeleted: { $ne: true } };
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
@@ -70,10 +71,29 @@ export async function GET(request: NextRequest) {
       ]),
     ]);
 
-    const salesWithDeliver = sales.map((s) => ({
-      ...s,
-      canDeliver: s.totalPrice > 0 ? ((s.totalPaid / s.totalPrice) * 100 >= (s.deliveryThresholdPercent ?? 30)) : false,
-    }));
+    const salesWithDeliver = sales.map((s) => {
+      const schedule = (s as any).paymentSchedule || [];
+      const nextPending = schedule.find((p: any) => p.status !== 'Paid');
+      
+      let currentInstallmentStatus = 'N/A';
+      if (nextPending) {
+        const dueDate = new Date(nextPending.dueDate);
+        const now = new Date();
+        if (dueDate < now && nextPending.status !== 'Paid') {
+          currentInstallmentStatus = 'Overdue';
+        } else {
+          currentInstallmentStatus = nextPending.status || 'Pending';
+        }
+      } else if (s.status === 'Completed') {
+        currentInstallmentStatus = 'Paid';
+      }
+
+      return {
+        ...s,
+        currentInstallmentStatus,
+        canDeliver: s.totalPrice > 0 ? ((s.totalPaid / s.totalPrice) * 100 >= (s.deliveryThresholdPercent ?? 30)) : false,
+      };
+    });
 
     return NextResponse.json({
       sales: salesWithDeliver,
@@ -110,6 +130,7 @@ export async function POST(request: NextRequest) {
       deliveryThresholdPercent, lateFeePercent,
       invoiceType, buyerTrn,
       agentName, agentCommission,
+      tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !totalPrice || !downPayment || !tenureMonths || !startDate) {
@@ -138,6 +159,23 @@ export async function POST(request: NextRequest) {
     const nextPaymentDate = new Date(start);
     nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
 
+    let tafweedData;
+    try {
+      tafweedData = validateTafweedAuthorization({
+        startDate,
+        customerName,
+        tafweedAuthorizedTo,
+        tafweedDriverIqama,
+        tafweedExpiryDate,
+        tafweedDurationMonths,
+      });
+    } catch (validationError) {
+      return NextResponse.json(
+        { error: validationError instanceof Error ? validationError.message : 'Invalid Tafweed details' },
+        { status: 400 }
+      );
+    }
+
     const session = await mongoose.startSession();
     let sale;
     let customerDoc;
@@ -148,6 +186,9 @@ export async function POST(request: NextRequest) {
         const carCheck = await Car.findById(car).session(session);
         if (!carCheck) throw new Error('Car not found');
         if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
+
+        const customerDocInTx = await Customer.findById(customer).session(session).lean();
+        if (!customerDocInTx) throw new Error('Customer not found');
 
         const sales = await InstallmentSale.create([{
           car: car,
@@ -172,6 +213,12 @@ export async function POST(request: NextRequest) {
           agentName: agentName || '',
           agentCommission: agentCommission || 0,
           status: 'Active',
+          tafweedStatus: tafweedData.status,
+          tafweedAuthorizedTo: tafweedData.authorizedTo,
+          tafweedDriverIqama: tafweedData.driverIqama,
+          tafweedDurationMonths: tafweedData.durationMonths,
+          tafweedExpiryDate: tafweedData.expiryDate,
+          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
           notes,
           vatRate: ZATCA_VAT_RATE,
           vatAmount: vatInfo.vatAmount,
@@ -182,7 +229,15 @@ export async function POST(request: NextRequest) {
         
         sale = sales[0];
 
-        await Car.findByIdAndUpdate(car, { status: 'Reserved' }, { session });
+        await Car.findByIdAndUpdate(car, { 
+          status: 'Reserved',
+          tafweedStatus: tafweedData.status,
+          tafweedAuthorizedTo: tafweedData.authorizedTo,
+          tafweedDriverIqama: tafweedData.driverIqama,
+          tafweedDurationMonths: tafweedData.durationMonths,
+          tafweedExpiryDate: tafweedData.expiryDate,
+          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
+        }, { session });
         
         await Transaction.create([{
           date: new Date(startDate),
@@ -196,7 +251,7 @@ export async function POST(request: NextRequest) {
           createdBy: user.userId,
         }], { session });
 
-        customerDoc = await Customer.findById(customer).session(session).lean();
+        customerDoc = customerDocInTx;
         carDoc = await Car.findById(car).session(session).lean();
 
         await logActivity({

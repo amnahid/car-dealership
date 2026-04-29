@@ -19,6 +19,7 @@ export interface ICustomerDocument extends Document {
   profilePhoto?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
+  licenseExpiryDate?: Date;
   customerType: CustomerType;
   vatRegistrationNumber?: string; // TRN (15-digit)
   otherId?: string;               // Secondary ID (e.g., CRN)
@@ -46,6 +47,7 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     profilePhoto: { type: String },
     emergencyContactName: { type: String, trim: true },
     emergencyContactPhone: { type: String, trim: true },
+    licenseExpiryDate: { type: Date },
     customerType: { type: String, enum: ['Individual', 'Business'], default: 'Individual' },
     vatRegistrationNumber: { type: String, trim: true },
     otherId: { type: String, trim: true },

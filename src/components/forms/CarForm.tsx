@@ -40,6 +40,7 @@ interface CarFormData {
   model: string;
   year: string;
   engineNumber: string;
+  sequenceNumber: string;
   chassisNumber: string;
   color: string;
   status: CarStatus;
@@ -105,6 +106,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
     model: '',
     year: new Date().getFullYear().toString(),
     engineNumber: '',
+    sequenceNumber: '',
     chassisNumber: '',
     color: '',
     status: 'In Stock',
@@ -119,6 +121,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         ...prev,
         ...initialData,
         year: initialData.year?.toString() || new Date().getFullYear().toString(),
+        sequenceNumber: initialData.sequenceNumber || '',
         purchase: initialData.purchase ? {
           ...emptyPurchase,
           supplier: initialData.purchase.supplier || '',
@@ -445,6 +448,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         <div><label style={labelStyle}>{t('year')} *</label><input name="year" type="number" required value={form.year} onChange={handleChange} style={inputStyle} /></div>
         <div><label style={labelStyle}>{t('color')}</label><input name="color" value={form.color} onChange={handleChange} style={inputStyle} /></div>
         <div><label style={labelStyle}>{t('engineNumber')}</label><input name="engineNumber" value={form.engineNumber} onChange={handleChange} style={inputStyle} /></div>
+        <div><label style={labelStyle}>{t('sequenceNumber')}</label><input name="sequenceNumber" value={form.sequenceNumber} onChange={handleChange} style={inputStyle} /></div>
         <div><label style={labelStyle}>{t('chassisNumber')} *</label><input name="chassisNumber" required value={form.chassisNumber} onChange={handleChange} style={inputStyle} /></div>
         <div>
           <label style={labelStyle}>{t('status')}</label>

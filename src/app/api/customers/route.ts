@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       buildingNumber, streetName, district, city, postalCode, countryCode,
       nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
       emergencyContactName, emergencyContactPhone, 
-      notes, profilePhoto, customerType, vatRegistrationNumber,
+      licenseExpiryDate, notes, profilePhoto, customerType, vatRegistrationNumber,
       otherId, otherIdType
     } = body;
 
@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
       iqamaDocument,
       emergencyContactName,
       emergencyContactPhone,
+      licenseExpiryDate,
       notes,
       profilePhoto,
       customerType: customerType || 'Individual',
