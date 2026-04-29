@@ -410,6 +410,7 @@
     "reserved": "محجوز",
     "sold": "مباع",
     "rented": "مؤجر",
+    "defaulted": "متعثر",
     "unknown": "غير معروف"
   },
   "Header": {

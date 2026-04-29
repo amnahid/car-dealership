@@ -16,6 +16,7 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
     Reserved: { label: t('reserved'), background: '#38a4f8', color: '#ffffff' },
     Sold: { label: t('sold'), background: '#adb5bd', color: '#ffffff' },
     Rented: { label: t('rented'), background: '#9c27b0', color: '#ffffff' },
+    Defaulted: { label: t('defaulted'), background: '#ec4561', color: '#ffffff' },
   };
 
   const config = statusConfig[status] || { label: t('unknown'), background: '#adb5bd', color: '#ffffff' };

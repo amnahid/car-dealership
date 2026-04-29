@@ -11,7 +11,7 @@ export interface ICarRaw {
   sequenceNumber?: string;
   chassisNumber: string;
   color: string;
-  status: 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented';
+  status: 'In Stock' | 'Under Repair' | 'Reserved' | 'Sold' | 'Rented' | 'Defaulted';
   images: string[];
   documents: string[];
   notes: string;
@@ -58,7 +58,7 @@ const CarSchema = new Schema(
     color: { type: String, trim: true },
     status: {
       type: String,
-      enum: ['In Stock', 'Under Repair', 'Reserved', 'Sold', 'Rented'],
+      enum: ['In Stock', 'Under Repair', 'Reserved', 'Sold', 'Rented', 'Defaulted'],
       default: 'In Stock',
     },
     images: [{ type: String }],

@@ -92,8 +92,10 @@ export async function POST(
           const hasOverdue = schedule.some(p => p.status === 'Overdue');
           if (!hasOverdue && updatedSale.status === 'Defaulted') {
             updatedSale.status = 'Active';
+            await Car.findByIdAndUpdate(updatedSale.car, { status: 'Reserved' }, { session });
           } else if (hasOverdue) {
             updatedSale.status = 'Defaulted';
+            await Car.findByIdAndUpdate(updatedSale.car, { status: 'Defaulted' }, { session });
           }
         } else {
           updatedSale.status = 'Completed';

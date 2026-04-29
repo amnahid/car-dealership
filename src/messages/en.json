@@ -410,6 +410,7 @@
     "reserved": "Reserved",
     "sold": "Sold",
     "rented": "Rented",
+    "defaulted": "Defaulted",
     "unknown": "Unknown"
   },
   "Header": {

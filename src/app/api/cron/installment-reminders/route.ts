@@ -121,9 +121,15 @@ export async function GET(request: NextRequest) {
         });
 
         if (hasAnyOverdue && sale.status === 'Active') {
-          await InstallmentSale.updateOne({ _id: sale._id }, { $set: { status: 'Defaulted' } });
+          await Promise.all([
+            InstallmentSale.updateOne({ _id: sale._id }, { $set: { status: 'Defaulted' } }),
+            Car.updateOne({ _id: sale.car }, { $set: { status: 'Defaulted' } }),
+          ]);
         } else if (!hasAnyOverdue && sale.status === 'Defaulted') {
-          await InstallmentSale.updateOne({ _id: sale._id }, { $set: { status: 'Active' } });
+          await Promise.all([
+            InstallmentSale.updateOne({ _id: sale._id }, { $set: { status: 'Active' } }),
+            Car.updateOne({ _id: sale.car }, { $set: { status: 'Reserved' } }),
+          ]);
         }
       } catch (err) {
         errors.push(`Error processing sale ${sale.saleId}: ${err instanceof Error ? err.message : 'Unknown error'}`);
