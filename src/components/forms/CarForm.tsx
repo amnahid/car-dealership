@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CarStatus } from '@/types';
+import { RepairStatus, CarStatus } from '@/types';
 import { uploadImage, deleteFile } from '@/lib/uploadClient';
 import SearchableSelect from '@/components/SearchableSelect';
+import StatusBadge from '@/components/StatusBadge';
 import { MultiImageUpload } from '@/components/ImageUpload';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -452,18 +453,12 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         <div><label style={labelStyle}>{t('chassisNumber')} *</label><input name="chassisNumber" required value={form.chassisNumber} onChange={handleChange} style={inputStyle} /></div>
         <div>
           <label style={labelStyle}>{t('status')}</label>
-          <select name="status" value={form.status} onChange={handleChange} style={inputStyle}>
-            {['In Stock', 'Under Repair', 'Reserved', 'On Installment', 'Sold', 'Rented', 'Defaulted'].map((s) => {
-              const isProtected = ['Sold', 'Rented', 'Reserved', 'On Installment', 'Defaulted', 'Under Repair'].includes(s);
-              const isCurrentStatus = form.status === s;
-              return (
-                <option key={s} value={s} disabled={isProtected && !isCurrentStatus}>
-                  {statusT(s.replace(' ', '').charAt(0).toLowerCase() + s.replace(' ', '').slice(1))}
-                  {isProtected && !isCurrentStatus ? ` (${commonT('automatic')})` : ''}
-                </option>
-              );
-            })}
-          </select>
+          <div style={{ marginTop: '8px' }}>
+            <StatusBadge status={form.status as CarStatus} />
+          </div>
+          <p style={{ fontSize: '11px', color: '#9ca8b3', marginTop: '8px' }}>
+            {commonT('statusManagedAutomatically')}
+          </p>
         </div>
       </div>
 

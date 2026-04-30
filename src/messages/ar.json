@@ -957,6 +957,7 @@
     "deleteActionUndone": "هذا الإجراء لا يمكن التراجع عنه.",
     "export": "تصدير CSV",
     "import": "استيراد CSV",
-    "automatic": "تلقائي فقط"
+    "automatic": "تلقائي فقط",
+    "statusManagedAutomatically": "يتم إدارة هذه الحالة تلقائياً من خلال عمليات البيع والإصلاح."
   }
 }
