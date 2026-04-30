@@ -956,6 +956,7 @@
     "export": "تصدير CSV",
     "import": "استيراد CSV",
     "automatic": "تلقائي فقط",
-    "statusManagedAutomatically": "يتم إدارة هذه الحالة تلقائياً من خلال عمليات البيع والإصلاح."
+    "statusManagedAutomatically": "يتم إدارة هذه الحالة تلقائياً من خلال عمليات البيع والإصلاح.",
+    "insurance": "التأمين"
   }
 }
