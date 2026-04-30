@@ -358,7 +358,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
   const isRtl = locale === 'ar';
   const pathname = usePathname();
   const router = useRouter();
-  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set());
+  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set(['car']));
 
   const filteredItems = filterMenuItems(navItems, userRole);
 
