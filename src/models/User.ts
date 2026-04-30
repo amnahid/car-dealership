@@ -28,6 +28,7 @@ const UserSchema = new Schema<IUserDocument>(
       default: 'Sales Person',
     },
     isActive: { type: Boolean, default: true },
+    isDeleted: { type: Boolean, default: false },
     resetToken: { type: String },
     resetTokenExpiry: { type: Date },
     passwordVersion: { type: Number, default: 1 },

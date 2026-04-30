@@ -303,6 +303,7 @@ export default function CarDetailPage() {
           <h3 className="font-semibold text-gray-800 mb-4">{t('vehicleDetails')}</h3>
           <div className="space-y-4 text-sm">
             {[
+              [t('plateNumber'), car.plateNumber],
               [t('chassisNumber'), car.chassisNumber],
               [t('engineNumber'), car.engineNumber],
               [t('sequenceNumber'), car.sequenceNumber],

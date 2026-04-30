@@ -49,6 +49,7 @@ export type ICarDocument = mongoose.HydratedDocument<ICarRaw>;
 const CarSchema = new Schema(
   {
     carId: { type: String, unique: true },
+    plateNumber: { type: String, trim: true },
     brand: { type: String, required: true, trim: true },
     model: { type: String, required: true, trim: true },
     year: { type: Number, required: true },

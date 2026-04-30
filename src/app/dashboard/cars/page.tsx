@@ -17,6 +17,7 @@ interface Purchase {
 interface Car {
   _id: string;
   carId: string;
+  plateNumber?: string;
   brand: string;
   model: string;
   year: number;
@@ -59,7 +60,11 @@ export default function CarsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>(TABS[0]);
   const [search, setSearch] = useState('');
+  const [plateSearch, setPlateSearch] = useState('');
+  const [query, setQuery] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const debouncedPlateSearch = useDebounce(plateSearch, 300);
+  const debouncedQuery = useDebounce(query, 300);
   const [statusFilter, setStatusFilter] = useState('');
   const [modelFilter, setModelFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
@@ -178,7 +183,9 @@ export default function CarsPage() {
 
   const fetchCars = useCallback(async () => {
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
+    if (debouncedQuery) params.set('q', debouncedQuery);
     if (debouncedSearch) params.set('brand', debouncedSearch);
+    if (debouncedPlateSearch) params.set('plateNumber', debouncedPlateSearch);
     if (statusFilter) params.set('status', statusFilter);
     if (modelFilter) params.set('model', modelFilter);
     if (yearFilter) params.set('year', yearFilter);
@@ -200,7 +207,7 @@ export default function CarsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, statusFilter, modelFilter, yearFilter, colorFilter]);
+  }, [page, debouncedSearch, debouncedPlateSearch, debouncedQuery, statusFilter, modelFilter, yearFilter, colorFilter]);
 
   useEffect(() => {
     fetchCars();
@@ -384,6 +391,44 @@ export default function CarsPage() {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             <input
               type="text"
+              placeholder={t('searchCars')}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: '220px',
+                height: '40px',
+                fontSize: '14px',
+                borderRadius: '0',
+                padding: '0 12px',
+                border: '1px solid #28aaa9',
+                background: '#ffffff',
+                textAlign: isRtl ? 'right' : 'left'
+              }}
+            />
+            <input
+              type="text"
+              placeholder={commonT('plateNumber')}
+              value={plateSearch}
+              onChange={(e) => {
+                setPlateSearch(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: '160px',
+                height: '40px',
+                fontSize: '14px',
+                borderRadius: '0',
+                padding: '0 12px',
+                border: '1px solid #ced4da',
+                background: '#ffffff',
+                textAlign: isRtl ? 'right' : 'left'
+              }}
+            />
+            <input
+              type="text"
               placeholder={t('searchBrand')}
               value={search}
               onChange={(e) => {
@@ -514,6 +559,7 @@ export default function CarsPage() {
                       </th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('image')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('plateNumber')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('brand')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('model')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('year')}</th>
@@ -547,6 +593,9 @@ export default function CarsPage() {
                           <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 500, color: '#28aaa9' }}>
                             {car.carId}
                           </td>
+                          <td style={{ padding: '12px', fontWeight: 500, color: '#2a3142' }}>
+                            {car.plateNumber || '-'}
+                          </td>
                           <td style={{ padding: '12px' }}>{car.brand}</td>
                           <td style={{ padding: '12px' }}>{car.model}</td>
                           <td style={{ padding: '12px' }}>{car.year}</td>
@@ -560,15 +609,6 @@ export default function CarsPage() {
                           </td>
                           <td style={{ padding: '12px' }}>
                             <StatusBadge status={car.status} />
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 500 }}>{car.tafweedAuthorizedTo || '-'}</div>
-                            {car.tafweedStatus === 'Expired' && (
-                              <span style={{ fontSize: '10px', color: '#ec4561', fontWeight: 600 }}>EXPIRED</span>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px', fontSize: '12px', color: car.tafweedStatus === 'Expired' ? '#ec4561' : '#525f80' }}>
-                            {car.tafweedExpiryDate ? new Date(car.tafweedExpiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}
                           </td>
                           <td style={{ padding: '12px' }}>
                             <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
@@ -677,7 +717,6 @@ export default function CarsPage() {
           )}
         </div>
       )}
-
-      </div>
+    </div>
   );
 }

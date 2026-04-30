@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    const users = await User.find({ isDeleted: { $ne: true } }).select('-password').sort({ createdAt: -1 });
     return NextResponse.json({ users });
   } catch (error) {
     console.error('Get users error:', error);

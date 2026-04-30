@@ -24,19 +24,34 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const brand = searchParams.get('brand');
+    const plateNumber = searchParams.get('plateNumber');
     const model = searchParams.get('model');
     const year = searchParams.get('year');
     const color = searchParams.get('color');
     const status = searchParams.get('status');
+    const q = searchParams.get('q');
 
     const query: Record<string, unknown> = {
       isDeleted: { $ne: true }
     };
     if (brand) query.brand = { $regex: brand, $options: 'i' };
+    if (plateNumber) query.plateNumber = { $regex: plateNumber, $options: 'i' };
     if (model) query.model = { $regex: model, $options: 'i' };
     if (year) query.year = parseInt(year);
     if (color) query.color = { $regex: color, $options: 'i' };
     if (status) query.status = status;
+
+    if (q) {
+      query.$or = [
+        { carId: { $regex: q, $options: 'i' } },
+        { brand: { $regex: q, $options: 'i' } },
+        { model: { $regex: q, $options: 'i' } },
+        { plateNumber: { $regex: q, $options: 'i' } },
+        { chassisNumber: { $regex: q, $options: 'i' } },
+        { engineNumber: { $regex: q, $options: 'i' } },
+        { sequenceNumber: { $regex: q, $options: 'i' } },
+      ];
+    }
 
     const [total, cars] = await Promise.all([
       Car.countDocuments(query),

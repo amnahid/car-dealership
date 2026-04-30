@@ -444,6 +444,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
 
       <div style={sectionTitleStyle}>{t('vehicleInfo')}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
+        <div><label style={labelStyle}>{t('plateNumber')}</label><input name="plateNumber" value={form.plateNumber} onChange={handleChange} style={inputStyle} /></div>
         <div><label style={labelStyle}>{t('brand')} *</label><input name="brand" required value={form.brand} onChange={handleChange} style={inputStyle} /></div>
         <div><label style={labelStyle}>{t('model')} *</label><input name="model" required value={form.model} onChange={handleChange} style={inputStyle} /></div>
         <div><label style={labelStyle}>{t('year')} *</label><input name="year" type="number" required value={form.year} onChange={handleChange} style={inputStyle} /></div>

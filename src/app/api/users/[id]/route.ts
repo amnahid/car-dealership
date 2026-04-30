@@ -164,25 +164,26 @@ export async function DELETE(
         _id: { $ne: id },
         role: 'Admin',
         isActive: true,
+        isDeleted: { $ne: true },
       });
       if (remainingActiveAdmins === 0) {
         return NextResponse.json({ error: 'Cannot deactivate the last active admin account' }, { status: 400 });
       }
     }
 
-    const user = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });
+    const user = await User.findByIdAndUpdate(id, { isDeleted: true, isActive: false }, { new: true });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     await logActivity({
       userId: auth.userId,
       userName: auth.name,
-      action: `Deactivated user ${user.name}`,
+      action: `Deleted user ${user.name}`,
       module: 'Users',
       targetId: id,
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    return NextResponse.json({ message: 'User deactivated successfully' });
+    return NextResponse.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

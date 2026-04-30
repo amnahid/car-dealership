@@ -16,6 +16,7 @@ export interface IUser {
 export interface ICar {
   _id: Types.ObjectId;
   carId: string;
+  plateNumber?: string;
   supplierName: string;
   supplierContact: string;
   purchasePrice: number;

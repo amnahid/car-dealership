@@ -127,14 +127,6 @@
     "monthlySalaryExpense": "Monthly Salary Expense",
     "searchPlaceholder": "Search by name, phone, ID...",
     "allDepartments": "All Departments",
-    "departments": {
-      "sales": "Sales",
-      "service": "Service",
-      "accounts": "Accounts",
-      "admin": "Admin",
-      "management": "Management",
-      "operations": "Operations"
-    },
     "noEmployees": "No employees found.",
     "id": "ID",
     "photo": "Photo",
@@ -157,12 +149,14 @@
       "service": "Service",
       "accounts": "Accounts",
       "admin": "Admin",
-      "management": "Management"
+      "management": "Management",
+      "operations": "Operations"
     }
   },
   "Returns": {
     "title": "Purchase Returns",
     "addNew": "New Return Request",
+    "searchPlaceholder": "Search by ID, car, or customer...",
     "totalReturns": "Total Returns",
     "totalRefunds": "Total Refunds",
     "penaltyAmount": "Penalty Amount",
@@ -487,6 +481,7 @@
     "addNew": "Add New Car",
     "inventoryTab": "Inventory",
     "stockReportTab": "Stock Report",
+    "searchCars": "Search cars (Plate, ID, Model...)",
     "searchBrand": "Search brand...",
     "searchModel": "Search model...",
     "allStatuses": "All Statuses",
@@ -631,6 +626,7 @@
     "purchaseDoc": "Purchase Document",
     "purchaseNotes": "Purchase Notes",
     "vehicleInfo": "Vehicle Information",
+    "plateNumber": "Plate Number",
     "brand": "Brand",
     "model": "Model",
     "year": "Year",
@@ -799,6 +795,7 @@
     "activate": "Activate",
     "active": "Active",
     "inactive": "Inactive",
+    "deleteConfirm": "Are you sure you want to delete this user?",
     "pwAutoHint": "(auto-generated if blank)",
     "pwHelp": "A strong password will be auto-generated if left blank. Login credentials will be sent via email.",
     "generatedPw": "Generated Password (share with user):",
@@ -939,6 +936,7 @@
     "amount": "Amount",
     "status": "Status",
     "id": "ID",
+    "plateNumber": "Plate Number",
     "brand": "Brand",
     "model": "Model",
     "year": "Year",

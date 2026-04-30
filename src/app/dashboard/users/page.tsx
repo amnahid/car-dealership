@@ -153,6 +153,21 @@ export default function UsersPage() {
     fetchUsers();
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm(t('deleteConfirm'))) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete user');
+      }
+    } catch {
+      alert('Network error');
+    }
+  };
+
   const getRoleLabel = (role: string) => {
     const key = role.replace(' ', '').charAt(0).toLowerCase() + role.replace(' ', '').slice(1);
     return t(`roles.${key}`);
@@ -469,19 +484,32 @@ export default function UsersPage() {
                   </td>
                   <td style={{ padding: '12px', color: '#525f80' }}>{new Date(u.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                   <td style={{ padding: '12px' }}>
-                    <button
-                      onClick={() => toggleActive(u._id, u.isActive)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#28aaa9',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      {u.isActive ? t('deactivate') : t('activate')}
-                    </button>
+                    <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                      <button
+                        onClick={() => toggleActive(u._id, u.isActive)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#28aaa9',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {u.isActive ? t('deactivate') : t('activate')}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(u._id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#dc3545',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {commonT('delete')}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
