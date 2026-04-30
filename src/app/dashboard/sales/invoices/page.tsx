@@ -96,7 +96,7 @@ export default function InvoicesPage() {
     selectedIds.forEach(id => {
       const inv = invoices.find(i => i._id === id);
       if (inv) {
-        window.open(`/invoices/invoice-${inv.saleId}.pdf`, '_blank');
+        window.open(`/uploads/invoices/invoice-${inv.saleId}.pdf`, '_blank');
       }
     });
   };
@@ -244,7 +244,7 @@ export default function InvoicesPage() {
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-                        <a href={`/invoices/invoice-${inv.saleId}.pdf`} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', textDecoration: 'none' }}>{t('download')}</a>
+                        <a href={`/uploads/invoices/invoice-${inv.saleId}.pdf`} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', textDecoration: 'none' }}>{t('download')}</a>
                         <button onClick={() => openSendModal(inv)} style={{ background: 'none', border: 'none', color: '#28aaa9', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('send')}</button>
                       </div>
                     </td>

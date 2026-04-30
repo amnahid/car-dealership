@@ -58,7 +58,7 @@ export async function GET(
       }
     }
 
-    const invoiceUrl = (sale as any)?.invoiceUrl || `/invoices/invoice-${invoice.saleId}.pdf`;
+    const invoiceUrl = (sale as any)?.invoiceUrl || `/uploads/invoices/invoice-${invoice.saleId}.pdf`;
 
     return NextResponse.json({
       invoice: {

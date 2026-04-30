@@ -27,7 +27,7 @@ interface InvoiceData {
 }
 
 export async function generateInvoice(data: InvoiceData): Promise<string> {
-  const uploadsDir = path.join(process.cwd(), 'public', 'invoices');
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'invoices');
 
   if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
@@ -250,5 +250,5 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   const pdfBuffer = doc.output('arraybuffer');
   fs.writeFileSync(filePath, Buffer.from(pdfBuffer));
 
-  return `/invoices/${fileName}`;
+  return `/uploads/invoices/${fileName}`;
 }

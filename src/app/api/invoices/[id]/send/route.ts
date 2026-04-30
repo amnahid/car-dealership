@@ -90,7 +90,7 @@ export async function POST(
     }
 
     const invoiceFilename = `invoice-${invoice.saleId}.pdf`;
-    const invoicePath = path.join(process.cwd(), 'public', 'invoices', invoiceFilename);
+    const invoicePath = path.join(process.cwd(), 'public', 'uploads', 'invoices', invoiceFilename);
 
     if (!fs.existsSync(invoicePath)) {
       return NextResponse.json({ error: 'Invoice PDF not found. Please regenerate.' }, { status: 404 });

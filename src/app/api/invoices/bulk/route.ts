@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     if (action === 'download') {
       const downloadUrls = invoiceIds.map((id: string) => ({
         id,
-        url: `/invoices/invoice-${id}.pdf`,
+        url: `/uploads/invoices/invoice-${id}.pdf`,
       }));
 
       await logActivity({
