@@ -453,9 +453,16 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         <div>
           <label style={labelStyle}>{t('status')}</label>
           <select name="status" value={form.status} onChange={handleChange} style={inputStyle}>
-            {['In Stock', 'Under Repair', 'Reserved', 'On Installment', 'Sold', 'Rented', 'Defaulted'].map((s) => (
-              <option key={s} value={s}>{statusT(s.replace(' ', '').charAt(0).toLowerCase() + s.replace(' ', '').slice(1))}</option>
-            ))}
+            {['In Stock', 'Under Repair', 'Reserved', 'On Installment', 'Sold', 'Rented', 'Defaulted'].map((s) => {
+              const isProtected = ['Sold', 'Rented', 'Reserved', 'On Installment', 'Defaulted'].includes(s);
+              const isCurrentStatus = form.status === s;
+              return (
+                <option key={s} value={s} disabled={isProtected && !isCurrentStatus}>
+                  {statusT(s.replace(' ', '').charAt(0).toLowerCase() + s.replace(' ', '').slice(1))}
+                  {isProtected && !isCurrentStatus ? ` (${commonT('automatic')})` : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>

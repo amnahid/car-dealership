@@ -77,10 +77,10 @@ export async function PUT(
 
         // Prevent manual status changes for critical states
         if (carData.status && carData.status !== car.status) {
-          if (['Sold', 'Rented', 'Defaulted', 'On Installment'].includes(car.status)) {
+          if (['Sold', 'Rented', 'Defaulted', 'On Installment', 'Reserved'].includes(car.status)) {
             throw new Error(`Cannot manually change status of a ${car.status} car. Use the appropriate sale or rental workflow.`);
           }
-          if (['Sold', 'Rented', 'Defaulted', 'On Installment'].includes(carData.status)) {
+          if (['Sold', 'Rented', 'Defaulted', 'On Installment', 'Reserved'].includes(carData.status)) {
             throw new Error(`Cannot manually set status to ${carData.status}. Use the appropriate sale or rental workflow.`);
           }
         }

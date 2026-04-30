@@ -956,6 +956,7 @@
     "deleteConfirm": "Are you sure you want to delete these items?",
     "deleteActionUndone": "This action cannot be undone.",
     "export": "Export CSV",
-    "import": "Import CSV"
+    "import": "Import CSV",
+    "automatic": "Automatic Only"
   }
 }

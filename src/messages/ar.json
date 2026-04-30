@@ -956,6 +956,7 @@
     "deleteConfirm": "هل أنت متأكد من حذف هذه العناصر؟",
     "deleteActionUndone": "هذا الإجراء لا يمكن التراجع عنه.",
     "export": "تصدير CSV",
-    "import": "استيراد CSV"
+    "import": "استيراد CSV",
+    "automatic": "تلقائي فقط"
   }
 }
