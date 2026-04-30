@@ -44,6 +44,7 @@ interface Purchase {
 interface Car {
   _id: string;
   carId: string;
+  plateNumber?: string;
   brand: string;
   model: string;
   year: number;
