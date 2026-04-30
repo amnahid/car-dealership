@@ -447,6 +447,7 @@
     "users": "المستخدمين",
     "activityLogs": "سجلات النشاط",
     "notificationLogs": "سجلات التنبيهات",
+    "customerNotifications": "تنبيهات العملاء",
     "logout": "تسجيل الخروج",
     "managementSystem": "نظام الإدارة"
   },
@@ -742,6 +743,7 @@
   },
   "NotificationLogs": {
     "title": "سجلات التنبيهات",
+    "customerNotifications": "تنبيهات العملاء",
     "noLogs": "لم يتم العثور على سجلات تنبيهات.",
     "allChannels": "جميع القنوات",
     "allTypes": "جميع الأنواع",
@@ -750,6 +752,8 @@
     "subject": "الموضوع",
     "reference": "المرجع",
     "sentAt": "تاريخ الإرسال",
+    "channel": "القناة",
+    "type": "النوع",
     "channels": {
       "sms": "رسالة نصية",
       "email": "بريد إلكتروني"

@@ -447,6 +447,7 @@
     "users": "Users",
     "activityLogs": "Activity Logs",
     "notificationLogs": "Notification Logs",
+    "customerNotifications": "Customer Notifications",
     "logout": "Logout",
     "managementSystem": "Management System"
   },
@@ -742,6 +743,7 @@
   },
   "NotificationLogs": {
     "title": "Notification Logs",
+    "customerNotifications": "Customer Notifications",
     "noLogs": "No notification logs found.",
     "allChannels": "All Channels",
     "allTypes": "All Types",
@@ -750,6 +752,8 @@
     "subject": "Subject",
     "reference": "Reference",
     "sentAt": "Sent At",
+    "channel": "Channel",
+    "type": "Type",
     "channels": {
       "sms": "SMS",
       "email": "Email"
