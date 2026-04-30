@@ -9,6 +9,7 @@ export interface IUserDocument extends Document {
   avatar?: string;
   role: KnownUserRole;
   isActive: boolean;
+  isDeleted: boolean;
   resetToken?: string;
   resetTokenExpiry?: Date;
   passwordVersion: number;

@@ -4,6 +4,7 @@ import mongoose, { Schema, Model } from 'mongoose';
 export interface ICarRaw {
   _id: mongoose.Types.ObjectId;
   carId: string;
+  plateNumber?: string;
   brand: string;
   carModel: string;
   year: number;
