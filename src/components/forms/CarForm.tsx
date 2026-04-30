@@ -38,6 +38,7 @@ interface PurchaseData {
 
 interface CarFormData {
   brand: string;
+  plateNumber: string;
   model: string;
   year: string;
   engineNumber: string;
@@ -104,6 +105,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
 
   const [form, setForm] = useState<CarFormData>({
     brand: '',
+    plateNumber: '',
     model: '',
     year: new Date().getFullYear().toString(),
     engineNumber: '',
@@ -121,6 +123,7 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
       setForm((prev) => ({
         ...prev,
         ...initialData,
+        plateNumber: initialData.plateNumber || '',
         year: initialData.year?.toString() || new Date().getFullYear().toString(),
         sequenceNumber: initialData.sequenceNumber || '',
         purchase: initialData.purchase ? {
