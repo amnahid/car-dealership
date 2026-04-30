@@ -495,6 +495,8 @@
     "purchasePrice": "سعر الشراء",
     "repairCost": "تكلفة الإصلاح",
     "totalCost": "التكلفة الإجمالية",
+    "authorizedTo": "مفوض إلى",
+    "tafweedExpiry": "انتهاء التفويض",
     "daysInStock": "أيام في المخزون",
     "stockReport": {
       "count": "العدد",

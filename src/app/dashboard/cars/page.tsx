@@ -25,6 +25,9 @@ interface Car {
   images: string[];
   totalRepairCost: number;
   purchase?: Purchase;
+  tafweedStatus?: 'None' | 'Active' | 'Expired';
+  tafweedAuthorizedTo?: string;
+  tafweedExpiryDate?: string;
   createdAt?: string;
 }
 
@@ -557,6 +560,15 @@ export default function CarsPage() {
                           </td>
                           <td style={{ padding: '12px' }}>
                             <StatusBadge status={car.status} />
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 500 }}>{car.tafweedAuthorizedTo || '-'}</div>
+                            {car.tafweedStatus === 'Expired' && (
+                              <span style={{ fontSize: '10px', color: '#ec4561', fontWeight: 600 }}>EXPIRED</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '12px', color: car.tafweedStatus === 'Expired' ? '#ec4561' : '#525f80' }}>
+                            {car.tafweedExpiryDate ? new Date(car.tafweedExpiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-'}
                           </td>
                           <td style={{ padding: '12px' }}>
                             <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
