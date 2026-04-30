@@ -1,4 +1,10 @@
+import crypto from 'crypto';
+
 export type GpsProvider = 'WhatsGPS' | 'iTrack' | 'Mock';
+
+function md5(data: string): string {
+  return crypto.createHash('md5').update(data).digest('hex');
+}
 
 export interface GpsPosition {
   latitude: number;
@@ -37,22 +43,25 @@ function generateMockPosition(): GpsPosition {
 
 async function testWhatsGps(apiKey: string, apiSecret: string): Promise<GpsTestResult> {
   try {
-    const loginRes = await fetch(
-      `https://www.whatsgps.com/api/login?username=${encodeURIComponent(apiKey)}&password=${encodeURIComponent(apiSecret)}`,
-      { method: 'GET', headers: { 'Accept': 'application/json' } }
-    );
+    const url = `https://www.whatsgps.com/api/login?username=${encodeURIComponent(apiKey)}&password=${encodeURIComponent(apiSecret)}`;
+    console.log(`[WhatsGPS] Testing connection for user: ${apiKey}`);
+    
+    const loginRes = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
 
     if (!loginRes.ok) {
-      return { success: false, message: 'Invalid credentials' };
+      console.error(`[WhatsGPS] Login failed with status: ${loginRes.status}`);
+      return { success: false, message: `Invalid credentials (HTTP ${loginRes.status})` };
     }
 
     const data = await loginRes.json() as {
       result?: { userId?: string; token?: string; deviceList?: Array<{ deviceId?: string; name?: string }> };
       error?: string;
+      code?: number;
     };
 
-    if (data.error) {
-      return { success: false, message: data.error };
+    if (data.error || (data.code !== undefined && data.code !== 0)) {
+      console.error(`[WhatsGPS] Error from API:`, data);
+      return { success: false, message: data.error || `Error code: ${data.code}` };
     }
 
     return {
@@ -61,38 +70,33 @@ async function testWhatsGps(apiKey: string, apiSecret: string): Promise<GpsTestR
       deviceName: data.result?.deviceList?.[0]?.name || 'Device found',
     };
   } catch (err) {
+    console.error(`[WhatsGPS] Network error:`, err);
     return { success: false, message: `Network error: ${err instanceof Error ? err.message : 'Unknown error'}` };
   }
 }
 
 async function fetchWhatsGpsPosition(apiKey: string, apiSecret: string, imei: string): Promise<GpsPosition> {
-  const loginRes = await fetch(
-    `https://www.whatsgps.com/api/login?username=${encodeURIComponent(apiKey)}&password=${encodeURIComponent(apiSecret)}`,
-    { method: 'GET', headers: { 'Accept': 'application/json' } }
-  );
-
-  if (!loginRes.ok) {
-    return { ...generateMockPosition(), isStale: true, errorMessage: 'Auth failed' };
-  }
-
-  const loginData = await loginRes.json() as {
-    result?: { token?: string; deviceList?: Array<{ deviceId?: string }> };
-  };
-
-  const token = loginData.result?.token;
-  if (!token) {
-    return { ...generateMockPosition(), isStale: true, errorMessage: 'No auth token' };
-  }
-
   try {
+    const loginRes = await fetch(
+      `https://www.whatsgps.com/api/login?username=${encodeURIComponent(apiKey)}&password=${encodeURIComponent(apiSecret)}`,
+      { method: 'GET', headers: { 'Accept': 'application/json' } }
+    );
+
+    if (!loginRes.ok) return { ...generateMockPosition(), isStale: true, errorMessage: 'Auth failed' };
+
+    const loginData = await loginRes.json() as {
+      result?: { token?: string; deviceList?: Array<{ deviceId?: string }> };
+    };
+
+    const token = loginData.result?.token;
+    if (!token) return { ...generateMockPosition(), isStale: true, errorMessage: 'No auth token' };
+
     const posRes = await fetch(
       `https://www.whatsgps.com/api/location?imei=${imei}&token=${token}`,
       { method: 'GET', headers: { 'Accept': 'application/json' } }
     );
 
-    if (!posRes.ok) {
-      return { ...generateMockPosition(), isStale: true, errorMessage: `HTTP ${posRes.status}` };
-    }
+    if (!posRes.ok) return { ...generateMockPosition(), isStale: true, errorMessage: `HTTP ${posRes.status}` };
 
     const posData = await posRes.json() as {
       lat?: string | number;
@@ -116,98 +120,104 @@ async function fetchWhatsGpsPosition(apiKey: string, apiSecret: string, imei: st
       positionType: (posData.posType as 'GPS' | 'LBS' | 'WIFI') || 'GPS',
       isStale: false,
     };
-  } catch {
+  } catch (err) {
+    console.error(`[WhatsGPS] Position fetch error:`, err);
     return { ...generateMockPosition(), isStale: true, errorMessage: 'Fetch error' };
   }
 }
 
 async function testITrack(apiKey: string, apiSecret: string): Promise<GpsTestResult> {
   try {
-    const loginRes = await fetch(
-      `https://api.itrack.live/v2/user/auth?login=${encodeURIComponent(apiKey)}&password=${encodeURIComponent(apiSecret)}`,
-      { method: 'GET', headers: { 'Accept': 'application/json' } }
-    );
+    const time = Math.floor(Date.now() / 1000);
+    const pwMd5 = md5(apiSecret);
+    const signature = md5(pwMd5 + time);
+    
+    // Switching back to HTTP as HTTPS is not responding on api.itrack.top
+    const url = `http://api.itrack.top/api/authorization?time=${time}&account=${encodeURIComponent(apiKey)}&signature=${signature}`;
+    
+    console.log(`[iTrack] Testing connection for account: ${apiKey} (Time: ${time})`);
+
+    const loginRes = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
 
     if (!loginRes.ok) {
-      return { success: false, message: 'Invalid credentials' };
+      console.error(`[iTrack] Login failed with status: ${loginRes.status}`);
+      return { success: false, message: `Server error (HTTP ${loginRes.status})` };
     }
 
     const data = await loginRes.json() as {
-      hash?: string;
-      devices?: Array<{ id?: string; IMEI?: string; name?: string }>;
-      error?: string;
+      record?: { access_token?: string };
+      code: number;
       message?: string;
     };
 
-    if (data.error || data.message === 'fail') {
-      return { success: false, message: data.error || 'Authentication failed' };
+    if (data.code !== 0) {
+      console.warn(`[iTrack] Auth failed with code ${data.code}: ${data.message}`);
+      const errorMsg = data.code === 10007 
+        ? 'Permission denied: Please ensure "Open API" access is enabled in the iTrack platform.' 
+        : (data.message || `Error code: ${data.code}`);
+      return { success: false, message: errorMsg };
     }
 
     return {
       success: true,
       message: 'Connection successful',
-      imei: data.devices?.[0]?.IMEI,
-      deviceName: data.devices?.[0]?.name,
     };
   } catch (err) {
+    console.error(`[iTrack] Network error:`, err);
     return { success: false, message: `Network error: ${err instanceof Error ? err.message : 'Unknown error'}` };
   }
 }
 
 async function fetchITrackPosition(apiKey: string, apiSecret: string, imei: string): Promise<GpsPosition> {
-  const loginRes = await fetch(
-    `https://api.itrack.live/v2/user/auth?login=${encodeURIComponent(apiKey)}&password=${encodeURIComponent(apiSecret)}`,
-    { method: 'GET', headers: { 'Accept': 'application/json' } }
-  );
-
-  if (!loginRes.ok) {
-    return { ...generateMockPosition(), isStale: true, errorMessage: 'Auth failed' };
-  }
-
-  const loginData = await loginRes.json() as { hash?: string };
-
-  const hash = loginData.hash;
-  if (!hash) {
-    return { ...generateMockPosition(), isStale: true, errorMessage: 'No session hash' };
-  }
-
   try {
-    const posRes = await fetch(
-      `https://api.itrack.live/v2/track/list?hash=${hash}&imeis=${imei}`,
-      { method: 'GET', headers: { 'Accept': 'application/json' } }
-    );
+    const time = Math.floor(Date.now() / 1000);
+    const signature = md5(md5(apiSecret) + time);
+    const authUrl = `http://api.itrack.top/api/authorization?time=${time}&account=${encodeURIComponent(apiKey)}&signature=${signature}`;
 
-    if (!posRes.ok) {
-      return { ...generateMockPosition(), isStale: true, errorMessage: `HTTP ${posRes.status}` };
+    const loginRes = await fetch(authUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
+
+    if (!loginRes.ok) return { ...generateMockPosition(), isStale: true, errorMessage: `Auth HTTP ${loginRes.status}` };
+
+    const loginData = await loginRes.json() as { record?: { access_token?: string }; code: number; message?: string };
+    const accessToken = loginData.record?.access_token;
+    if (!accessToken || loginData.code !== 0) {
+      return { ...generateMockPosition(), isStale: true, errorMessage: loginData.message || `Auth Code ${loginData.code}` };
     }
+
+    const trackUrl = `http://api.itrack.top/api/track?access_token=${accessToken}&imeis=${imei}`;
+    const posRes = await fetch(trackUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
+
+    if (!posRes.ok) return { ...generateMockPosition(), isStale: true, errorMessage: `Track HTTP ${posRes.status}` };
 
     const posData = await posRes.json() as {
-      result?: Array<{
-        lat?: string | number;
-        lng?: string | number;
-        speed?: string | number;
-        direction?: string | number;
-        gpsTime?: string;
-        posType?: string;
+      record?: Array<{
+        latitude?: number;
+        longitude?: number;
+        speed?: number;
+        course?: number;
+        gpstime?: number;
+        accstatus?: number;
       }>;
+      code: number;
+      message?: string;
     };
 
-    const entry = posData.result?.[0];
-    if (!entry) {
-      return { ...generateMockPosition(), isStale: true, errorMessage: 'No position data' };
-    }
+    const entry = posData.record?.[0];
+    if (posData.code !== 0) return { ...generateMockPosition(), isStale: true, errorMessage: posData.message || `Track Code ${posData.code}` };
+    if (!entry) return { ...generateMockPosition(), isStale: true, errorMessage: 'No data for IMEI' };
 
     return {
-      latitude: parseFloat(String(entry.lat || 0)),
-      longitude: parseFloat(String(entry.lng || 0)),
-      speed: parseFloat(String(entry.speed || 0)),
-      heading: parseFloat(String(entry.direction || 0)),
-      timestamp: new Date(entry.gpsTime || Date.now()),
-      ignitionStatus: 'UNKNOWN',
-      positionType: (entry.posType as 'GPS' | 'LBS' | 'WIFI') || 'GPS',
+      latitude: entry.latitude || 0,
+      longitude: entry.longitude || 0,
+      speed: entry.speed || 0,
+      heading: entry.course || 0,
+      timestamp: new Date((entry.gpstime || 0) * 1000),
+      ignitionStatus: entry.accstatus === 1 ? 'ON' : entry.accstatus === 0 ? 'OFF' : 'UNKNOWN',
+      positionType: 'GPS',
       isStale: false,
     };
-  } catch {
+  } catch (err) {
+    console.error(`[iTrack] Position fetch error:`, err);
     return { ...generateMockPosition(), isStale: true, errorMessage: 'Fetch error' };
   }
 }
