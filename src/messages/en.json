@@ -332,6 +332,7 @@
     "vehicleDocs": "Vehicle Documents",
     "purchaseDoc": "Purchase Document",
     "vehicleDetails": "Vehicle Details",
+    "plateNumber": "Plate Number",
     "chassisNumber": "Chassis Number",
     "engineNumber": "Engine Number",
     "sequenceNumber": "Sequence Number",
