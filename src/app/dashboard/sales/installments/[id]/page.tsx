@@ -193,7 +193,7 @@ export default function InstallmentSaleDetailPage() {
             className="no-print"
             style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingInvoice ? 0.7 : 1 }}
           >
-            {regeneratingInvoice ? 'Generating...' : 'Regenerate Invoice'}
+            {regeneratingInvoice ? (sale.invoiceUrl ? 'Regenerating...' : 'Generating...') : (sale.invoiceUrl ? 'Regenerate Invoice' : 'Generate Invoice')}
           </button>
           {sale.agreementUrl && (
             <a
@@ -212,7 +212,7 @@ export default function InstallmentSaleDetailPage() {
             className="no-print"
             style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingAgreement ? 0.7 : 1 }}
           >
-            {regeneratingAgreement ? 'Regenerating...' : 'Regenerate Agreement'}
+            {regeneratingAgreement ? (sale.agreementUrl ? 'Regenerating...' : 'Generating...') : (sale.agreementUrl ? 'Regenerate Agreement' : 'Generate Agreement')}
           </button>
           <span
             style={{

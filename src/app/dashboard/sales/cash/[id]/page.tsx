@@ -125,7 +125,7 @@ export default function CashSaleDetailPage() {
             className="no-print"
             style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: generating ? 0.7 : 1 }}
           >
-            {generating ? 'Generating...' : 'Regenerate Invoice'}
+            {generating ? (sale.invoiceUrl ? 'Regenerating...' : 'Generating...') : (sale.invoiceUrl ? 'Regenerate Invoice' : 'Generate Invoice')}
           </button>
         </div>
       </div>
