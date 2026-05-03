@@ -113,7 +113,7 @@ export async function POST(
       await us.save({ session });
 
       // Create ledger transactions
-      const transactions = [{
+      const transactions: any[] = [{
         date: new Date(paymentDate),
         type: 'Income',
         category: 'Installment Payment',
