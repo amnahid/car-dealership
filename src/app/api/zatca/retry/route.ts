@@ -8,6 +8,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { ZatcaClient } from '@/lib/zatca/zatcaClient';
 import ZatcaConfig from '@/models/ZatcaConfig';
 import { processZatcaInvoice, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
+import { generateInvoice } from '@/lib/invoiceGenerator';
 import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
@@ -134,6 +135,44 @@ export async function POST(request: NextRequest) {
         await InstallmentSale.updateOne({ _id: sale._id }, { $set: updateData });
       } else if (referenceType === 'Rental') {
         await Rental.updateOne({ _id: sale._id }, { $set: updateData });
+      }
+
+      // REGENERATE PDF with the new ZATCA QR and Barcode
+      try {
+        const updatedInvoiceUrl = await generateInvoice({
+          saleId: sale.saleId || sale.rentalId,
+          saleDate: (sale.saleDate || sale.startDate || new Date()).toString(),
+          carId: sale.carId,
+          carBrand: carData?.brand,
+          carModel: carData?.carModel || carData?.model,
+          customerName: sale.customerName,
+          customerPhone: sale.customerPhone,
+          customerAddress: customerData ? `${customerData.buildingNumber || ''} ${customerData.streetName || ''}, ${customerData.district || ''}, ${customerData.city || ''} ${customerData.postalCode || ''}`.trim() : '',
+          salePrice: referenceType === 'Rental' ? sale.totalAmount : (referenceType === 'InstallmentSale' ? sale.totalPrice : sale.salePrice),
+          discountType: sale.discountType,
+          discountValue: sale.discountValue,
+          discountAmount: discountAmount,
+          finalPrice: subtotal,
+          vatRate: sale.vatRate || ZATCA_VAT_RATE,
+          vatAmount: vatAmount,
+          finalPriceWithVat: totalWithVat,
+          agentName: sale.agentName,
+          agentCommission: sale.agentCommission,
+          zatcaQRCode: zatcaResult.qrCode,
+          zatcaUUID: zatcaResult.uuid,
+          invoiceType: sale.invoiceType || 'Simplified',
+        });
+
+        const finalUpdate = { invoiceUrl: updatedInvoiceUrl };
+        if (referenceType === 'CashSale') {
+          await CashSale.updateOne({ _id: sale._id }, { $set: finalUpdate });
+        } else if (referenceType === 'InstallmentSale') {
+          await InstallmentSale.updateOne({ _id: sale._id }, { $set: finalUpdate });
+        } else if (referenceType === 'Rental') {
+          await Rental.updateOne({ _id: sale._id }, { $set: finalUpdate });
+        }
+      } catch (pdfError) {
+        console.error('Failed to regenerate PDF after ZATCA retry:', pdfError);
       }
 
       return NextResponse.json({ results: [{ uuid: zatcaResult.uuid, status: zatcaResult.status, success: zatcaResult.status !== 'Failed', error: zatcaResult.errorMessage }] });
