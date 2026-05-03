@@ -60,7 +60,7 @@ export interface IInstallmentSaleDocument extends Document {
   guarantorPhone?: string;
   status: InstallmentSaleStatus;
   isDeleted: boolean;
-  tafweedStatus?: 'Active' | 'Expired';
+  tafweedStatus?: 'Active' | 'Expired' | 'None';
   tafweedAuthorizedTo?: string;
   tafweedDriverIqama?: string;
   tafweedDurationMonths?: number;
@@ -123,7 +123,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     guarantorPhone: { type: String, trim: true },
     status: { type: String, enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },
-    tafweedStatus: { type: String, enum: ['Active', 'Expired'], default: 'Active' },
+    tafweedStatus: { type: String, enum: ['Active', 'Expired', 'None'], default: 'Active' },
     tafweedAuthorizedTo: { type: String, trim: true },
     tafweedDriverIqama: { type: String, trim: true },
     tafweedDurationMonths: { type: Number, min: 1 },

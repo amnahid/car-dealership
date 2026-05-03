@@ -21,7 +21,7 @@ export interface IRentalDocument extends Document {
   securityDeposit: number;
   status: RentalStatus;
   isDeleted: boolean;
-  tafweedStatus?: 'Active' | 'Expired';
+  tafweedStatus?: 'Active' | 'Expired' | 'None';
   tafweedAuthorizedTo?: string;
   tafweedDriverIqama?: string;
   tafweedDurationMonths?: number;
@@ -66,7 +66,7 @@ const RentalSchema = new Schema<IRentalDocument>(
     securityDeposit: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: ['Active', 'Completed', 'Cancelled', 'Overdue'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },
-    tafweedStatus: { type: String, enum: ['Active', 'Expired'], default: 'Active' },
+    tafweedStatus: { type: String, enum: ['Active', 'Expired', 'None'], default: 'Active' },
     tafweedAuthorizedTo: { type: String, trim: true },
     tafweedDriverIqama: { type: String, trim: true },
     tafweedDurationMonths: { type: Number, min: 1 },
