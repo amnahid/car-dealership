@@ -19,6 +19,10 @@ async function fixSpecificInvoice() {
     await mongoose.connect(MONGODB_URI);
     console.log('Connected to MongoDB');
 
+    // Register models
+    const _car = Car;
+    const _cust = Customer;
+
     const saleId = 'INS-0001';
     const sale = await InstallmentSale.findOne({ saleId }).populate('car').populate('customer');
     
