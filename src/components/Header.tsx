@@ -8,12 +8,11 @@ import { useLocale, useTranslations } from 'next-intl';
 interface HeaderProps {
   userName: string;
   userRole: string;
-  expiringDocsCount?: number;
   userEmail?: string;
   userAvatar?: string;
 }
 
-export default function Header({ userName, userRole, expiringDocsCount = 0, userEmail = '', userAvatar }: HeaderProps) {
+export default function Header({ userName, userRole, userEmail = '', userAvatar }: HeaderProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const locale = useLocale();
   const isRtl = locale === 'ar';
@@ -43,39 +42,6 @@ export default function Header({ userName, userRole, expiringDocsCount = 0, user
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {expiringDocsCount > 0 && (
-            <Link
-              href="/dashboard/documents"
-              style={{ position: 'relative', textDecoration: 'none' }}
-            >
-              <span style={{ fontSize: '20px', color: '#525f80' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                </svg>
-              </span>
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: isRtl ? 'auto' : '-8px',
-                  left: isRtl ? '-8px' : 'auto',
-                  background: '#ec4561',
-                  color: '#ffffff',
-                  fontSize: '10px',
-                  width: '18px',
-                  height: '18px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {expiringDocsCount > 9 ? '9+' : expiringDocsCount}
-              </span>
-            </Link>
-          )}
-          
           <div style={{ borderRight: isRtl ? 'none' : '1px solid #eee', borderLeft: isRtl ? '1px solid #eee' : 'none', paddingRight: isRtl ? 0 : '16px', paddingLeft: isRtl ? '16px' : 0 }}>
              <LanguageSwitcher />
           </div>

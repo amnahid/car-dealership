@@ -56,38 +56,17 @@ async function getUser() {
   }
 }
 
-async function getExpiringDocsCount() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('auth-token')?.value;
-  if (!token) return 0;
-
-  try {
-    await connectDB();
-    const Document = (await import('@/models/Document')).default as typeof import('@/models/Document').default;
-    const now = new Date();
-    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    const count = await Document.countDocuments({
-      expiryDate: { $gte: now, $lte: thirtyDaysFromNow },
-    });
-    return count;
-  } catch {
-    return 0;
-  }
-}
-
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser();
   if (!user) redirect('/auth/login');
 
-  const expiringDocsCount = await getExpiringDocsCount();
   const locale = await getLocale();
   const isRtl = locale === 'ar';
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fbfd', display: 'flex', flexDirection: 'column' }}>
       <Sidebar userRole={user.role} />
-      <Header userName={user.name} userRole={user.role} expiringDocsCount={expiringDocsCount} userEmail={user.email} userAvatar={user.avatar} />
+      <Header userName={user.name} userRole={user.role} userEmail={user.email} userAvatar={user.avatar} />
       <main style={{ 
         padding: '24px', 
         marginTop: '70px', 
