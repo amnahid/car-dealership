@@ -25,7 +25,7 @@ export class ZatcaClient {
     // EGS Serial Number (uuid) should be a unique identifier for this unit.
     // The package template will wrap this as: 1-SolutionName|2-Model|3-Serial
     const egsUnit: EGSUnitInfo = {
-      uuid: extConfig.egsUuid || '6789', 
+      uuid: extConfig.egsUuid || '12345678-1234-4123-a123-1234567890ab', 
       custom_id: extConfig.egsCustomId || config.trn, 
       model: extConfig.egsModel || 'V1',
       CRN_number: extConfig.crnNumber || '1010000000', // Must be 10 digits for schemeID="CRN"
@@ -107,6 +107,7 @@ export class ZatcaClient {
       invoice_code: invoiceCode as "0100000" | "0200000",
       invoice_counter_number: 1, 
       invoice_serial_number: data.invoiceNumber || data.uuid.substring(0, 8),
+      uuid: data.uuid,
       issue_date: data.issueDate.toISOString().split('T')[0],
       issue_time: data.issueDate.toISOString().split('T')[1].split('.')[0],
       actual_delivery_date: (data.supplyDate || data.issueDate).toISOString().split('T')[0],
