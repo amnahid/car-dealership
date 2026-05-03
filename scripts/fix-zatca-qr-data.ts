@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import QRCode from 'qrcode';
 
 dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 
 async function fixData() {
   try {
