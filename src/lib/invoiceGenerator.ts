@@ -52,7 +52,8 @@ function processArabic(text: string): string {
     
     // 2. Use bidi for correct RTL reordering
     // This handles mixing English and Arabic correctly.
-    return bidi.getReorderedString(reshaped);
+    const embeddingLevels = bidi.getEmbeddingLevels(reshaped);
+    return bidi.getReorderedString(reshaped, embeddingLevels);
   } catch (e) {
     console.error('Arabic processing error:', e);
     return text;
