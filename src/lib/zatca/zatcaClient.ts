@@ -127,6 +127,12 @@ export class ZatcaClient {
     const isProduction = !!this.config.productionCsid;
     const { signed_invoice_string, invoice_hash, qr } = this.egs.signInvoice(invoice, isProduction);
 
+    console.log('ZATCA: Signed invoice hash:', invoice_hash);
+    // Log UUID extraction from XML if possible
+    const uuidMatch = signed_invoice_string.match(/<cbc:UUID>(.*?)<\/cbc:UUID>/);
+    const xmlUuid = uuidMatch ? uuidMatch[1] : 'NOT_FOUND';
+    console.log('ZATCA: UUID in XML:', xmlUuid);
+
     let status: ZatcaProcessResult['status'] = 'Pending';
     let zatcaResponse: Record<string, unknown>;
     let clearedXml: string | undefined;
