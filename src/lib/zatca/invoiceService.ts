@@ -40,6 +40,22 @@ export interface ZatcaSaleInput {
 }
 
 /**
+ * Ensures a QR code string is a visual Data URL.
+ * If it's a raw TLV string, it converts it.
+ */
+export async function ensureVisualQRCode(qrCode: string): Promise<string> {
+  if (!qrCode || qrCode === 'N/A') return qrCode;
+  if (qrCode.startsWith('data:image')) return qrCode;
+  
+  try {
+    return await QRCode.toDataURL(qrCode);
+  } catch (err) {
+    console.error('Failed to convert TLV to visual QR code:', err);
+    return qrCode;
+  }
+}
+
+/**
  * Main ZATCA invoice processing function.
  * Orchestrates: UUID → XML → hash → QR → sign → submit → update PIH
  */
@@ -103,13 +119,7 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
       result = await client.processInvoice(invoiceData);
       
       // Convert TLV QR string to visual Data URL image
-      if (result.qrCode && result.qrCode !== 'N/A') {
-        try {
-          result.qrCode = await QRCode.toDataURL(result.qrCode);
-        } catch (qrErr) {
-          console.error('Failed to generate visual QR code:', qrErr);
-        }
-      }
+      result.qrCode = await ensureVisualQRCode(result.qrCode);
 
       // Update PIH chain in config on success
       if (result.status === 'Cleared' || result.status === 'Reported') {

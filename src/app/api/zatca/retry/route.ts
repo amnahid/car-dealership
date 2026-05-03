@@ -8,7 +8,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { ZatcaClient } from '@/lib/zatca/zatcaClient';
 import ZatcaConfig from '@/models/ZatcaConfig';
 import QRCode from 'qrcode';
-import { processZatcaInvoice, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
+import { processZatcaInvoice, ZATCA_VAT_RATE, ensureVisualQRCode } from '@/lib/zatca/invoiceService';
 import { generateInvoice } from '@/lib/invoiceGenerator';
 import mongoose from 'mongoose';
 
@@ -121,9 +121,10 @@ export async function POST(request: NextRequest) {
       });
 
       // Update the sale record
+      const visualQR = await ensureVisualQRCode(zatcaResult.qrCode);
       const updateData = {
         zatcaUUID: zatcaResult.uuid,
-        zatcaQRCode: zatcaResult.qrCode,
+        zatcaQRCode: visualQR,
         zatcaStatus: zatcaResult.status as any,
         zatcaHash: zatcaResult.xmlHash,
         zatcaResponse: zatcaResult.zatcaResponse,
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
           finalPriceWithVat: totalWithVat,
           agentName: sale.agentName,
           agentCommission: sale.agentCommission,
-          zatcaQRCode: zatcaResult.qrCode,
+          zatcaQRCode: visualQR,
           zatcaUUID: zatcaResult.uuid,
           invoiceType: sale.invoiceType || 'Simplified',
         });
@@ -233,10 +234,12 @@ export async function POST(request: NextRequest) {
         );
 
         // Update the source sale record — clear any previous error on success
-        const statusUpdate = {
+        const visualQR = await ensureVisualQRCode((zatcaResponse as any)?.qrCode || (invoice as any).qrCode || '');
+        const statusUpdate: any = {
           zatcaStatus: status,
           zatcaResponse,
           zatcaErrorMessage: undefined,
+          zatcaQRCode: visualQR,
         };
 
         if (invoice.referenceType === 'CashSale') {

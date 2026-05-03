@@ -18,6 +18,8 @@ const bidi = typeof bidiFactory === 'function'
       getEmbeddingLevels: (s: string) => ({ paragraphs: [] })
     };
 
+import { processZatcaInvoice, ZATCA_VAT_RATE, ensureVisualQRCode } from '@/lib/zatca/invoiceService';
+
 function processArabic(text: string): string {
   if (!text) return '';
   // Check if text contains Arabic characters
@@ -48,11 +50,9 @@ function processArabic(text: string): string {
     // 1. Reshape: Convert to positional forms (joined characters)
     let reshaped = reshapeFn ? reshapeFn(text) : text;
     
-    // 2. Reorder Surgically: Only reverse the Arabic character blocks.
-    // This prevents English text (like "Customer Details") from being reversed.
-    return reshaped.replace(/[\u0600-\u06FF\uFE70-\uFEFF]+/g, (match: string) => {
-      return match.split('').reverse().join('');
-    });
+    // 2. Use bidi for correct RTL reordering
+    // This handles mixing English and Arabic correctly.
+    return bidi.getReorderedString(reshaped);
   } catch (e) {
     console.error('Arabic processing error:', e);
     return text;
@@ -334,7 +334,8 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.line(margin, y, pageWidth - margin, y);
 
   // QR code (ZATCA compliant — mandatory for simplified invoices)
-  if (data.zatcaQRCode) {
+  const visualQR = await ensureVisualQRCode(data.zatcaQRCode || '');
+  if (visualQR && visualQR !== 'N/A') {
     try {
       const qrSize = 35;
       const qrY = pageHeight - margin - qrSize - 20;
@@ -342,10 +343,10 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
       doc.setTextColor(120, 120, 120);
       doc.text(processArabic('ZATCA QR Code / رمز الاستجابة السريعة'), margin, qrY - 2);
       
-      const format = data.zatcaQRCode.includes('jpeg') || data.zatcaQRCode.includes('jpg') ? 'JPEG' : 'PNG';
-      const base64Data = data.zatcaQRCode.includes(';base64,') 
-        ? data.zatcaQRCode.split(';base64,').pop() || ''
-        : data.zatcaQRCode;
+      const format = visualQR.includes('jpeg') || visualQR.includes('jpg') ? 'JPEG' : 'PNG';
+      const base64Data = visualQR.includes(';base64,') 
+        ? visualQR.split(';base64,').pop() || ''
+        : visualQR;
       
       doc.addImage(base64Data, format, margin, qrY, qrSize, qrSize);
 
