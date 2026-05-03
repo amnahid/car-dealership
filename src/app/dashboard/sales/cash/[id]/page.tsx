@@ -105,7 +105,30 @@ export default function CashSaleDetailPage() {
         </Link>
       </div>
 
-      <h2 className="page-title" style={{ marginBottom: '24px' }}>Cash Sale Details</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 className="page-title">Cash Sale Details</h2>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {sale.invoiceUrl && (
+            <a
+              href={sale.invoiceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+            >
+              Download Invoice
+            </a>
+          )}
+          <button
+            onClick={handleGenerateInvoice}
+            disabled={generating}
+            className="no-print"
+            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: generating ? 0.7 : 1 }}
+          >
+            {generating ? 'Generating...' : 'Regenerate Invoice'}
+          </button>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
         <div className="card" style={{ padding: '24px' }}>

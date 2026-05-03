@@ -45,6 +45,30 @@ export default function RentalDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
+  const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
+
+  const handleRegenerateInvoice = async () => {
+    if (!rental) return;
+    setRegeneratingInvoice(true);
+    try {
+      const res = await fetch(`/api/sales/rentals/${rental._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate-invoice' }),
+      });
+      if (res.ok) {
+        fetchRental();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to regenerate invoice');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setRegeneratingInvoice(false);
+    }
+  };
 
   const fetchRental = () => {
     const id = params?.id;
@@ -127,6 +151,25 @@ export default function RentalDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 className="page-title">Rental Details</h2>
         <div style={{ display: 'flex', gap: '12px' }}>
+          {rental.invoiceUrl && (
+            <a
+              href={rental.invoiceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+            >
+              Download Invoice
+            </a>
+          )}
+          <button
+            onClick={handleRegenerateInvoice}
+            disabled={regeneratingInvoice}
+            className="no-print"
+            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingInvoice ? 0.7 : 1 }}
+          >
+            {regeneratingInvoice ? 'Generating...' : 'Regenerate Invoice'}
+          </button>
           {rental.agreementUrl && (
             <a
               href={rental.agreementUrl}

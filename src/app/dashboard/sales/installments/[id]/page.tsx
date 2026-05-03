@@ -67,6 +67,30 @@ export default function InstallmentSaleDetailPage() {
   const [showPaymentModal, setShowModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
+  const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
+
+  const handleRegenerateInvoice = async () => {
+    if (!sale) return;
+    setRegeneratingInvoice(true);
+    try {
+      const res = await fetch(`/api/sales/installments/${sale._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate-invoice' }),
+      });
+      if (res.ok) {
+        fetchSale();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to regenerate invoice');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setRegeneratingInvoice(false);
+    }
+  };
 
   const fetchSale = () => {
     const id = params?.id;
@@ -152,6 +176,25 @@ export default function InstallmentSaleDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 className="page-title">Installment Sale Details</h2>
         <div style={{ display: 'flex', gap: '12px' }}>
+          {sale.invoiceUrl && (
+            <a
+              href={sale.invoiceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+            >
+              Download Invoice
+            </a>
+          )}
+          <button
+            onClick={handleRegenerateInvoice}
+            disabled={regeneratingInvoice}
+            className="no-print"
+            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingInvoice ? 0.7 : 1 }}
+          >
+            {regeneratingInvoice ? 'Generating...' : 'Regenerate Invoice'}
+          </button>
           {sale.agreementUrl && (
             <a
               href={sale.agreementUrl}
