@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
           invoiceType: sale.invoiceType || 'Simplified',
         });
 
-        const finalUpdate = { invoiceUrl: updatedInvoiceUrl };
+        const finalUpdate = { invoiceUrl: `${updatedInvoiceUrl}?t=${Date.now()}` };
         if (referenceType === 'CashSale') {
           await CashSale.updateOne({ _id: sale._id }, { $set: finalUpdate });
         } else if (referenceType === 'InstallmentSale') {

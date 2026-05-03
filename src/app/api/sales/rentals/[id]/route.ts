@@ -378,7 +378,7 @@ export async function PATCH(
         invoiceType: rental.invoiceType || 'Simplified',
       });
 
-      rental.invoiceUrl = invoiceUrl;
+      rental.invoiceUrl = `${invoiceUrl}?t=${Date.now()}`;
       await rental.save();
 
       await logActivity({

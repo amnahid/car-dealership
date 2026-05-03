@@ -35,11 +35,6 @@ function processArabic(text: string): string {
       const d = obj.default;
       if (typeof d.convertArabic === 'function') return d.convertArabic.bind(d);
       if (typeof d.reshape === 'function') return d.reshape.bind(d);
-      if (d.default) {
-        const dd = d.default;
-        if (typeof dd.convertArabic === 'function') return dd.convertArabic.bind(dd);
-        if (typeof dd.reshape === 'function') return dd.reshape.bind(dd);
-      }
     }
     return null;
   };
@@ -50,10 +45,10 @@ function processArabic(text: string): string {
     // 1. Reshape: Convert to positional forms (joined characters)
     let reshaped = reshapeFn ? reshapeFn(text) : text;
     
-    // 2. Use bidi for correct RTL reordering
-    // This handles mixing English and Arabic correctly.
-    const embeddingLevels = bidi.getEmbeddingLevels(reshaped);
-    return bidi.getReorderedString(reshaped, embeddingLevels);
+    // 2. Visual Order: jsPDF with custom fonts needs visual order (reversed for RTL)
+    // We split by lines if any, or just reverse character-by-character.
+    // Note: Simple reversal works because reshaper already joined the characters into positional forms.
+    return reshaped.split('').reverse().join('');
   } catch (e) {
     console.error('Arabic processing error:', e);
     return text;
@@ -353,7 +348,12 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
         ? visualQR.split(';base64,').pop() || ''
         : visualQR;
       
-      doc.addImage(base64Data, format, qrX, qrY, qrSize, qrSize);
+      if (base64Data && base64Data.length > 50) {
+        console.log(`PDF: Embedding QR Code (${format}, length: ${base64Data.length})`);
+        doc.addImage(base64Data, format, qrX, qrY, qrSize, qrSize);
+      } else {
+        console.warn('PDF: QR Code data too short or invalid, skipping image');
+      }
 
       // 1D Barcode on the right
       const barcodeWidth = 50;

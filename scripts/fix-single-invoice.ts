@@ -69,7 +69,7 @@ async function fixSpecificInvoice() {
         $set: { 
           zatcaStatus: 'Reported', 
           zatcaQRCode: visualQR,
-          invoiceUrl: invoiceUrl,
+          invoiceUrl: `${invoiceUrl}?t=${Date.now()}`,
           zatcaErrorMessage: undefined
         } 
       }

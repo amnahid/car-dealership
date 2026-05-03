@@ -384,7 +384,7 @@ export async function PATCH(
         invoiceType: sale.invoiceType || 'Simplified',
       });
 
-      sale.invoiceUrl = invoiceUrl;
+      sale.invoiceUrl = `${invoiceUrl}?t=${Date.now()}`;
       await sale.save();
 
       await logActivity({
