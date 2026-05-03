@@ -268,6 +268,19 @@ export async function POST(request: NextRequest) {
       }
     } catch (zatcaError) {
       console.error('ZATCA processing failed:', zatcaError);
+      try {
+        await CashSale.updateOne(
+          { _id: (sale as ICashSaleDocument)._id },
+          { 
+            $set: { 
+              zatcaStatus: 'Failed', 
+              zatcaErrorMessage: zatcaError instanceof Error ? zatcaError.message : 'Unknown ZATCA error' 
+            } 
+          }
+        );
+      } catch (updateError) {
+        console.error('Failed to update CashSale with ZATCA failure:', updateError);
+      }
     }
 
     try {

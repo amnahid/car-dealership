@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
 
     const client = new ZatcaClient(config);
 
-    // Build query — retry all failed if no UUID, else specific one
-    const query = uuid ? { uuid } : { status: 'Failed' };
+    // Build query — retry all failed/pending if no UUID, else specific one
+    const query = uuid ? { uuid } : { status: { $in: ['Failed', 'Pending'] } };
     const invoices = await ZatcaInvoice.find(query);
 
     if (invoices.length === 0) {

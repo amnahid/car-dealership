@@ -807,7 +807,7 @@ function ZatcaStatusBadge({ status, saleId, saleType, t }: { status?: string; sa
       <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, background: s.bg, color: s.color }}>
         {s.label}
       </span>
-      {status === 'Failed' && (
+      {(status === 'Failed' || status === 'Pending') && (
         <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
           {retrying ? 'Retrying...' : '↺ Retry'}
         </button>

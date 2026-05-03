@@ -349,6 +349,19 @@ export async function POST(request: NextRequest) {
       }
     } catch (zatcaError) {
       console.error('ZATCA processing failed:', zatcaError);
+      try {
+        await InstallmentSale.updateOne(
+          { _id: (sale as any)._id },
+          { 
+            $set: { 
+              zatcaStatus: 'Failed', 
+              zatcaErrorMessage: zatcaError instanceof Error ? zatcaError.message : 'Unknown ZATCA error' 
+            } 
+          }
+        );
+      } catch (updateError) {
+        console.error('Failed to update InstallmentSale with ZATCA failure:', updateError);
+      }
     }
 
     try {
