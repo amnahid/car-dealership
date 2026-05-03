@@ -132,8 +132,18 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
     });
 
     return result;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : 'Unknown ZATCA error';
+  } catch (error: any) {
+    let errorMsg = error instanceof Error ? error.message : 'Unknown ZATCA error';
+    let zatcaResponse = undefined;
+
+    if (error.response && error.response.data) {
+      zatcaResponse = error.response.data;
+      // Capture more specific validation errors if available
+      const validationErrors = zatcaResponse.validationResults?.errorMessages;
+      if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+        errorMsg = validationErrors[0].message;
+      }
+    }
     
     // Create a failed record
     const failedResult: ZatcaProcessResult = {
@@ -143,6 +153,7 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
       xmlHash: 'N/A',
       status: 'Failed',
       errorMessage: errorMsg,
+      zatcaResponse,
       newPih: pih || '0',
     };
 
@@ -160,6 +171,7 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
         qrCode: 'N/A',
         status: 'Failed',
         errorMessage: errorMsg,
+        zatcaResponse,
         createdBy: input.createdBy,
       });
     } catch (auditError) {
@@ -174,11 +186,12 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
  * Calculate VAT amounts for a given price.
  */
 export function calculateVat(
-  finalPrice: number,
-  vatRate: number = ZATCA_VAT_RATE
+  finalPrice: any,
+  vatRate: any = ZATCA_VAT_RATE
 ): { subtotal: number; vatAmount: number; totalWithVat: number } {
-  const subtotal = finalPrice;
-  const vatAmount = Math.round(subtotal * (vatRate / 100) * 100) / 100;
+  const subtotal = Number(finalPrice) || 0;
+  const rate = Number(vatRate) || 0;
+  const vatAmount = Math.round(subtotal * (rate / 100) * 100) / 100;
   const totalWithVat = Math.round((subtotal + vatAmount) * 100) / 100;
   return { subtotal, vatAmount, totalWithVat };
 }
