@@ -1,11 +1,11 @@
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { generateInvoice } from './src/lib/invoiceGenerator';
-import { ensureVisualQRCode } from './src/lib/zatca/invoiceService';
-import InstallmentSale from './src/models/InstallmentSale';
-import Car from './src/models/Car';
-import Customer from './src/models/Customer';
+import { generateInvoice } from '../src/lib/invoiceGenerator';
+import { ensureVisualQRCode } from '../src/lib/zatca/invoiceService';
+import InstallmentSale from '../src/models/InstallmentSale';
+import Car from '../src/models/Car';
+import Customer from '../src/models/Customer';
 
 dotenv.config({ path: '.env' });
 dotenv.config({ path: '.env.local' });
