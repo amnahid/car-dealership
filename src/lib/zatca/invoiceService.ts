@@ -2,6 +2,7 @@ import { connectDB } from '@/lib/db';
 import ZatcaConfig from '@/models/ZatcaConfig';
 import ZatcaInvoice from '@/models/ZatcaInvoice';
 import { ZatcaClient } from './zatcaClient';
+import QRCode from 'qrcode';
 import {
   ZatcaInvoiceData,
   ZatcaProcessResult,
@@ -101,6 +102,15 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
     if (canSubmit) {
       result = await client.processInvoice(invoiceData);
       
+      // Convert TLV QR string to visual Data URL image
+      if (result.qrCode && result.qrCode !== 'N/A') {
+        try {
+          result.qrCode = await QRCode.toDataURL(result.qrCode);
+        } catch (qrErr) {
+          console.error('Failed to generate visual QR code:', qrErr);
+        }
+      }
+
       // Update PIH chain in config on success
       if (result.status === 'Cleared' || result.status === 'Reported') {
         await ZatcaConfig.updateOne({ _id: config._id }, { $set: { pih: result.xmlHash } });

@@ -7,6 +7,7 @@ import Rental from '@/models/Rental';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { ZatcaClient } from '@/lib/zatca/zatcaClient';
 import ZatcaConfig from '@/models/ZatcaConfig';
+import QRCode from 'qrcode';
 import { processZatcaInvoice, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 import { generateInvoice } from '@/lib/invoiceGenerator';
 import mongoose from 'mongoose';
