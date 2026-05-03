@@ -4,16 +4,14 @@ import InstallmentSale from '@/models/InstallmentSale';
 import Customer from '@/models/Customer';
 import Car from '@/models/Car';
 import { sendPaymentReminderNotifications, sendOverdueNoticeNotifications } from '@/lib/saleNotifications';
+import { calculateAccruedLateFee } from '@/lib/installmentUtils';
 
 export const dynamic = 'force-dynamic';
-
-const DEFAULT_LATE_FEE_PERCENT = parseInt(process.env.LATE_FEE_PERCENT || '5');
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'both';
-    const lateFeePercent = parseInt(searchParams.get('lateFee') || DEFAULT_LATE_FEE_PERCENT.toString());
     const apiKey = searchParams.get('key');
 
     const cronSecret = process.env.CRON_SECRET;
@@ -28,7 +26,7 @@ export async function GET(request: NextRequest) {
     tomorrow.setHours(0, 0, 0, 0);
     const tomorrowEnd = new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000 - 1);
 
-    const sales = await InstallmentSale.find({ status: 'Active' }).lean();
+    const sales = await InstallmentSale.find({ status: 'Active' });
 
     let remindersSent = 0;
     let overdueSent = 0;
@@ -70,11 +68,19 @@ export async function GET(request: NextRequest) {
           const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
           const daysOverdue = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
-          // Auto-update status to Overdue in DB if past due date
-          if (daysOverdue > 0 && payment.status !== 'Overdue') {
+          // Calculate accrued late fee: 10 day grace period, then monthlyLateFee per month
+          const accruedLateFee = calculateAccruedLateFee(daysOverdue, sale.monthlyLateFee);
+
+          // Auto-update status to Overdue and update accrued late fee in DB
+          if (daysOverdue > 0) {
             await InstallmentSale.updateOne(
               { _id: sale._id, 'paymentSchedule.installmentNumber': payment.installmentNumber },
-              { $set: { 'paymentSchedule.$.status': 'Overdue' } }
+              { 
+                $set: { 
+                  'paymentSchedule.$.status': 'Overdue',
+                  'paymentSchedule.$.lateFee': accruedLateFee
+                } 
+              }
             );
             hasOverdueUpdate = true;
           }
@@ -93,7 +99,8 @@ export async function GET(request: NextRequest) {
             installmentNumber: payment.installmentNumber,
             amount: payment.amount,
             dueDate: payment.dueDate.toString(),
-            lateFeePercent,
+            monthlyLateFee: sale.monthlyLateFee || 200,
+            accruedLateFee,
           };
 
           if ((action === 'reminders' || action === 'both') && daysUntilDue > 0 && daysUntilDue <= 7) {

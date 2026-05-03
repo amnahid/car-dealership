@@ -1,12 +1,46 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/navigation';
+import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
 import DataTransferButtons from '@/components/DataTransferButtons';
+import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
+
+interface Customer {
+  _id: string;
+  fullName: string;
+  phone: string;
+  profilePhoto?: string;
+  customerType?: string;
+  vatRegistrationNumber?: string;
+}
+
+interface Guarantor {
+  _id: string;
+  fullName: string;
+  phone: string;
+}
+
+interface Car {
+  _id: string;
+  carId: string;
+  brand: string;
+  model: string;
+  price: number;
+  purchasePrice?: number;
+  status?: string;
+  images?: string[];
+}
+
+interface Employee {
+  _id: string;
+  name: string;
+  designation: string;
+  commissionRate: number;
+}
 
 interface Sale {
   _id: string;
@@ -25,12 +59,16 @@ interface Sale {
   nextPaymentDate: string;
   notes?: string;
   interestRate?: number;
+  monthlyLateFee?: number;
   agentName?: string;
   agentCommission?: number;
   car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
-  customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string; customerType?: string; vatRegistrationNumber?: string };
+  customer?: Customer;
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   invoiceType?: 'Standard' | 'Simplified';
+  guarantor?: Guarantor | string;
+  guarantorName?: string;
+  guarantorPhone?: string;
 }
 
 export default function InstallmentsPage() {
@@ -44,6 +82,7 @@ export default function InstallmentsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -98,15 +137,18 @@ export default function InstallmentsPage() {
     }
   };
 
-  const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number; purchasePrice?: number }[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [employees, setEmployees] = useState<{ _id: string; name: string; designation: string; commissionRate: number }[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [guarantors, setGuarantors] = useState<Guarantor[]>([]);
 
   const fetchSales = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
     if (statusFilter) params.set('status', statusFilter);
+    if (dateRange.startDate) params.set('startDate', dateRange.startDate);
+    if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
     try {
       const res = await fetch(`/api/sales/installments?${params}`);
@@ -119,21 +161,27 @@ export default function InstallmentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, statusFilter]);
+  }, [page, debouncedSearch, statusFilter, dateRange]);
 
   useEffect(() => {
     fetchSales();
   }, [fetchSales]);
 
   useEffect(() => {
+    setPage(1);
+  }, [dateRange]);
+
+  useEffect(() => {
     Promise.all([
       fetch('/api/cars?limit=100').then(r => r.json()),
       fetch('/api/customers?limit=100').then(r => r.json()),
-      fetch('/api/employees?limit=100&active=true').then(r => r.json()),
-    ]).then(([carData, custData, empData]) => {
-      setCars(carData.cars?.filter((c: any) => c.status === 'In Stock') || []);
+      fetch('/api/employees?limit=100&active=true&department=Sales').then(r => r.json()),
+      fetch('/api/guarantors?limit=1000').then(r => r.json()),
+    ]).then(([carData, custData, empData, guaData]) => {
+      setCars(carData.cars?.filter((c: Car) => c.status === 'In Stock') || []);
       setCustomers(custData.customers || []);
       setEmployees(empData.employees || []);
+      setGuarantors(guaData.guarantors || []);
     });
   }, []);
 
@@ -151,14 +199,20 @@ export default function InstallmentsPage() {
     } catch (err) { console.error(err); }
   };
 
-  const handleUpdateSale = async (id: string, data: any) => {
+  const handleUpdateSale = async (id: string, data: Partial<Sale>) => {
     try {
       const res = await fetch(`/api/sales/installments/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); return; }
+      const resData = await res.json();
+      if (!res.ok) { alert(resData.error || 'Failed'); return; }
+      
+      if (resData.isPending) {
+        alert(resData.message || 'Edit request submitted for admin approval');
+      }
+      
       setEditingSale(null);
       fetchSales();
     } catch (err) { console.error(err); }
@@ -219,6 +273,7 @@ export default function InstallmentsPage() {
           <option value="Completed">{t('statuses.completed')}</option>
           <option value="Defaulted">{t('statuses.defaulted')}</option>
         </select>
+        <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
 
       {selectedIds.size > 0 && (
@@ -363,13 +418,13 @@ export default function InstallmentsPage() {
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(sale.status) + '20', color: getStatusColor(sale.status) }}>{getStatusLabel(sale.status)}</span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} saleType="InstallmentSale" t={cashT} />
+                      <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} saleType="InstallmentSale" />
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         <a href={`/dashboard/sales/installments/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</a>
-                        <a href={`/dashboard/sales/installments/${sale._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>{commonT('edit')}</a>
-                        {sale.status === 'Active' && (
+                        <button onClick={() => setEditingSale(sale)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{commonT('edit')}</button>
+                        {sale.status !== 'Cancelled' && (
                           <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('cancelSale')}</button>
                         )}
                       </div>
@@ -390,13 +445,13 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {showModal && <InstallmentModal cars={cars} customers={customers} employees={employees} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
-      {editingSale && <EditInstallmentModal sale={editingSale} employees={employees} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
+      {showModal && <InstallmentModal cars={cars} customers={customers} employees={employees} guarantors={guarantors} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
+      {editingSale && <EditInstallmentModal sale={editingSale} employees={employees} guarantors={guarantors} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
     </div>
   );
 }
 
-function InstallmentModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; onClose: () => void; onSave: () => void }) {
+function InstallmentModal({ cars, customers, employees, guarantors, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; guarantors: Guarantor[]; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -404,7 +459,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '', lateFeePercent: '2', invoiceType: 'Simplified', buyerTrn: '', agreementDocument: '', agentName: '', agentCommission: '', tafweedAuthorizedTo: '', tafweedDriverIqama: '', tafweedExpiryDate: '', tafweedDurationMonths: '12' });
+  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', totalPrice: '', downPayment: '', interestRate: '0', tenureMonths: '12', startDate: new Date().toISOString().split('T')[0], notes: '', monthlyLateFee: '200', invoiceType: 'Simplified', buyerTrn: '', agreementDocument: '', agentName: '', agentCommission: '', guarantor: '', guarantorName: '', guarantorPhone: '', tafweedAuthorizedTo: '', tafweedDriverIqama: '', tafweedExpiryDate: '', tafweedDurationMonths: '12' });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -428,6 +483,11 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
     setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+  };
+
+  const handleGuarantorChange = (guarantorId: string) => {
+    const gua = guarantors.find(g => g._id === guarantorId);
+    setForm(prev => ({ ...prev, guarantor: guarantorId, guarantorName: gua?.fullName || '', guarantorPhone: gua?.phone || '' }));
   };
 
   const handleAddCustomer = async () => {
@@ -513,6 +573,21 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
               required
             />
           </div>
+          <div style={{ marginBottom: '12px' }}>
+            <SearchableSelect
+              label={t('selectGuarantor')}
+              value={form.guarantor}
+              onChange={handleGuarantorChange}
+              options={[
+                { value: '', label: commonT('none') },
+                ...guarantors.map(g => ({ value: g._id, label: `${g.fullName} - ${g.phone}` })),
+              ]}
+              placeholder={t('guarantorName')}
+            />
+            <div style={{ textAlign: isRtl ? 'left' : 'right', marginTop: '4px' }}>
+                <Link href="/dashboard/crm/guarantors" target="_blank" style={{ fontSize: '12px', color: '#28aaa9', textDecoration: 'none' }}>+ {isRtl ? 'إضافة كفيل جديد في CRM' : 'Add new guarantor in CRM'}</Link>
+            </div>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
               <label style={labelStyle}>{t('totalPrice')} *</label>
@@ -531,14 +606,38 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
               <input required type="number" value={form.tenureMonths} onChange={(e) => setForm({ ...form, tenureMonths: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('lateFee')}</label>
-              <input type="number" value={form.lateFeePercent} onChange={(e) => setForm({ ...form, lateFeePercent: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('monthlyLateFee')}</label>
+              <input type="number" value={form.monthlyLateFee} onChange={(e) => setForm({ ...form, monthlyLateFee: e.target.value })} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>{t('startDate')} *</label>
               <input required type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} style={inputStyle} />
             </div>
           </div>
+
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f9fa', borderRadius: '4px', border: '1px solid #e9ecef' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Calculation Preview</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
+              <div style={{ color: '#9ca8b3' }}>Principal Amount:</div>
+              <div style={{ fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>SAR {((parseFloat(form.totalPrice) || 0) - (parseFloat(form.downPayment) || 0)).toLocaleString()}</div>
+              
+              <div style={{ color: '#9ca8b3' }}>Total Interest ({form.interestRate}%):</div>
+              <div style={{ fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>SAR {(((parseFloat(form.totalPrice) || 0) - (parseFloat(form.downPayment) || 0)) * (parseFloat(form.interestRate) || 0) / 100).toLocaleString()}</div>
+              
+              <div style={{ color: '#525f80', fontWeight: 600, borderTop: '1px solid #dee2e6', paddingTop: '4px' }}>Total Financed:</div>
+              <div style={{ fontWeight: 700, color: '#28aaa9', textAlign: isRtl ? 'left' : 'right', borderTop: '1px solid #dee2e6', paddingTop: '4px' }}>
+                SAR {(((parseFloat(form.totalPrice) || 0) - (parseFloat(form.downPayment) || 0)) * (1 + (parseFloat(form.interestRate) || 0) / 100)).toLocaleString()}
+              </div>
+              
+              <div style={{ color: '#2a3142', fontWeight: 600 }}>Monthly Payment:</div>
+              <div style={{ fontWeight: 700, color: '#28aaa9', textAlign: isRtl ? 'left' : 'right' }}>
+                SAR {(parseFloat(form.tenureMonths) > 0 
+                  ? (((parseFloat(form.totalPrice) || 0) - (parseFloat(form.downPayment) || 0)) * (1 + (parseFloat(form.interestRate) || 0) / 100)) / parseFloat(form.tenureMonths)
+                  : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+            </div>
+          </div>
+
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>{cashT('salesAgent')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
@@ -556,7 +655,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
               </div>
               <div>
                 <label style={labelStyle}>{t('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ ...inputStyle, background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
               </div>
             </div>
           </div>
@@ -585,13 +684,13 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Vehicle Authorization (Tafweed) *</div>
             <div style={{ marginBottom: '12px' }}>
-              <label style={labelStyle}>Driver's Full Name</label>
+              <label style={labelStyle}>Driver&apos;s Full Name</label>
               <input value={form.tafweedAuthorizedTo} onChange={(e) => setForm({ ...form, tafweedAuthorizedTo: e.target.value })} style={inputStyle} placeholder="Leave blank to use customer name" />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={labelStyle}>Driver's Iqama Number *</label>
-                <input value={form.tafweedDriverIqama} onChange={(e) => setForm({ ...form, tafweedDriverIqama: e.target.value })} style={inputStyle} placeholder="Driver's Iqama" required />
+                <label style={labelStyle}>Driver&apos;s Iqama Number *</label>
+                <input value={form.tafweedDriverIqama} onChange={(e) => setForm({ ...form, tafweedDriverIqama: e.target.value })} style={inputStyle} placeholder="Driver&apos;s Iqama" required />
               </div>
               <div>
                 <label style={labelStyle}>Tafweed Expiration Date *</label>
@@ -646,7 +745,8 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
                   <label style={labelStyle}>{customersT('postalCode')} *</label>
                   <input required value={newCustomer.postalCode} onChange={(e) => setNewCustomer({ ...newCustomer, postalCode: e.target.value })} style={inputStyle} placeholder={customersT('postalCode')} />
                 </div>
-                </div>              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                 <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('cancel')}</button>
                 <button type="button" onClick={handleAddCustomer} disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : cashT('addCustomer')}</button>
               </div>
@@ -658,7 +758,7 @@ function InstallmentModal({ cars, customers, employees, onClose, onSave }: { car
   );
 }
 
-function EditInstallmentModal({ sale, employees, onClose, onSave }: { sale: Sale; employees: any[]; onClose: () => void; onSave: (id: string, data: any) => void }) {
+function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: { sale: Sale; employees: Employee[]; guarantors: Guarantor[]; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -670,9 +770,13 @@ function EditInstallmentModal({ sale, employees, onClose, onSave }: { sale: Sale
     monthlyPayment: sale.monthlyPayment.toString(),
     interestRate: sale.interestRate?.toString() || '0',
     tenureMonths: sale.tenureMonths.toString(),
+    monthlyLateFee: sale.monthlyLateFee?.toString() || '200',
     notes: sale.notes || '',
     agentName: sale.agentName || '',
     agentCommission: sale.agentCommission?.toString() || '',
+    guarantor: (sale.guarantor as unknown as Guarantor)?._id || (sale.guarantor as string) || '',
+    guarantorName: sale.guarantorName || '',
+    guarantorPhone: sale.guarantorPhone || '',
   });
   const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
@@ -683,11 +787,16 @@ function EditInstallmentModal({ sale, employees, onClose, onSave }: { sale: Sale
     setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
   };
 
+  const handleGuarantorChange = (guarantorId: string) => {
+    const gua = guarantors.find(g => g._id === guarantorId);
+    setForm(prev => ({ ...prev, guarantor: guarantorId, guarantorName: gua?.fullName || '', guarantorPhone: gua?.phone || '' }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(sale._id, form);
+      await onSave(sale._id, form as any);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -731,7 +840,38 @@ function EditInstallmentModal({ sale, employees, onClose, onSave }: { sale: Sale
               <label style={labelStyle}>{t('tenure')}</label>
               <input type="number" value={form.tenureMonths} onChange={(e) => setForm({ ...form, tenureMonths: e.target.value })} style={inputStyle} />
             </div>
+            <div>
+              <label style={labelStyle}>{t('monthlyLateFee')}</label>
+              <input type="number" value={form.monthlyLateFee} onChange={(e) => setForm({ ...form, monthlyLateFee: e.target.value })} style={inputStyle} />
+            </div>
           </div>
+
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f9fa', borderRadius: '4px', border: '1px solid #e9ecef' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Recalculation Preview</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '13px' }}>
+              <div style={{ color: '#9ca8b3' }}>Principal Amount:</div>
+              <div style={{ fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>SAR {(sale.totalPrice - (parseFloat(form.downPayment) || 0)).toLocaleString()}</div>
+              
+              <div style={{ color: '#9ca8b3' }}>Total Interest ({form.interestRate}%):</div>
+              <div style={{ fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>SAR {((sale.totalPrice - (parseFloat(form.downPayment) || 0)) * (parseFloat(form.interestRate) || 0) / 100).toLocaleString()}</div>
+              
+              <div style={{ color: '#525f80', fontWeight: 600, borderTop: '1px solid #dee2e6', paddingTop: '4px' }}>New Total Financed:</div>
+              <div style={{ fontWeight: 700, color: '#28aaa9', textAlign: isRtl ? 'left' : 'right', borderTop: '1px solid #dee2e6', paddingTop: '4px' }}>
+                SAR {((sale.totalPrice - (parseFloat(form.downPayment) || 0)) * (1 + (parseFloat(form.interestRate) || 0) / 100)).toLocaleString()}
+              </div>
+              
+              <div style={{ color: '#2a3142', fontWeight: 600 }}>New Monthly Payment:</div>
+              <div style={{ fontWeight: 700, color: '#28aaa9', textAlign: isRtl ? 'left' : 'right' }}>
+                SAR {(parseFloat(form.tenureMonths) > 0 
+                  ? ((sale.totalPrice - (parseFloat(form.downPayment) || 0)) * (1 + (parseFloat(form.interestRate) || 0) / 100)) / parseFloat(form.tenureMonths)
+                  : 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div style={{ gridColumn: '1 / -1', fontSize: '11px', color: '#ec4561', marginTop: '4px', fontStyle: 'italic' }}>
+                * Note: Changing these values will require admin approval and may reset the payment schedule.
+              </div>
+            </div>
+          </div>
+
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>{t('notes')}</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ ...inputStyle, height: '80px', padding: '12px' }} />
@@ -753,13 +893,28 @@ function EditInstallmentModal({ sale, employees, onClose, onSave }: { sale: Sale
               </div>
               <div>
                 <label style={labelStyle}>{t('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ ...inputStyle, background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
               </div>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>{t('guarantorInfo')}</div>
+            <div style={{ marginBottom: '12px' }}>
+                <SearchableSelect
+                  label={t('selectGuarantor')}
+                  value={form.guarantor}
+                  onChange={handleGuarantorChange}
+                  options={[
+                    { value: '', label: commonT('none') },
+                    ...guarantors.map(g => ({ value: g._id, label: `${g.fullName} - ${g.phone}` })),
+                  ]}
+                  placeholder={t('guarantorName')}
+                />
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             {sale.status !== 'Cancelled' && (
-              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { await onSave(sale._id, { ...form, status: 'Cancelled' }); onClose(); } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
+              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { await onSave(sale._id, { ...form, status: 'Cancelled' } as any); onClose(); } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
             )}
             <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('close')}</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : commonT('save')}</button>
@@ -770,7 +925,7 @@ function EditInstallmentModal({ sale, employees, onClose, onSave }: { sale: Sale
   );
 }
 
-function ZatcaStatusBadge({ status, saleId, saleType, t }: { status?: string; saleId: string; saleType: string; t: any }) {
+function ZatcaStatusBadge({ status, saleId, saleType }: { status?: string; saleId: string; saleType: string }) {
   const [retrying, setRetrying] = useState(false);
   
   const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
@@ -781,7 +936,7 @@ function ZatcaStatusBadge({ status, saleId, saleType, t }: { status?: string; sa
     NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
   };
   
-  const s = status ? ZATCA_BADGE_COLORS[status] : ZATCA_BADGE_COLORS['NotRequired'];
+  const s = status ? (ZATCA_BADGE_COLORS[status] || ZATCA_BADGE_COLORS['NotRequired']) : ZATCA_BADGE_COLORS['NotRequired'];
 
   const handleRetry = async () => {
     setRetrying(true);

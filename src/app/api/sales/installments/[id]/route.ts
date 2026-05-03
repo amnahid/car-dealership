@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
+import EditRequest from '@/models/EditRequest';
 import Car from '@/models/Car';
 import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { generateInvoice } from '@/lib/invoiceGenerator';
+import { generateInstallmentAgreement } from '@/lib/agreementGenerator';
 import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 import { getTafweedStatus, validateTafweedAuthorization } from '@/lib/tafweed';
 import mongoose from 'mongoose';
@@ -27,7 +30,12 @@ export async function GET(
 
     await connectDB();
 
-    const sale = await InstallmentSale.findById(id).lean();
+    const sale = await InstallmentSale.findById(id)
+      .populate('car', 'carId brand model images')
+      .populate('customer', 'fullName phone email nationalId buildingNumber streetName district city postalCode otherId otherIdType vatRegistrationNumber')
+      .populate('guarantor', 'fullName phone nationalId employer salary buildingNumber streetName district city postalCode documents profilePhoto')
+      .lean();
+      
     if (!sale) {
       return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
     }
@@ -76,9 +84,35 @@ export async function PUT(
 
     const body = await request.json();
     const {
-      downPayment, monthlyPayment, interestRate, tenureMonths, notes, invoiceType, buyerTrn, agentName, agentCommission, status,
+      downPayment, monthlyPayment, interestRate, tenureMonths, monthlyLateFee, notes, invoiceType, buyerTrn, agentName, agentCommission, status,
+      guarantor, guarantorName, guarantorPhone,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
     } = body;
+
+    // INTERCEPTION: If not Admin, queue for approval
+    if (user.normalizedRole !== 'Admin') {
+      await EditRequest.create({
+        targetModel: 'InstallmentSale',
+        targetId: id,
+        requestedBy: user.userId,
+        proposedChanges: body,
+        status: 'Pending'
+      });
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Requested update for installment sale: ${id}`,
+        module: 'Sales',
+        targetId: id,
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ 
+        message: 'Edit request submitted for admin approval', 
+        isPending: true 
+      });
+    }
 
     if (status !== undefined && status === 'Cancelled') {
         sale.status = 'Cancelled';
@@ -114,9 +148,13 @@ export async function PUT(
     if (monthlyPayment !== undefined) sale.monthlyPayment = monthlyPayment;
     if (interestRate !== undefined) sale.interestRate = interestRate;
     if (tenureMonths !== undefined) sale.tenureMonths = tenureMonths;
+    if (monthlyLateFee !== undefined) sale.monthlyLateFee = monthlyLateFee;
     if (notes !== undefined) sale.notes = notes;
     if (agentName !== undefined) (sale as any).agentName = agentName;
     if (agentCommission !== undefined) (sale as any).agentCommission = agentCommission;
+    if (guarantor !== undefined) (sale as any).guarantor = guarantor;
+    if (guarantorName !== undefined) (sale as any).guarantorName = guarantorName;
+    if (guarantorPhone !== undefined) (sale as any).guarantorPhone = guarantorPhone;
     if (
       tafweedAuthorizedTo !== undefined ||
       tafweedDriverIqama !== undefined ||
@@ -239,6 +277,127 @@ export async function PUT(
     return NextResponse.json({ sale });
   } catch (error) {
     console.error('Update installment sale error:', error);
+
+    if (error instanceof DatabaseConnectionError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const user = await getAuthPayload(request);
+    if (!user || user.normalizedRole !== 'Admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await connectDB();
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid sale ID' }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const { action } = body;
+
+    if (action === 'generate-invoice') {
+      const sale = await InstallmentSale.findById(id);
+      if (!sale) {
+        return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
+      }
+
+      const [carData, customerData] = await Promise.all([
+        Car.findById(sale.car).lean() as any,
+        Customer.findById(sale.customer).lean() as any,
+      ]);
+
+      const invoiceUrl = await generateInvoice({
+        saleId: sale.saleId,
+        saleDate: sale.startDate.toString(),
+        carId: sale.carId,
+        carBrand: carData?.brand,
+        carModel: carData?.carModel,
+        customerName: sale.customerName,
+        customerPhone: sale.customerPhone,
+        customerAddress: customerData ? `${customerData.buildingNumber} ${customerData.streetName}, ${customerData.district}, ${customerData.city} ${customerData.postalCode}` : '',
+        salePrice: sale.totalPrice,
+        discountAmount: 0,
+        finalPrice: sale.totalPrice,
+        vatRate: sale.vatRate || 15,
+        vatAmount: sale.vatAmount || 0,
+        finalPriceWithVat: sale.finalPriceWithVat || 0,
+        agentName: sale.agentName,
+        agentCommission: sale.agentCommission,
+        zatcaQRCode: sale.zatcaQRCode,
+        zatcaUUID: sale.zatcaUUID,
+        invoiceType: sale.invoiceType || 'Simplified',
+      });
+
+      sale.invoiceUrl = invoiceUrl;
+      await sale.save();
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Regenerated invoice for installment sale: ${sale.saleId}`,
+        module: 'Sales',
+        targetId: sale._id.toString(),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ invoiceUrl, sale });
+    }
+
+    if (action === 'generate-agreement') {
+      const sale = await InstallmentSale.findById(id);
+      if (!sale) {
+        return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
+      }
+
+      const carData = await Car.findById(sale.car).lean() as any;
+
+      const agreementUrl = await generateInstallmentAgreement({
+        saleId: sale.saleId,
+        date: sale.startDate.toString(),
+        customerName: sale.customerName,
+        customerPhone: sale.customerPhone,
+        carId: sale.carId,
+        carBrand: carData?.brand || '',
+        carModel: carData?.model || '',
+        carYear: carData?.year || 0,
+        carPlate: carData?.plateNumber || '',
+        carVin: carData?.chassisNumber || '',
+        totalPrice: sale.totalPrice,
+        downPayment: sale.downPayment,
+        loanAmount: sale.loanAmount,
+        monthlyPayment: sale.monthlyPayment,
+        tenureMonths: sale.tenureMonths,
+      });
+
+      sale.agreementUrl = agreementUrl;
+      await sale.save();
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Regenerated agreement for installment sale: ${sale.saleId}`,
+        module: 'Sales',
+        targetId: sale._id.toString(),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ agreementUrl, sale });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error) {
+    console.error('Patch installment sale error:', error);
 
     if (error instanceof DatabaseConnectionError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });

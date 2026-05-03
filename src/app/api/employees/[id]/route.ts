@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Employee from '@/models/Employee';
+import SalaryPayment from '@/models/SalaryPayment';
+import CashSale from '@/models/CashSale';
+import InstallmentSale from '@/models/InstallmentSale';
+import Rental from '@/models/Rental';
+import '@/models/Car'; // Ensure Car model is registered for population
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import mongoose from 'mongoose';
@@ -31,7 +36,43 @@ export async function GET(
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ employee });
+    const [payments, cashSales, installmentSales, rentals] = await Promise.all([
+      SalaryPayment.find({ employee: id, isDeleted: false }).sort({ paymentDate: -1 }).lean(),
+      CashSale.find({ agentName: (employee as any).name, isDeleted: false })
+        .populate('car', 'brand model')
+        .sort({ saleDate: -1 })
+        .lean(),
+      InstallmentSale.find({ agentName: (employee as any).name, isDeleted: false })
+        .populate('car', 'brand model')
+        .sort({ startDate: -1 })
+        .lean(),
+      Rental.find({ agentName: (employee as any).name, isDeleted: false })
+        .populate('car', 'brand model')
+        .sort({ startDate: -1 })
+        .lean(),
+    ]);
+
+    // Map and combine sales
+    const sales = [
+      ...cashSales.map(s => ({
+        ...s,
+        saleDate: (s as any).saleDate,
+        type: 'Cash'
+      })),
+      ...installmentSales.map(s => ({
+        ...s,
+        finalPrice: (s as any).totalPrice,
+        saleDate: (s as any).startDate,
+        type: 'Installment'
+      }))
+    ].sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime());
+
+    return NextResponse.json({
+      employee,
+      payments,
+      sales,
+      rentals
+    });
   } catch (error) {
     console.error('Get employee error:', error);
     if (error instanceof DatabaseConnectionError) {

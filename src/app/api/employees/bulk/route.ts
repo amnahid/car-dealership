@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+    if (!['Admin', 'Finance Manager'].includes(auth.normalizedRole || '')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

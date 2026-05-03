@@ -97,7 +97,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       }}>
         {children}
       </main>
-      <footer style={{ 
+      <footer className="no-print" style={{ 
         textAlign: 'center', 
         padding: '20px', 
         marginLeft: isRtl ? 0 : '260px',

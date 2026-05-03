@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
-import CashSale from '@/models/CashSale';
-import Car from '@/models/Car';
-import Customer from '@/models/Customer';
+import CashSale, { ICashSaleDocument } from '@/models/CashSale';
+import EditRequest from '@/models/EditRequest';
+import Car, { ICarRaw } from '@/models/Car';
+import Customer, { ICustomerDocument } from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
@@ -78,6 +79,31 @@ export async function PUT(
     const body = await request.json();
     const { saleDate, salePrice, discountType, discountValue, agentName, agentCommission, notes, status, invoiceType, buyerTrn } = body;
 
+    // INTERCEPTION: If not Admin, queue for approval
+    if (user.normalizedRole !== 'Admin') {
+      await EditRequest.create({
+        targetModel: 'CashSale',
+        targetId: id,
+        requestedBy: user.userId,
+        proposedChanges: body,
+        status: 'Pending'
+      });
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Requested update for cash sale: ${id}`,
+        module: 'Sales',
+        targetId: id,
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ 
+        message: 'Edit request submitted for admin approval', 
+        isPending: true 
+      });
+    }
+
     if (status !== undefined && status === 'Cancelled') {
       const currentStatus = (sale.status as string) || 'Active';
       if (currentStatus === 'Cancelled') {
@@ -145,7 +171,7 @@ export async function PUT(
 
     const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
     if (invoiceType !== undefined) sale.invoiceType = invoiceType;
-    if (buyerTrn !== undefined) (sale as any).buyerTrn = buyerTrn;
+    if (buyerTrn !== undefined) sale.buyerTrn = buyerTrn;
 
     await sale.save();
 
@@ -161,8 +187,8 @@ export async function PUT(
     // Re-run ZATCA if invoiceType or buyerTrn changed
     if (zatcaFieldChanged) {
       try {
-        const customerDoc = await Customer.findById(sale.customer).lean();
-        const carDoc = await Car.findById(sale.car).lean();
+        const customerDoc = await Customer.findById(sale.customer).lean() as unknown as ICustomerDocument;
+        const carDoc = await Car.findById(sale.car).lean() as unknown as ICarRaw;
         const vatInfo = calculateVat(sale.finalPrice, ZATCA_VAT_RATE);
         const zatcaResult = await processZatcaInvoice({
           referenceId: sale._id.toString(),
@@ -173,20 +199,20 @@ export async function PUT(
           supplyDate: new Date(sale.saleDate),
           buyer: {
             name: sale.customerName,
-            trn: (sale as any).buyerTrn || '',
-            buildingNumber: (customerDoc as any)?.buildingNumber,
-            streetName: (customerDoc as any)?.streetName,
-            district: (customerDoc as any)?.district,
-            city: (customerDoc as any)?.city,
-            postalCode: (customerDoc as any)?.postalCode,
-            countryCode: (customerDoc as any)?.countryCode || 'SA',
-            otherId: (customerDoc as any)?.otherId ? {
-              id: (customerDoc as any).otherId,
-              type: (customerDoc as any).otherIdType || 'CRN'
+            trn: sale.buyerTrn || '',
+            buildingNumber: customerDoc?.buildingNumber,
+            streetName: customerDoc?.streetName,
+            district: customerDoc?.district,
+            city: customerDoc?.city,
+            postalCode: customerDoc?.postalCode,
+            countryCode: customerDoc?.countryCode || 'SA',
+            otherId: customerDoc?.otherId ? {
+              id: customerDoc.otherId,
+              type: customerDoc.otherIdType || 'CRN'
             } : undefined
           },
           lineItems: [{
-            name: carDoc ? `${carDoc.brand} ${carDoc.model} (${sale.carId})`.trim() : sale.carId,
+            name: carDoc ? `${carDoc.brand} ${carDoc.carModel} (${sale.carId})`.trim() : sale.carId,
             quantity: 1,
             unitPrice: vatInfo.subtotal,
             vatRate: ZATCA_VAT_RATE,
@@ -335,8 +361,8 @@ export async function PATCH(
       }
 
       const [carData, customerData] = await Promise.all([
-        Car.findById(sale.car).lean(),
-        Customer.findById(sale.customer).lean(),
+        Car.findById(sale.car).lean() as unknown as ICarRaw,
+        Customer.findById(sale.customer).lean() as unknown as ICustomerDocument,
       ]);
 
       const invoiceUrl = await generateInvoice({
@@ -344,7 +370,7 @@ export async function PATCH(
         saleDate: sale.saleDate.toString(),
         carId: sale.carId,
         carBrand: carData?.brand,
-        carModel: carData?.model,
+        carModel: carData?.carModel,
         customerName: sale.customerName,
         customerPhone: sale.customerPhone,
         customerAddress: customerData ? `${customerData.buildingNumber} ${customerData.streetName}, ${customerData.district}, ${customerData.city} ${customerData.postalCode}` : '',
@@ -353,6 +379,9 @@ export async function PATCH(
         finalPrice: sale.finalPrice,
         agentName: sale.agentName,
         agentCommission: sale.agentCommission,
+        zatcaQRCode: sale.zatcaQRCode,
+        zatcaUUID: sale.zatcaUUID,
+        invoiceType: sale.invoiceType || 'Simplified',
       });
 
       sale.invoiceUrl = invoiceUrl;

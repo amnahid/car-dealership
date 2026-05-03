@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import VehicleDocument from '@/models/Document';
+import EditRequest from '@/models/EditRequest';
 import Car from '@/models/Car';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { sendDocumentRenewalNotifications } from '@/lib/documentNotifications';
@@ -48,6 +49,31 @@ export async function PUT(
     await connectDB();
     const { id } = await params;
     const body = await request.json();
+    
+    // INTERCEPTION: If not Admin, queue for approval
+    if (auth.normalizedRole !== 'Admin') {
+      await EditRequest.create({
+        targetModel: 'Document',
+        targetId: id,
+        requestedBy: auth.userId,
+        proposedChanges: body,
+        status: 'Pending'
+      });
+
+      await logActivity({
+        userId: auth.userId,
+        userName: auth.name,
+        action: `Requested update for document: ${id}`,
+        module: 'Document',
+        targetId: id,
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ 
+        message: 'Edit request submitted for admin approval', 
+        isPending: true 
+      });
+    }
     
     // Get the old document to check if expiryDate changed
     const oldDocument = await VehicleDocument.findById(id);

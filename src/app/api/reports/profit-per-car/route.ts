@@ -55,10 +55,22 @@ export async function GET(request: NextRequest) {
           as: 'installmentSaleData',
         },
       },
-      // Calculate revenue: cash finalPrice takes priority, then installment totalPrice
+      // Join with Rental to get rental revenue
+      {
+        $lookup: {
+          from: 'rentals',
+          let: { carId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $and: [{ $eq: ['$car', '$$carId'] }, { $ne: ['$status', 'Cancelled'] }] } } },
+            { $group: { _id: null, totalRental: { $sum: '$totalAmount' } } },
+          ],
+          as: 'rentalData',
+        },
+      },
+      // Calculate revenue: sum of (cash or installment) + all rentals
       {
         $addFields: {
-          revenue: {
+          saleRevenue: {
             $cond: {
               if: { $gt: [{ $size: '$cashSaleData' }, 0] },
               then: { $arrayElemAt: ['$cashSaleData.finalPrice', 0] },
@@ -71,6 +83,12 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          rentalRevenue: { $ifNull: [{ $arrayElemAt: ['$rentalData.totalRental', 0] }, 0] },
+        },
+      },
+      {
+        $addFields: {
+          revenue: { $add: ['$saleRevenue', '$rentalRevenue'] },
         },
       },
       // Compute totalCost and profit

@@ -113,13 +113,18 @@ export default function CustomerDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+      const resData = await res.json();
       if (!res.ok) {
-        const resData = await res.json();
         alert(resData.error || 'Failed to update');
         return;
       }
-      const updated = await res.json();
-      setCustomer(updated.customer);
+      
+      if (resData.isPending) {
+        alert(resData.message || 'Edit request submitted for admin approval');
+      } else if (resData.customer) {
+        setCustomer(resData.customer);
+      }
+      
       setShowEditModal(false);
     } catch (err) {
       console.error(err);
@@ -160,7 +165,14 @@ export default function CustomerDetailPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ profilePhoto: url }),
               });
-              if (res.ok) setCustomer({ ...customer, profilePhoto: url });
+              const resData = await res.json();
+              if (res.ok) {
+                if (resData.isPending) {
+                  alert(resData.message || 'Edit request submitted for admin approval');
+                } else {
+                  setCustomer({ ...customer, profilePhoto: url });
+                }
+              }
             }} folder="customers" label={customer.fullName} size={80} />
           </div>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Personal Information</h3>

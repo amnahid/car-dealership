@@ -36,12 +36,13 @@ export interface IInstallmentSaleDocument extends Document {
   totalPaid: number;
   remainingAmount: number;
   deliveryThresholdPercent: number;
-  lateFeePercent: number;
+  monthlyLateFee: number;
   lateFeeCharged: number;
   vatRate: number;
   vatAmount: number;
   finalPriceWithVat: number;
   agreementDocument?: string;
+  agreementUrl?: string;
   // ZATCA fields
   invoiceType: ZatcaInvoiceType;
   buyerTrn?: string;
@@ -53,6 +54,10 @@ export interface IInstallmentSaleDocument extends Document {
   zatcaErrorMessage?: string;
   agentName?: string;
   agentCommission?: number;
+  invoiceUrl?: string;
+  guarantor?: mongoose.Types.ObjectId;
+  guarantorName?: string;
+  guarantorPhone?: string;
   status: InstallmentSaleStatus;
   isDeleted: boolean;
   tafweedStatus?: 'Active' | 'Expired';
@@ -95,12 +100,13 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     totalPaid: { type: Number, default: 0, min: 0 },
     remainingAmount: { type: Number, required: true, min: 0 },
     deliveryThresholdPercent: { type: Number, default: 30, min: 0, max: 100 },
-    lateFeePercent: { type: Number, default: 2, min: 0, max: 100 },
+    monthlyLateFee: { type: Number, default: 200, min: 0 },
     lateFeeCharged: { type: Number, default: 0, min: 0 },
     vatRate: { type: Number, default: 15, min: 0 },
     vatAmount: { type: Number, default: 0, min: 0 },
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
     agreementDocument: { type: String },
+    agreementUrl: { type: String },
     invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
     buyerTrn: { type: String },
     zatcaUUID: { type: String, sparse: true },
@@ -111,6 +117,10 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     zatcaErrorMessage: { type: String },
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
+    invoiceUrl: { type: String },
+    guarantor: { type: Schema.Types.ObjectId, ref: 'Guarantor' },
+    guarantorName: { type: String, trim: true },
+    guarantorPhone: { type: String, trim: true },
     status: { type: String, enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },
     tafweedStatus: { type: String, enum: ['Active', 'Expired'], default: 'Active' },

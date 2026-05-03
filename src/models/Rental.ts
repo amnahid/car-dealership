@@ -31,6 +31,7 @@ export interface IRentalDocument extends Document {
   actualReturnDate?: Date;
   lateFee?: number;
   agreementDocument?: string;
+  agreementUrl?: string;
   // ZATCA fields
   invoiceType: ZatcaInvoiceType;
   buyerTrn?: string;
@@ -75,6 +76,7 @@ const RentalSchema = new Schema<IRentalDocument>(
     actualReturnDate: { type: Date },
     lateFee: { type: Number, default: 0, min: 0 },
     agreementDocument: { type: String },
+    agreementUrl: { type: String },
     invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },
     buyerTrn: { type: String },
     zatcaUUID: { type: String, sparse: true },

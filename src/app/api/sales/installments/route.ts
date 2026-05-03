@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB, DatabaseConnectionError } from '@/lib/db';
+import { connectDB, DatabaseConnectionError, runInTransaction } from '@/lib/db';
 import InstallmentSale, { IInstallmentPayment } from '@/models/InstallmentSale';
 import Car from '@/models/Car';
 import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { generateInvoice } from '@/lib/invoiceGenerator';
+import { generateInstallmentAgreement } from '@/lib/agreementGenerator';
 import { sendInstallmentConfirmationNotifications } from '@/lib/saleNotifications';
 import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 import { validateTafweedAuthorization } from '@/lib/tafweed';
@@ -29,11 +31,24 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     const customerId = searchParams.get('customer');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
 
-    const query: Record<string, unknown> = { isDeleted: { $ne: true } };
+    const query: Record<string, any> = { isDeleted: { $ne: true } };
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
+    }
+
+    if (startDateParam || endDateParam) {
+      const dateQuery: Record<string, any> = {};
+      if (startDateParam) dateQuery.$gte = new Date(startDateParam);
+      if (endDateParam) {
+        const end = new Date(endDateParam);
+        end.setHours(23, 59, 59, 999);
+        dateQuery.$lte = end;
+      }
+      query.startDate = dateQuery;
     }
 
     if (search) {
@@ -127,9 +142,10 @@ export async function POST(request: NextRequest) {
     const {
       carId, car, customer, customerName, customerPhone,
       totalPrice, downPayment, interestRate, tenureMonths, startDate, notes,
-      deliveryThresholdPercent, lateFeePercent,
+      deliveryThresholdPercent, monthlyLateFee,
       invoiceType, buyerTrn,
       agentName, agentCommission,
+      guarantor, guarantorName, guarantorPhone,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
     } = body;
 
@@ -137,7 +153,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
-    const loanAmount = totalPrice - downPayment;
+    const principalAmount = totalPrice - downPayment;
+    const totalInterest = principalAmount * ((interestRate || 0) / 100);
+    const loanAmount = principalAmount + totalInterest;
     const monthlyPayment = loanAmount / tenureMonths;
     const remainingAmount = loanAmount;
 
@@ -176,103 +194,105 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await mongoose.startSession();
-    let sale;
-    let customerDoc;
-    let carDoc;
+    let sale: any = null;
+    let customerDoc: any = null;
+    let carDoc: any = null;
 
-    try {
-      await session.withTransaction(async () => {
-        const carCheck = await Car.findById(car).session(session);
-        if (!carCheck) throw new Error('Car not found');
-        if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
+    const result = await runInTransaction(async (session) => {
+      const carCheck = await Car.findById(car).session(session);
+      if (!carCheck) throw new Error('Car not found');
+      if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
 
-        const customerDocInTx = await Customer.findById(customer).session(session).lean();
-        if (!customerDocInTx) throw new Error('Customer not found');
+      const customerDocInTx = await Customer.findById(customer).session(session).lean();
+      if (!customerDocInTx) throw new Error('Customer not found');
 
-        const sales = await InstallmentSale.create([{
-          car: car,
-          carId,
-          customer,
-          customerName,
-          customerPhone,
-          totalPrice,
-          downPayment,
-          loanAmount,
-          monthlyPayment: Math.round(monthlyPayment * 100) / 100,
-          interestRate: interestRate || 0,
-          tenureMonths,
-          startDate,
-          paymentSchedule,
-          nextPaymentDate,
-          nextPaymentAmount: Math.round(monthlyPayment * 100) / 100,
-          totalPaid: 0,
-          remainingAmount,
-          deliveryThresholdPercent: deliveryThresholdPercent ?? 30,
-          lateFeePercent: lateFeePercent ?? 2,
-          agentName: agentName || '',
-          agentCommission: agentCommission || 0,
-          status: 'Active',
-          tafweedStatus: tafweedData.status,
-          tafweedAuthorizedTo: tafweedData.authorizedTo,
-          tafweedDriverIqama: tafweedData.driverIqama,
-          tafweedDurationMonths: tafweedData.durationMonths,
-          tafweedExpiryDate: tafweedData.expiryDate,
-          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
-          notes,
-          vatRate: ZATCA_VAT_RATE,
-          vatAmount: vatInfo.vatAmount,
-          finalPriceWithVat: vatInfo.totalWithVat,
-          invoiceType: invoiceType || 'Simplified',
-          createdBy: user.userId,
-        }], { session });
-        
-        sale = sales[0];
+      const sales = await InstallmentSale.create([{
+        car: car,
+        carId,
+        customer,
+        customerName,
+        customerPhone,
+        totalPrice,
+        downPayment,
+        loanAmount,
+        monthlyPayment: Math.round(monthlyPayment * 100) / 100,
+        interestRate: interestRate || 0,
+        tenureMonths,
+        startDate,
+        paymentSchedule,
+        nextPaymentDate,
+        nextPaymentAmount: Math.round(monthlyPayment * 100) / 100,
+        totalPaid: 0,
+        remainingAmount,
+        deliveryThresholdPercent: deliveryThresholdPercent ?? 30,
+        monthlyLateFee: monthlyLateFee ?? 200,
+        agentName: agentName || '',
+        agentCommission: agentCommission || 0,
+        guarantor: guarantor || undefined,
+        guarantorName: guarantorName || '',
+        guarantorPhone: guarantorPhone || '',
+        status: 'Active',
+        tafweedStatus: tafweedData.status,
+        tafweedAuthorizedTo: tafweedData.authorizedTo,
+        tafweedDriverIqama: tafweedData.driverIqama,
+        tafweedDurationMonths: tafweedData.durationMonths,
+        tafweedExpiryDate: tafweedData.expiryDate,
+        driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
+        notes,
+        vatRate: ZATCA_VAT_RATE,
+        vatAmount: vatInfo.vatAmount,
+        finalPriceWithVat: vatInfo.totalWithVat,
+        invoiceType: invoiceType || 'Simplified',
+        createdBy: user.userId,
+      }], { session });
+      
+      const s = sales[0];
 
-        await Car.findByIdAndUpdate(car, { 
-          status: 'On Installment',
-          tafweedStatus: tafweedData.status,
-          tafweedAuthorizedTo: tafweedData.authorizedTo,
-          tafweedDriverIqama: tafweedData.driverIqama,
-          tafweedDurationMonths: tafweedData.durationMonths,
-          tafweedExpiryDate: tafweedData.expiryDate,
-          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
-        }, { session });
-        
-        await Transaction.create([{
-          date: new Date(startDate),
-          type: 'Income',
-          category: 'Installment Payment',
-          amount: downPayment,
-          description: `Down payment for installment sale ${sale.saleId} - Car ${carId}`,
-          referenceId: sale._id.toString(),
-          referenceType: 'InstallmentSale',
-          isAutoGenerated: true,
-          createdBy: user.userId,
-        }], { session });
+      await Car.findByIdAndUpdate(car, { 
+        status: 'On Installment',
+        tafweedStatus: tafweedData.status,
+        tafweedAuthorizedTo: tafweedData.authorizedTo,
+        tafweedDriverIqama: tafweedData.driverIqama,
+        tafweedDurationMonths: tafweedData.durationMonths,
+        tafweedExpiryDate: tafweedData.expiryDate,
+        driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
+      }, { session });
+      
+      await Transaction.create([{
+        date: new Date(startDate),
+        type: 'Income',
+        category: 'Installment Payment',
+        amount: downPayment,
+        description: `Down payment for installment sale ${s.saleId} - Car ${carId}`,
+        referenceId: s._id.toString(),
+        referenceType: 'InstallmentSale',
+        isAutoGenerated: true,
+        createdBy: user.userId,
+      }], { session });
 
-        customerDoc = customerDocInTx;
-        carDoc = await Car.findById(car).session(session).lean();
+      return {
+        sale: s,
+        customerDoc: customerDocInTx,
+        carDoc: await Car.findById(car).session(session).lean()
+      };
+    });
 
-        await logActivity({
-          userId: user.userId,
-          userName: user.name,
-          action: `Created installment sale: ${sale.saleId} for car ${carId}`,
-          module: 'Sales',
-          targetId: sale._id.toString(),
-          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        });
-      });
-    } catch (txError) {
-      console.error('Transaction failed:', txError);
-      throw txError;
-    } finally {
-      await session.endSession();
-    }
+    sale = result.sale;
+    customerDoc = result.customerDoc;
+    carDoc = result.carDoc;
 
     if (!sale) {
       throw new Error('Failed to create installment sale');
     }
+
+    await logActivity({
+      userId: user.userId,
+      userName: user.name,
+      action: `Created installment sale: ${sale.saleId} for car ${carId}`,
+      module: 'Sales',
+      targetId: sale._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
 
     // Process ZATCA invoice
     try {
@@ -311,16 +331,89 @@ export async function POST(request: NextRequest) {
         notes,
         createdBy: user.userId,
       });
-      await InstallmentSale.findByIdAndUpdate((sale as any)._id, {
-        zatcaUUID: zatcaResult.uuid,
-        zatcaQRCode: zatcaResult.qrCode,
-        zatcaHash: zatcaResult.xmlHash,
-        zatcaStatus: zatcaResult.status,
-        zatcaResponse: zatcaResult.zatcaResponse,
-        ...(zatcaResult.errorMessage && { zatcaErrorMessage: zatcaResult.errorMessage }),
-      });
+      const updatedSale = await InstallmentSale.findById((sale as any)._id);
+      if (updatedSale) {
+        updatedSale.zatcaUUID = zatcaResult.uuid;
+        updatedSale.zatcaQRCode = zatcaResult.qrCode;
+        updatedSale.zatcaHash = zatcaResult.xmlHash;
+        updatedSale.zatcaStatus = zatcaResult.status as any;
+        updatedSale.zatcaResponse = zatcaResult.zatcaResponse;
+        if (zatcaResult.errorMessage) updatedSale.zatcaErrorMessage = zatcaResult.errorMessage;
+        
+        try {
+          await updatedSale.save();
+          sale = updatedSale;
+        } catch (saveError) {
+          console.error('Failed to update InstallmentSale with ZATCA status:', saveError);
+        }
+      }
     } catch (zatcaError) {
       console.error('ZATCA processing failed:', zatcaError);
+    }
+
+    try {
+      const s = sale as any;
+      const invoiceUrl = await generateInvoice({
+        saleId: s.saleId,
+        saleDate: s.startDate.toString(),
+        carId: s.carId,
+        carBrand: carDoc?.brand,
+        carModel: carDoc?.carModel,
+        customerName: s.customerName,
+        customerPhone: s.customerPhone,
+        customerAddress: customerDoc ? `${customerDoc.buildingNumber} ${customerDoc.streetName}, ${customerDoc.district}, ${customerDoc.city} ${customerDoc.postalCode}` : '',
+        salePrice: s.totalPrice,
+        discountAmount: 0,
+        finalPrice: s.totalPrice,
+        vatRate: s.vatRate,
+        vatAmount: s.vatAmount,
+        finalPriceWithVat: s.finalPriceWithVat,
+        agentName: s.agentName,
+        agentCommission: s.agentCommission,
+        zatcaQRCode: sale.zatcaQRCode,
+        zatcaUUID: sale.zatcaUUID,
+        invoiceType: s.invoiceType || 'Simplified',
+      });
+
+      const finalSale = await InstallmentSale.findById(s._id);
+      if (finalSale) {
+        finalSale.invoiceUrl = invoiceUrl;
+        await finalSale.save();
+        sale = finalSale;
+      }
+    } catch (invoiceError) {
+      console.error('Invoice generation failed:', invoiceError);
+    }
+
+    // Auto-generate Agreement
+    try {
+      const s = sale as any;
+      const agreementUrl = await generateInstallmentAgreement({
+        saleId: s.saleId,
+        date: s.startDate.toString(),
+        customerName: s.customerName,
+        customerPhone: s.customerPhone,
+        carId: s.carId,
+        carBrand: carDoc?.brand || '',
+        carModel: carDoc?.model || '',
+        carYear: carDoc?.year || 0,
+        carPlate: carDoc?.plateNumber || '',
+        carVin: carDoc?.chassisNumber || '',
+        totalPrice: s.totalPrice,
+        downPayment: s.downPayment,
+        loanAmount: s.loanAmount,
+        monthlyPayment: s.monthlyPayment,
+        tenureMonths: s.tenureMonths,
+      });
+
+      const finalSale = await InstallmentSale.findById(s._id);
+      if (finalSale) {
+        finalSale.agreementUrl = agreementUrl;
+        await finalSale.save();
+        sale = finalSale;
+      }
+    } catch (agreementError) {
+      console.error('Agreement generation failed:', agreementError);
     }
 
     // Send confirmation notifications to customer
@@ -355,11 +448,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ sale }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create installment sale error:', error);
     if (error instanceof DatabaseConnectionError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

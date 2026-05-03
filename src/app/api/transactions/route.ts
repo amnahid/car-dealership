@@ -37,11 +37,25 @@ export async function GET(request: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    const [transactions, total, stats] = await Promise.all([
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const [transactions, total, stats, monthlyStats] = await Promise.all([
       Transaction.find(query).sort({ date: -1 }).skip(skip).limit(limit).lean(),
       Transaction.countDocuments(query),
       Transaction.aggregate([
         { $match: query },
+        { $group: { _id: '$type', total: { $sum: '$amount' } } },
+      ]),
+      Transaction.aggregate([
+        { 
+          $match: { 
+            isDeleted: { $ne: true }, 
+            date: { $gte: startOfMonth, $lte: endOfMonth } 
+          } 
+        },
         { $group: { _id: '$type', total: { $sum: '$amount' } } },
       ]),
     ]);
@@ -49,10 +63,21 @@ export async function GET(request: NextRequest) {
     const income = stats.find(s => s._id === 'Income')?.total || 0;
     const expense = stats.find(s => s._id === 'Expense')?.total || 0;
 
+    const thisMonthIncome = monthlyStats.find(s => s._id === 'Income')?.total || 0;
+    const thisMonthExpense = monthlyStats.find(s => s._id === 'Expense')?.total || 0;
+    const thisMonthProfit = thisMonthIncome - thisMonthExpense;
+
     return NextResponse.json({
       transactions,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-      summary: { income, expense, profit: income - expense },
+      summary: { 
+        income, 
+        expense, 
+        totalProfit: income - expense,
+        thisMonthIncome,
+        thisMonthExpense,
+        thisMonthProfit
+      },
     });
   } catch (error) {
     console.error('Get transactions error:', error);

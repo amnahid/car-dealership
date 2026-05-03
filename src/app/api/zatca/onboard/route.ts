@@ -203,11 +203,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error: any) {
     console.error('ZATCA onboarding error:', error);
+    let status = 500;
+    let message = error instanceof Error ? error.message : 'Internal server error';
+    const detail = error.response?.data || null;
+
     if (error.response && error.response.data) {
         console.error('ZATCA API Error Data:', JSON.stringify(error.response.data, null, 2));
+        
+        // Use ZATCA's status code if available
+        if (error.response.status) {
+            status = error.response.status;
+        }
+
+        // Specifically check for Invalid-OTP to provide a clearer status if not set
+        const errors = error.response.data.errors;
+        if (Array.isArray(errors) && errors.some((e: any) => e.code === 'Invalid-OTP')) {
+            status = 400;
+            message = 'Invalid ZATCA OTP. Please generate a new OTP from the Fatoora portal.';
+        }
     }
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    const detail = error.response?.data || null;
-    return NextResponse.json({ error: message, detail }, { status: 500 });
+
+    return NextResponse.json({ error: message, detail }, { status });
   }
 }

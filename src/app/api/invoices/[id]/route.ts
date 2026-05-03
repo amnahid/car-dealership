@@ -7,7 +7,12 @@ import InstallmentSale from '@/models/InstallmentSale';
 import Rental from '@/models/Rental';
 import Customer from '@/models/Customer';
 import Car from '@/models/Car';
-import User from '@/models/User';
+
+interface BaseSale {
+  customer: any;
+  car: any;
+  invoiceUrl?: string;
+}
 
 export async function GET(
   request: NextRequest,
@@ -34,31 +39,31 @@ export async function GET(
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
 
-    let sale = null;
+    let sale: BaseSale | null = null;
     let customer = null;
     let car = null;
 
     if (invoice.referenceType === 'CashSale') {
-      sale = await CashSale.findOne({ _id: invoice.referenceId }).lean();
+      sale = await CashSale.findOne({ _id: invoice.referenceId }).lean() as BaseSale | null;
       if (sale) {
-        customer = await Customer.findOne({ _id: (sale as any).customer }).lean();
-        car = await Car.findOne({ _id: (sale as any).car }).lean();
+        customer = await Customer.findOne({ _id: sale.customer }).lean();
+        car = await Car.findOne({ _id: sale.car }).lean();
       }
     } else if (invoice.referenceType === 'InstallmentSale') {
-      sale = await InstallmentSale.findOne({ _id: invoice.referenceId }).lean();
+      sale = await InstallmentSale.findOne({ _id: invoice.referenceId }).lean() as BaseSale | null;
       if (sale) {
-        customer = await Customer.findOne({ _id: (sale as any).customer }).lean();
-        car = await Car.findOne({ _id: (sale as any).car }).lean();
+        customer = await Customer.findOne({ _id: sale.customer }).lean();
+        car = await Car.findOne({ _id: sale.car }).lean();
       }
     } else if (invoice.referenceType === 'Rental') {
-      sale = await Rental.findOne({ _id: invoice.referenceId }).lean();
+      sale = await Rental.findOne({ _id: invoice.referenceId }).lean() as BaseSale | null;
       if (sale) {
-        customer = await Customer.findOne({ _id: (sale as any).customer }).lean();
-        car = await Car.findOne({ _id: (sale as any).car }).lean();
+        customer = await Customer.findOne({ _id: sale.customer }).lean();
+        car = await Car.findOne({ _id: sale.car }).lean();
       }
     }
 
-    const invoiceUrl = (sale as any)?.invoiceUrl || `/uploads/invoices/invoice-${invoice.saleId}.pdf`;
+    const invoiceUrl = sale?.invoiceUrl || `/uploads/invoices/invoice-${invoice.saleId}.pdf`;
 
     return NextResponse.json({
       invoice: {

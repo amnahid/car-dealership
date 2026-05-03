@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB, DatabaseConnectionError } from '@/lib/db';
+import { connectDB, DatabaseConnectionError, runInTransaction } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
 import Transaction from '@/models/Transaction';
 import Car from '@/models/Car';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { calculateAccruedLateFee } from '@/lib/installmentUtils';
 import mongoose from 'mongoose';
 
 export async function POST(
@@ -29,117 +30,135 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { installmentNumber, amount, paymentDate, notes } = body;
+    const { installmentNumber, amount, lateFeeAmount, paymentDate, notes } = body;
 
-    if (!installmentNumber || !amount || !paymentDate) {
+    if (!installmentNumber || amount === undefined || !paymentDate) {
       return NextResponse.json({ error: 'Installment number, amount and payment date are required' }, { status: 400 });
     }
 
-    const session = await mongoose.startSession();
-    let updatedSale;
+    const updatedSale = await runInTransaction(async (session) => {
+      // Find sale first to validate installment exists and state
+      const sale = await InstallmentSale.findById(id).session(session);
+      if (!sale) {
+        throw new Error('Sale not found');
+      }
 
-    try {
-      await session.withTransaction(async () => {
-        // Find sale first to validate installment exists and state
-        const sale = await InstallmentSale.findById(id).session(session);
-        if (!sale) {
-          throw new Error('Sale not found');
-        }
+      const inst = sale.paymentSchedule.find(p => p.installmentNumber === installmentNumber);
+      if (!inst) {
+        throw new Error('Invalid installment number');
+      }
+      if (inst.status === 'Paid') {
+        throw new Error('Installment already paid');
+      }
 
-        const inst = sale.paymentSchedule.find(p => p.installmentNumber === installmentNumber);
-        if (!inst) {
-          throw new Error('Invalid installment number');
-        }
-        if (inst.status === 'Paid') {
-          throw new Error('Installment already paid');
-        }
+      // Calculate late fee: 10 day grace period, then flat fee per month
+      const dueDate = new Date(inst.dueDate);
+      const pDate = new Date(paymentDate);
+      const diffTime = pDate.getTime() - dueDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      const finalLateFee = lateFeeAmount !== undefined ? Number(lateFeeAmount) : calculateAccruedLateFee(diffDays, sale.monthlyLateFee);
 
-        // Atomic update of the installment and totals
-        updatedSale = await InstallmentSale.findByIdAndUpdate(
-          id,
-          {
-            $set: {
-              'paymentSchedule.$[elem].status': 'Paid',
-              'paymentSchedule.$[elem].paidDate': new Date(paymentDate),
-              'paymentSchedule.$[elem].paidAmount': amount,
-              'paymentSchedule.$[elem].notes': notes,
-            },
-            $inc: {
-              totalPaid: amount,
-              remainingAmount: -amount
-            }
+      // Atomic update of the installment and totals
+      const us = await InstallmentSale.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            'paymentSchedule.$[elem].status': 'Paid',
+            'paymentSchedule.$[elem].paidDate': new Date(paymentDate),
+            'paymentSchedule.$[elem].paidAmount': amount + finalLateFee,
+            'paymentSchedule.$[elem].lateFee': finalLateFee,
+            'paymentSchedule.$[elem].notes': notes,
           },
-          {
-            session,
-            new: true,
-            arrayFilters: [{ 'elem.installmentNumber': installmentNumber }]
+          $inc: {
+            totalPaid: amount + finalLateFee,
+            remainingAmount: -amount, // Only decrement remaining balance by the base amount
+            lateFeeCharged: finalLateFee
           }
-        );
-
-        if (!updatedSale) {
-          throw new Error('Failed to update sale');
+        },
+        {
+          session,
+          new: true,
+          arrayFilters: [{ 'elem.installmentNumber': installmentNumber }]
         }
+      );
 
-        // Recalculate next payment info based on new state
-        const schedule = updatedSale.paymentSchedule || [];
-        const nextUnpaid = schedule.find(p => p.status !== 'Paid');
+      if (!us) {
+        throw new Error('Failed to update sale');
+      }
 
-        if (nextUnpaid) {
-          updatedSale.nextPaymentDate = nextUnpaid.dueDate;
-          updatedSale.nextPaymentAmount = nextUnpaid.amount;
+      // Recalculate next payment info based on new state
+      const schedule = us.paymentSchedule || [];
+      const nextUnpaid = schedule.find(p => p.status !== 'Paid');
 
-          // Check if there are any remaining overdue installments
-          const hasOverdue = schedule.some(p => p.status === 'Overdue');
-          if (!hasOverdue && updatedSale.status === 'Defaulted') {
-            updatedSale.status = 'Active';
-            await Car.findByIdAndUpdate(updatedSale.car, { status: 'On Installment' }, { session });
-          } else if (hasOverdue) {
-            updatedSale.status = 'Defaulted';
-            await Car.findByIdAndUpdate(updatedSale.car, { status: 'Defaulted' }, { session });
-          }
-        } else {
-          updatedSale.status = 'Completed';
-          updatedSale.nextPaymentDate = null as unknown as Date;
-          updatedSale.nextPaymentAmount = 0;
-          await Car.findByIdAndUpdate(updatedSale.car, { status: 'Sold' }, { session });
+      if (nextUnpaid) {
+        us.nextPaymentDate = nextUnpaid.dueDate;
+        us.nextPaymentAmount = nextUnpaid.amount;
+
+        // Check if there are any remaining overdue installments
+        const hasOverdue = schedule.some(p => p.status === 'Overdue');
+        if (!hasOverdue && us.status === 'Defaulted') {
+          us.status = 'Active';
+          await Car.findByIdAndUpdate(us.car, { status: 'On Installment' }, { session });
+        } else if (hasOverdue) {
+          us.status = 'Defaulted';
+          await Car.findByIdAndUpdate(us.car, { status: 'Defaulted' }, { session });
         }
-        await updatedSale.save({ session });
+      } else {
+        us.status = 'Completed';
+        us.nextPaymentDate = null as unknown as Date;
+        us.nextPaymentAmount = 0;
+        await Car.findByIdAndUpdate(us.car, { status: 'Sold' }, { session });
+      }
+      await us.save({ session });
 
-        // Create ledger transaction
-        await Transaction.create([{
+      // Create ledger transactions
+      const transactions = [{
+        date: new Date(paymentDate),
+        type: 'Income',
+        category: 'Installment Payment',
+        amount: amount,
+        description: `Installment #${installmentNumber} base payment for ${us.saleId} - Car ${us.carId}`,
+        referenceId: us._id.toString(),
+        referenceType: 'InstallmentSale',
+        isAutoGenerated: true,
+        createdBy: user.userId,
+      }];
+
+      if (finalLateFee > 0) {
+        transactions.push({
           date: new Date(paymentDate),
           type: 'Income',
-          category: 'Installment Payment',
-          amount,
-          description: `Installment ${installmentNumber} for sale ${updatedSale.saleId} - Car ${updatedSale.carId}`,
-          referenceId: updatedSale._id.toString(),
+          category: 'Fee', // Or 'Installment Payment'
+          amount: finalLateFee,
+          description: `Late fee collected for installment #${installmentNumber} - Sale ${us.saleId}`,
+          referenceId: us._id.toString(),
           referenceType: 'InstallmentSale',
           isAutoGenerated: true,
           createdBy: user.userId,
-        }], { session });
-
-        await logActivity({
-          userId: user.userId,
-          userName: user.name,
-          action: `Recorded payment for installment ${installmentNumber} of sale ${updatedSale.saleId}`,
-          module: 'Sales',
-          targetId: updatedSale._id.toString(),
-          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
         });
+      }
+
+      await Transaction.create(transactions, { session });
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Recorded payment for installment ${installmentNumber} of sale ${us.saleId} (Base: ${amount}, Fee: ${finalLateFee})`,
+        module: 'Sales',
+        targetId: us._id.toString(),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
       });
-    } catch (txError: any) {
-      console.error('Payment transaction failed:', txError);
-      return NextResponse.json({ error: txError.message || 'Transaction failed' }, { status: 400 });
-    } finally {
-      await session.endSession();
-    }
+
+      return us;
+    });
 
     return NextResponse.json({ sale: updatedSale });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Record payment error:', error);
     if (error instanceof DatabaseConnectionError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 400 });
   }
 }

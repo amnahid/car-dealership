@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     let data: any[] = [];
-    let fileName = `export-${type}-${new Date().toISOString().split('T')[0]}.csv`;
+    const fileName = `export-${type}-${new Date().toISOString().split('T')[0]}.csv`;
 
     switch (type) {
       case 'cars':

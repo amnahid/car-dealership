@@ -102,6 +102,7 @@ export default function ZatcaSettingsPage() {
   async function handleOnboardAction(action: string) {
     setOnboardLoading(true);
     setOnboardResult('');
+    setMessage(null);
     try {
       const body: Record<string, string> = { action };
       if (action === 'auto_onboard') {
@@ -120,13 +121,22 @@ export default function ZatcaSettingsPage() {
       });
       const data = await res.json();
       setOnboardResult(JSON.stringify(data, null, 2));
-      if (res.ok) await fetchConfig();
+      
+      if (!res.ok) {
+        setMessage({ type: 'error', text: data.error || 'Onboarding action failed' });
+        return;
+      }
+
+      await fetchConfig();
       if (data.csrB64 && action === 'generate_csr') {
         setOnboardInput(data.csrB64);
         setMessage({ type: 'success', text: 'CSR generated! Pasted into Step 2 input — click Step 2 to continue.' });
+      } else {
+        setMessage({ type: 'success', text: data.message || 'Action completed successfully' });
       }
     } catch (err) {
       setOnboardResult(`Error: ${err}`);
+      setMessage({ type: 'error', text: commonT('errors.networkError') });
     } finally {
       setOnboardLoading(false);
     }

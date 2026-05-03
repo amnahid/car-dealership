@@ -138,29 +138,33 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
     // Create a failed record
     const failedResult: ZatcaProcessResult = {
       uuid,
-      qrCode: '',
-      xml: '',
-      xmlHash: '',
+      qrCode: 'N/A',
+      xml: 'N/A',
+      xmlHash: 'N/A',
       status: 'Failed',
       errorMessage: errorMsg,
-      newPih: pih,
+      newPih: pih || '0',
     };
 
-    await ZatcaInvoice.create({
+    try {
+      await ZatcaInvoice.create({
         uuid,
         invoiceType: input.invoiceType,
         referenceId: input.referenceId,
         referenceType: input.referenceType,
         saleId: input.saleId,
         issueDate: input.issueDate,
-        xml: '',
-        xmlHash: '',
-        pih,
-        qrCode: '',
+        xml: 'N/A',
+        xmlHash: 'N/A',
+        pih: pih || '0', // fallback to prevent validation errors if pih is undefined
+        qrCode: 'N/A',
         status: 'Failed',
         errorMessage: errorMsg,
         createdBy: input.createdBy,
       });
+    } catch (auditError) {
+      console.error('Failed to create ZatcaInvoice audit record:', auditError);
+    }
 
     return failedResult;
   }

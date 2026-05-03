@@ -5,6 +5,7 @@ import Link from 'next/navigation';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
 import DataTransferButtons from '@/components/DataTransferButtons';
+import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -43,6 +44,7 @@ export default function RentalsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -106,6 +108,8 @@ export default function RentalsPage() {
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
     if (statusFilter) params.set('status', statusFilter);
+    if (dateRange.startDate) params.set('startDate', dateRange.startDate);
+    if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
     try {
       const res = await fetch(`/api/sales/rentals?${params}`);
@@ -118,17 +122,21 @@ export default function RentalsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, statusFilter]);
+  }, [page, debouncedSearch, statusFilter, dateRange]);
 
   useEffect(() => {
     fetchRentals();
   }, [fetchRentals]);
 
   useEffect(() => {
+    setPage(1);
+  }, [dateRange]);
+
+  useEffect(() => {
     Promise.all([
       fetch('/api/cars?limit=100&status=In+Stock').then(r => r.json()),
       fetch('/api/customers?limit=100').then(r => r.json()),
-      fetch('/api/employees?limit=100&active=true').then(r => r.json()),
+      fetch('/api/employees?limit=100&active=true&department=Sales').then(r => r.json()),
     ]).then(([carData, custData, empData]) => {
       setCars(carData.cars || []);
       setCustomers(custData.customers || []);
@@ -157,7 +165,13 @@ export default function RentalsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); return; }
+      const resData = await res.json();
+      if (!res.ok) { alert(resData.error || 'Failed'); return; }
+      
+      if (resData.isPending) {
+        alert(resData.message || 'Edit request submitted for admin approval');
+      }
+
       setEditingRental(null);
       fetchRentals();
     } catch (err) { console.error(err); }
@@ -216,6 +230,7 @@ export default function RentalsPage() {
           <option value="Completed">{t('statuses.completed')}</option>
           <option value="Cancelled">{t('statuses.cancelled')}</option>
         </select>
+        <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
 
       {selectedIds.size > 0 && (
@@ -349,7 +364,7 @@ export default function RentalsPage() {
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         <a href={`/dashboard/sales/rentals/${rental._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</a>
-                        <a href={`/dashboard/sales/rentals/${rental._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>{commonT('edit')}</a>
+                        <button onClick={() => setEditingRental(rental)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{commonT('edit')}</button>
                         {rental.status !== 'Cancelled' && (
                           <button onClick={() => handleDelete(rental._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('cancelRental')}</button>
                         )}
@@ -549,7 +564,7 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
               </div>
               <div>
                 <label style={labelStyle}>{cashT('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ ...inputStyle, background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
               </div>
             </div>
           </div>
@@ -574,13 +589,13 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>Vehicle Authorization (Tafweed) *</div>
             <div style={{ marginBottom: '12px' }}>
-              <label style={labelStyle}>Driver's Full Name</label>
+              <label style={labelStyle}>Driver&apos;s Full Name</label>
               <input value={form.tafweedAuthorizedTo} onChange={(e) => setForm({ ...form, tafweedAuthorizedTo: e.target.value })} style={inputStyle} placeholder="Leave blank to use customer name" />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={labelStyle}>Driver's Iqama Number *</label>
-                <input value={form.tafweedDriverIqama} onChange={(e) => setForm({ ...form, tafweedDriverIqama: e.target.value })} style={inputStyle} placeholder="Driver's Iqama" required />
+                <label style={labelStyle}>Driver&apos;s Iqama Number *</label>
+                <input value={form.tafweedDriverIqama} onChange={(e) => setForm({ ...form, tafweedDriverIqama: e.target.value })} style={inputStyle} placeholder="Driver&apos;s Iqama" required />
               </div>
               <div>
                 <label style={labelStyle}>Tafweed Expiration Date *</label>
@@ -742,7 +757,7 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
               </div>
               <div>
                 <label style={labelStyle}>{cashT('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} readOnly={!!agentId} onChange={(e) => !agentId && setForm({ ...form, agentCommission: e.target.value })} style={{ ...inputStyle, background: agentId ? '#f8f9fa' : '#fff' }} placeholder="0" />
+                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
               </div>
             </div>
           </div>

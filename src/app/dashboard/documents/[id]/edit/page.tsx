@@ -104,10 +104,14 @@ export default function EditDocumentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+      const resData = await res.json();
       if (res.ok) {
+        if (resData.isPending) {
+          alert(resData.message || 'Edit request submitted for admin approval');
+        }
         router.push('/dashboard/documents');
       } else {
-        setError('Failed to save');
+        setError(resData.error || 'Failed to save');
       }
     } catch {
       setError('Network error');

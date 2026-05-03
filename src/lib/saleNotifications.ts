@@ -395,7 +395,8 @@ interface PaymentReminderInfo {
   dueDate: string;
   daysUntilDue?: number;
   daysOverdue?: number;
-  lateFeePercent: number;
+  monthlyLateFee: number;
+  accruedLateFee?: number;
 }
 
 function formatInstallmentConfirmationMessage(customer: CustomerInfo, installment: InstallmentInfo): string {
@@ -409,12 +410,12 @@ function formatInstallmentConfirmationMessage(customer: CustomerInfo, installmen
 
 function formatPaymentReminderMessage(customer: CustomerInfo, reminder: PaymentReminderInfo): string {
   const dueDate = new Date(reminder.dueDate).toLocaleDateString();
-  return `Reminder: Payment #${reminder.installmentNumber} of $${reminder.amount.toLocaleString()} is due on ${dueDate}${reminder.daysUntilDue ? ` (${reminder.daysUntilDue} days)` : ''}. Late fee: ${reminder.lateFeePercent}% after due date. - AMYAL CAR`;
+  return `Reminder: Payment #${reminder.installmentNumber} of $${reminder.amount.toLocaleString()} is due on ${dueDate}${reminder.daysUntilDue ? ` (${reminder.daysUntilDue} days)` : ''}. A late fee of $${reminder.monthlyLateFee.toLocaleString()} applies monthly after a 10-day grace period. - AMYAL CAR`;
 }
 
 function formatOverdueNoticeMessage(customer: CustomerInfo, reminder: PaymentReminderInfo): string {
   const dueDate = new Date(reminder.dueDate).toLocaleDateString();
-  const lateFee = Math.round(reminder.amount * reminder.lateFeePercent / 100);
+  const lateFee = reminder.accruedLateFee || 0;
   const totalDue = reminder.amount + lateFee;
   return `URGENT: Payment #${reminder.installmentNumber} is ${reminder.daysOverdue} days overdue! Amount: $${reminder.amount.toLocaleString()} + late fee: $${lateFee.toLocaleString()} = $${totalDue.toLocaleString()}. Please pay immediately. - AMYAL CAR`;
 }
@@ -495,7 +496,6 @@ function buildInstallmentConfirmationEmailHtml(customer: CustomerInfo, installme
 
 function buildPaymentReminderEmailHtml(customer: CustomerInfo, reminder: PaymentReminderInfo): string {
   const dueDate = new Date(reminder.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const lateFee = Math.round(reminder.amount * reminder.lateFeePercent / 100);
 
   return `
 <!DOCTYPE html>
@@ -541,7 +541,7 @@ function buildPaymentReminderEmailHtml(customer: CustomerInfo, reminder: Payment
                 </tr>
                 <tr style="background-color: #fff5f5;">
                   <td style="padding: 12px 15px; font-size: 13px; color: #666666; font-weight: 500;">Late Fee</td>
-                  <td style="padding: 12px 15px; font-size: 13px; color: #ec4561;">${reminder.lateFeePercent}% ($${lateFee.toLocaleString()}) after due date</td>
+                  <td style="padding: 12px 15px; font-size: 13px; color: #ec4561;">$${reminder.monthlyLateFee.toLocaleString()} per month after 10-day grace period</td>
                 </tr>
               </table>
               <p style="color: #555555; font-size: 14px; line-height: 1.6; margin: 20px 0;">
@@ -562,7 +562,7 @@ function buildPaymentReminderEmailHtml(customer: CustomerInfo, reminder: Payment
 
 function buildOverdueNoticeEmailHtml(customer: CustomerInfo, reminder: PaymentReminderInfo): string {
   const dueDate = new Date(reminder.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const lateFee = Math.round(reminder.amount * reminder.lateFeePercent / 100);
+  const lateFee = reminder.accruedLateFee || 0;
   const totalDue = reminder.amount + lateFee;
 
   return `
@@ -608,7 +608,7 @@ function buildOverdueNoticeEmailHtml(customer: CustomerInfo, reminder: PaymentRe
                   <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #333333;">$${reminder.amount.toLocaleString()}</td>
                 </tr>
                 <tr style="background-color: #fff5f5;">
-                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">Late Fee (${reminder.lateFeePercent}%)</td>
+                  <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #666666; font-weight: 500;">Late Fee</td>
                   <td style="padding: 12px 15px; border-bottom: 1px solid #e5e5e5; font-size: 13px; color: #dc2626; font-weight: 600;">$${lateFee.toLocaleString()}</td>
                 </tr>
                 <tr style="background-color: #fef2f2;">

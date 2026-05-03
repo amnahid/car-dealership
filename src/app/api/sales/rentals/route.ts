@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB, DatabaseConnectionError } from '@/lib/db';
+import { connectDB, DatabaseConnectionError, runInTransaction } from '@/lib/db';
 import Rental from '@/models/Rental';
 import Car from '@/models/Car';
 import Customer from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
+import { generateInvoice } from '@/lib/invoiceGenerator';
+import { generateRentalAgreement } from '@/lib/agreementGenerator';
 import { sendRentalConfirmationNotifications } from '@/lib/saleNotifications';
 import { processZatcaInvoice, calculateVat, ZATCA_VAT_RATE } from '@/lib/zatca/invoiceService';
 import { validateTafweedAuthorization } from '@/lib/tafweed';
@@ -29,11 +31,24 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     const customerId = searchParams.get('customer');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
 
-    const query: Record<string, unknown> = { isDeleted: { $ne: true } };
+    const query: Record<string, any> = { isDeleted: { $ne: true } };
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
+    }
+
+    if (startDateParam || endDateParam) {
+      const dateQuery: Record<string, any> = {};
+      if (startDateParam) dateQuery.$gte = new Date(startDateParam);
+      if (endDateParam) {
+        const end = new Date(endDateParam);
+        end.setHours(23, 59, 59, 999);
+        dateQuery.$lte = end;
+      }
+      query.startDate = dateQuery;
     }
 
     if (search) {
@@ -137,93 +152,92 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await mongoose.startSession();
-    let rental;
-    let customerDoc;
-    let carDoc;
+    let rental: any = null;
+    let customerDoc: any = null;
+    let carDoc: any = null;
 
-    try {
-      await session.withTransaction(async () => {
-        const carCheck = await Car.findById(car).session(session);
-        if (!carCheck) throw new Error('Car not found');
-        if (carCheck.status !== 'In Stock') throw new Error('Car is not available for rent');
+    const result = await runInTransaction(async (session) => {
+      const carCheck = await Car.findById(car).session(session);
+      if (!carCheck) throw new Error('Car not found');
+      if (carCheck.status !== 'In Stock') throw new Error('Car is not available for rent');
 
-        const customerDocInTx = await Customer.findById(customer).session(session).lean();
-        if (!customerDocInTx) throw new Error('Customer not found');
+      const customerDocInTx = await Customer.findById(customer).session(session).lean();
+      if (!customerDocInTx) throw new Error('Customer not found');
 
-        const rentals = await Rental.create([{
-          car: car,
-          carId,
-          customer,
-          customerName,
-          customerPhone,
-          startDate,
-          endDate,
-          dailyRate,
-          totalAmount,
-          securityDeposit: securityDeposit || 0,
-          agentName: agentName || '',
-          agentCommission: agentCommission || 0,
-          status: 'Active',
-          tafweedStatus: tafweedData.status,
-          tafweedAuthorizedTo: tafweedData.authorizedTo,
-          tafweedDriverIqama: tafweedData.driverIqama,
-          tafweedDurationMonths: tafweedData.durationMonths,
-          tafweedExpiryDate: tafweedData.expiryDate,
-          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
-          notes,
-          vatRate: ZATCA_VAT_RATE,
-          vatAmount: vatInfo.vatAmount,
-          invoiceType: invoiceType || 'Simplified',
-          createdBy: user.userId,
-        }], { session });
+      const rentals = await Rental.create([{
+        car: car,
+        carId,
+        customer,
+        customerName,
+        customerPhone,
+        startDate,
+        endDate,
+        dailyRate,
+        totalAmount,
+        securityDeposit: securityDeposit || 0,
+        agentName: agentName || '',
+        agentCommission: agentCommission || 0,
+        status: 'Active',
+        tafweedStatus: tafweedData.status,
+        tafweedAuthorizedTo: tafweedData.authorizedTo,
+        tafweedDriverIqama: tafweedData.driverIqama,
+        tafweedDurationMonths: tafweedData.durationMonths,
+        tafweedExpiryDate: tafweedData.expiryDate,
+        driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
+        notes,
+        vatRate: ZATCA_VAT_RATE,
+        vatAmount: vatInfo.vatAmount,
+        invoiceType: invoiceType || 'Simplified',
+        createdBy: user.userId,
+      }], { session });
 
-        rental = rentals[0];
+      const r = rentals[0];
 
-        await Car.findByIdAndUpdate(car, { 
-          status: 'Rented',
-          tafweedStatus: tafweedData.status,
-          tafweedAuthorizedTo: tafweedData.authorizedTo,
-          tafweedDriverIqama: tafweedData.driverIqama,
-          tafweedDurationMonths: tafweedData.durationMonths,
-          tafweedExpiryDate: tafweedData.expiryDate,
-          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
-        }, { session });
+      await Car.findByIdAndUpdate(car, { 
+        status: 'Rented',
+        tafweedStatus: tafweedData.status,
+        tafweedAuthorizedTo: tafweedData.authorizedTo,
+        tafweedDriverIqama: tafweedData.driverIqama,
+        tafweedDurationMonths: tafweedData.durationMonths,
+        tafweedExpiryDate: tafweedData.expiryDate,
+        driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
+      }, { session });
 
-        await Transaction.create([{
-          date: new Date(startDate),
-          type: 'Income',
-          category: 'Rental Income',
-          amount: totalAmount,
-          description: `Rental ${rental.rentalId} - Car ${carId}`,
-          referenceId: rental._id.toString(),
-          referenceType: 'Rental',
-          isAutoGenerated: true,
-          createdBy: user.userId,
-        }], { session });
+      await Transaction.create([{
+        date: new Date(startDate),
+        type: 'Income',
+        category: 'Rental Income',
+        amount: totalAmount,
+        description: `Rental ${r.rentalId} - Car ${carId}`,
+        referenceId: r._id.toString(),
+        referenceType: 'Rental',
+        isAutoGenerated: true,
+        createdBy: user.userId,
+      }], { session });
 
-        customerDoc = customerDocInTx;
-        carDoc = await Car.findById(car).session(session).lean();
+      return {
+        rental: r,
+        customerDoc: customerDocInTx,
+        carDoc: await Car.findById(car).session(session).lean()
+      };
+    });
 
-        await logActivity({
-          userId: user.userId,
-          userName: user.name,
-          action: `Created rental: ${rental.rentalId} for car ${carId}`,
-          module: 'Rental',
-          targetId: rental._id.toString(),
-          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        });
-      });
-    } catch (txError) {
-      console.error('Rental transaction failed:', txError);
-      throw txError;
-    } finally {
-      await session.endSession();
-    }
+    rental = result.rental;
+    customerDoc = result.customerDoc;
+    carDoc = result.carDoc;
 
     if (!rental) {
       throw new Error('Failed to create rental');
     }
+
+    await logActivity({
+      userId: user.userId,
+      userName: user.name,
+      action: `Created rental: ${rental.rentalId} for car ${carId}`,
+      module: 'Rental',
+      targetId: rental._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
 
     // Process ZATCA invoice
     try {
@@ -265,16 +279,89 @@ export async function POST(request: NextRequest) {
         notes,
         createdBy: user.userId,
       });
-      await Rental.findByIdAndUpdate((rental as any)._id, {
-        zatcaUUID: zatcaResult.uuid,
-        zatcaQRCode: zatcaResult.qrCode,
-        zatcaHash: zatcaResult.xmlHash,
-        zatcaStatus: zatcaResult.status,
-        zatcaResponse: zatcaResult.zatcaResponse,
-        ...(zatcaResult.errorMessage && { zatcaErrorMessage: zatcaResult.errorMessage }),
-      });
+      const updatedRental = await Rental.findById((rental as any)._id);
+      if (updatedRental) {
+        updatedRental.zatcaUUID = zatcaResult.uuid;
+        updatedRental.zatcaQRCode = zatcaResult.qrCode;
+        updatedRental.zatcaStatus = zatcaResult.status as any;
+        updatedRental.zatcaHash = zatcaResult.xmlHash;
+        updatedRental.zatcaResponse = zatcaResult.zatcaResponse;
+        if (zatcaResult.errorMessage) updatedRental.zatcaErrorMessage = zatcaResult.errorMessage;
+        
+        try {
+          await updatedRental.save();
+          rental = updatedRental;
+        } catch (saveError) {
+          console.error('Failed to update Rental with ZATCA status:', saveError);
+        }
+      }
     } catch (zatcaError) {
       console.error('ZATCA processing failed:', zatcaError);
+    }
+
+    try {
+      const r = rental as any;
+      const invoiceUrl = await generateInvoice({
+        saleId: r.rentalId,
+        saleDate: r.startDate.toString(),
+        carId: r.carId,
+        carBrand: carDoc?.brand,
+        carModel: carDoc?.carModel,
+        customerName: r.customerName,
+        customerPhone: r.customerPhone,
+        customerAddress: customerDoc ? `${customerDoc.buildingNumber} ${customerDoc.streetName}, ${customerDoc.district}, ${customerDoc.city} ${customerDoc.postalCode}` : '',
+        salePrice: r.totalAmount,
+        discountAmount: 0,
+        finalPrice: r.totalAmount,
+        vatRate: r.vatRate,
+        vatAmount: r.vatAmount,
+        finalPriceWithVat: r.totalAmountWithVat,
+        agentName: r.agentName,
+        agentCommission: r.agentCommission,
+        zatcaQRCode: rental.zatcaQRCode,
+        zatcaUUID: rental.zatcaUUID,
+        invoiceType: r.invoiceType || 'Simplified',
+      });
+
+      const finalRental = await Rental.findById(r._id);
+      if (finalRental) {
+        finalRental.invoiceUrl = invoiceUrl;
+        await finalRental.save();
+        rental = finalRental;
+      }
+    } catch (invoiceError) {
+      console.error('Invoice generation failed:', invoiceError);
+    }
+
+    // Auto-generate Agreement
+    try {
+      const r = rental as any;
+      const agreementUrl = await generateRentalAgreement({
+        saleId: r.rentalId,
+        date: r.startDate.toString(),
+        customerName: r.customerName,
+        customerPhone: r.customerPhone,
+        carId: r.carId,
+        carBrand: carDoc?.brand || '',
+        carModel: carDoc?.model || '',
+        carYear: carDoc?.year || 0,
+        carPlate: carDoc?.plateNumber || '',
+        carVin: carDoc?.chassisNumber || '',
+        startDate: r.startDate.toString(),
+        endDate: r.endDate.toString(),
+        dailyRate: r.dailyRate,
+        totalAmount: r.totalAmount,
+        securityDeposit: r.securityDeposit,
+      });
+
+      const finalRental = await Rental.findById(r._id);
+      if (finalRental) {
+        finalRental.agreementUrl = agreementUrl;
+        await finalRental.save();
+        rental = finalRental;
+      }
+    } catch (agreementError) {
+      console.error('Agreement generation failed:', agreementError);
     }
 
     // Send confirmation notifications to customer
@@ -304,11 +391,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ rental }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create rental error:', error);
     if (error instanceof DatabaseConnectionError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

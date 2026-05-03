@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       const [
         totalCars, carsInStock, carsUnderRepair, carsSold, carsRented, carsReserved,
         totalCashSales, totalInstallments, activeRentals, expiringDocuments,
-        monthlyCashRevenueAgg, monthlyRentalRevenueAgg, monthlySalariesAgg,
+        monthlyIncomeAgg, monthlyExpensesAgg,
         installmentStatsAgg,
       ] = await Promise.all([
         Car.countDocuments({ isDeleted: { $ne: true } }),
@@ -46,16 +46,12 @@ export async function GET(request: NextRequest) {
         InstallmentSale.countDocuments({ status: 'Active' }),
         Rental.countDocuments({ status: 'Active' }),
         VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
-        CashSale.aggregate([
-          { $match: { saleDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
-          { $group: { _id: null, total: { $sum: '$finalPrice' } } },
-        ]),
-        Rental.aggregate([
-          { $match: { startDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
-          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+        Transaction.aggregate([
+          { $match: { type: 'Income', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+          { $group: { _id: null, total: { $sum: '$amount' } } },
         ]),
         Transaction.aggregate([
-          { $match: { type: 'Expense', category: 'Salary Payment', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+          { $match: { type: 'Expense', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
           { $group: { _id: null, total: { $sum: '$amount' } } },
         ]),
         InstallmentSale.aggregate([
@@ -86,8 +82,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         totalCars, carsInStock, carsUnderRepair, carsSold, carsRented, carsReserved,
         totalCashSales, totalInstallments, activeRentals, expiringDocuments,
-        monthlyRevenue: (monthlyCashRevenueAgg[0]?.total || 0) + (monthlyRentalRevenueAgg[0]?.total || 0),
-        monthlyExpenses: monthlySalariesAgg[0]?.total || 0,
+        monthlyRevenue: monthlyIncomeAgg[0]?.total || 0,
+        monthlyExpenses: monthlyExpensesAgg[0]?.total || 0,
         pendingInstallments: pendingInstallmentsAgg?.total || 0,
         overdueInstallments: overdueAgg?.count || 0,
         overdueInstallmentsAmount: overdueAgg?.total || 0,
@@ -103,21 +99,20 @@ export async function GET(request: NextRequest) {
       carsSold,
       carsRented,
       carsReserved,
+      totalRepairCostAgg,
       totalCashSales,
       totalInstallments,
       activeRentals,
       cashRevenueAgg,
       installmentPaidAgg,
       rentalRevenueAgg,
-      monthlyCashRevenueAgg,
-      monthlyInstallmentPaidAgg,
-      monthlyRentalRevenueAgg,
-      totalRepairCostAgg,
-      totalSalariesAgg,
+      totalIncomeAgg,
+      totalExpensesAgg,
       salesByMonth,
       installmentStatsAgg,
       expiringDocuments,
-      monthlySalariesAgg,
+      monthlyIncomeAgg,
+      monthlyExpensesAgg,
       recentActivity,
       expenseByCategoryAgg,
       monthlyTrendsAgg,
@@ -128,29 +123,31 @@ export async function GET(request: NextRequest) {
       Car.countDocuments({ status: 'Sold', isDeleted: { $ne: true } }),
       Car.countDocuments({ status: 'Rented', isDeleted: { $ne: true } }),
       Car.countDocuments({ status: 'Reserved', isDeleted: { $ne: true } }),
+      Car.aggregate([
+        { $match: { isDeleted: { $ne: true } } },
+        { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
+      ]),
       CashSale.countDocuments({ status: { $ne: 'Cancelled' } }),
       InstallmentSale.countDocuments({ status: 'Active' }),
       Rental.countDocuments({ status: 'Active' }),
-      CashSale.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, total: { $sum: '$finalPrice' } } }]),
-      InstallmentSale.aggregate([{ $match: { status: { $ne: 'Cancelled' } } }, { $group: { _id: null, total: { $sum: '$totalPaid' } } }]),
-      Rental.aggregate([{ $match: { status: 'Completed' } }, { $group: { _id: null, total: { $sum: '$totalAmount' } } }]),
       CashSale.aggregate([
-        { $match: { saleDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
-        { $group: { _id: null, total: { $sum: '$finalPrice' } } }
+        { $match: { status: { $ne: 'Cancelled' } } },
+        { $group: { _id: null, total: { $sum: '$finalPrice' } } },
       ]),
       InstallmentSale.aggregate([
-        { $match: { status: 'Active' } },
-        { $unwind: '$paymentSchedule' },
-        { $match: { 'paymentSchedule.status': 'Paid', 'paymentSchedule.paidDate': { $gte: startOfMonth } } },
-        { $group: { _id: null, total: { $sum: '$paymentSchedule.amount' } } }
+        { $match: { status: { $ne: 'Cancelled' } } },
+        { $group: { _id: null, total: { $sum: '$totalPaid' } } },
       ]),
       Rental.aggregate([
-        { $match: { startDate: { $gte: startOfMonth }, status: { $ne: 'Cancelled' } } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+        { $match: { status: { $ne: 'Cancelled' } } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]),
-      Car.aggregate([{ $match: { isDeleted: { $ne: true } } }, { $group: { _id: null, total: { $sum: '$totalRepairCost' } } }]),
       Transaction.aggregate([
-        { $match: { type: 'Expense', category: 'Salary Payment', isDeleted: { $ne: true } } },
+        { $match: { type: 'Income', isDeleted: { $ne: true } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      Transaction.aggregate([
+        { $match: { type: 'Expense', isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       CashSale.aggregate([
@@ -185,7 +182,11 @@ export async function GET(request: NextRequest) {
       ]),
       VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
       Transaction.aggregate([
-        { $match: { type: 'Expense', category: 'Salary Payment', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+        { $match: { type: 'Income', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ]),
+      Transaction.aggregate([
+        { $match: { type: 'Expense', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       ActivityLog.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name').lean(),
@@ -194,29 +195,23 @@ export async function GET(request: NextRequest) {
         { $group: { _id: '$category', total: { $sum: '$amount' } } }
       ]),
       Transaction.aggregate([
-        { $match: { date: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) } } },
+        { $match: { date: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }, isDeleted: { $ne: true } } },
         { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$date' } }, income: { $sum: { $cond: [{ $eq: ['$type', 'Income'] }, '$amount', 0] } }, expenses: { $sum: { $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0] } } } },
         { $sort: { _id: 1 } }
       ]),
     ]);
 
+    const totalRevenue = totalIncomeAgg[0]?.total || 0;
+    const totalExpenses = totalExpensesAgg[0]?.total || 0;
+    const totalProfit = totalRevenue - totalExpenses;
+
+    const monthlyRevenue = monthlyIncomeAgg[0]?.total || 0;
+    const monthlyExpenses = monthlyExpensesAgg[0]?.total || 0;
+    const monthlyProfit = monthlyRevenue - monthlyExpenses;
+    const totalRepairCost = totalRepairCostAgg[0]?.total || 0;
     const cashRevenue = cashRevenueAgg[0]?.total || 0;
     const installmentPaid = installmentPaidAgg[0]?.total || 0;
     const rentalRevenue = rentalRevenueAgg[0]?.total || 0;
-    const totalRevenue = cashRevenue + installmentPaid + rentalRevenue;
-
-    const totalRepairCost = totalRepairCostAgg[0]?.total || 0;
-    const totalSalaries = totalSalariesAgg[0]?.total || 0;
-    const totalExpenses = totalRepairCost + totalSalaries;
-    const totalProfit = totalRevenue - totalExpenses;
-
-    const monthlyCashRevenue = monthlyCashRevenueAgg[0]?.total || 0;
-    const monthlyInstallmentPaid = monthlyInstallmentPaidAgg[0]?.total || 0;
-    const monthlyRentalRevenue = monthlyRentalRevenueAgg[0]?.total || 0;
-    const monthlyRevenue = monthlyCashRevenue + monthlyInstallmentPaid + monthlyRentalRevenue;
-
-    const monthlyExpenses = monthlySalariesAgg[0]?.total || 0;
-    const monthlyProfit = monthlyRevenue - monthlyExpenses;
 
     const installmentStats = installmentStatsAgg[0] || {};
     const overdueAgg = installmentStats.overdue?.[0];

@@ -72,7 +72,14 @@ export default function ReturnsPage() {
 
   const [availableSales, setAvailableSales] = useState<Sale[]>([]);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    originalSaleId: string;
+    saleType: 'Cash' | 'Installment' | 'Rental';
+    refundAmount: string;
+    penaltyAmount: string;
+    returnDate: string;
+    notes: string;
+  }>({
     originalSaleId: '',
     saleType: 'Installment',
     refundAmount: '',
@@ -315,7 +322,7 @@ export default function ReturnsPage() {
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>{t('saleType')}</label>
-                <select value={formData.saleType} onChange={(e) => setFormData({ ...formData, saleType: e.target.value as any })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} required>
+                <select value={formData.saleType} onChange={(e) => setFormData({ ...formData, saleType: e.target.value as PurchaseReturn['saleType'] })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} required>
                   <option value="Cash">{t('types.cash')}</option>
                   <option value="Installment">{t('types.installment')}</option>
                   <option value="Rental">{t('types.rental')}</option>

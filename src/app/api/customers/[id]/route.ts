@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Customer from '@/models/Customer';
+import EditRequest from '@/models/EditRequest';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import mongoose from 'mongoose';
@@ -75,6 +76,30 @@ export async function PUT(
 
     if (!fullName || !phone || !buildingNumber || !streetName || !district || !city || !postalCode) {
       return NextResponse.json({ error: 'Full name, phone, and full address are required' }, { status: 400 });
+    }
+
+    if (user.normalizedRole !== 'Admin') {
+      await EditRequest.create({
+        targetModel: 'Customer',
+        targetId: id,
+        requestedBy: user.userId,
+        proposedChanges: body,
+        status: 'Pending'
+      });
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Requested update for customer: ${fullName}`,
+        module: 'Customers',
+        targetId: id,
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ 
+        message: 'Edit request submitted for admin approval', 
+        isPending: true 
+      });
     }
 
     const customer = await Customer.findByIdAndUpdate(

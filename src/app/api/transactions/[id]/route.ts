@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import Transaction from '@/models/Transaction';
+import EditRequest from '@/models/EditRequest';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import mongoose from 'mongoose';
@@ -78,6 +79,30 @@ export async function PUT(
 
     if (!date || !type || !category || !amount || !description) {
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
+    }
+
+    if (user.normalizedRole !== 'Admin') {
+      await EditRequest.create({
+        targetModel: 'Transaction',
+        targetId: id,
+        requestedBy: user.userId,
+        proposedChanges: body,
+        status: 'Pending'
+      });
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Requested update for transaction: ${transaction.transactionId}`,
+        module: 'Finance',
+        targetId: id,
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ 
+        message: 'Edit request submitted for admin approval', 
+        isPending: true 
+      });
     }
 
     transaction.date = new Date(date);

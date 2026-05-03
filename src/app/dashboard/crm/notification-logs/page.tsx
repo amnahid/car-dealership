@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
+import { DateRangeFilter } from '@/components/DateRangeFilter';
 
 interface NotificationLog {
   _id: string;
@@ -31,6 +32,7 @@ export default function NotificationLogsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [filters, setFilters] = useState({
     channel: '',
     type: '',
@@ -44,6 +46,8 @@ export default function NotificationLogsPage() {
       if (filters.channel) params.append('channel', filters.channel);
       if (filters.type) params.append('type', filters.type);
       if (filters.status) params.append('status', filters.status);
+      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
       
       const res = await fetch(`/api/notifications/logs?${params}`);
       const data = await res.json();
@@ -54,11 +58,15 @@ export default function NotificationLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filters]);
+  }, [page, filters, dateRange]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateRange]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -81,6 +89,8 @@ export default function NotificationLogsPage() {
       <h2 className="page-title" style={{ marginBottom: '24px', textAlign: isRtl ? 'right' : 'left' }}>{t('customerNotifications')}</h2>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
+
         <select
           value={filters.channel}
           onChange={(e) => setFilters({ ...filters, channel: e.target.value })}

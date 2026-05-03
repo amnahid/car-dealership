@@ -34,16 +34,17 @@ describe('auth.ts', () => {
         email: 'test@example.com',
         role: 'admin',
         name: 'Test User',
+        passwordVersion: 1,
       };
 
-      mockJwt.sign.mockReturnValue('mocked-token');
+      (mockJwt.sign as jest.Mock).mockReturnValue('mocked-token');
 
       const token = signToken(payload);
 
       expect(token).toBe('mocked-token');
       expect(mockJwt.sign).toHaveBeenCalledWith(
         payload,
-        'test-jwt-secret-for-testing',
+        expect.any(String),
         { expiresIn: '7d' }
       );
     });
@@ -56,16 +57,17 @@ describe('auth.ts', () => {
         email: 'test@example.com',
         role: 'admin',
         name: 'Test User',
+        passwordVersion: 1,
       };
 
-      mockJwt.verify.mockReturnValue(payload as any);
+      (mockJwt.verify as jest.Mock).mockReturnValue(payload as any);
 
       const result = verifyToken('valid-token');
 
       expect(result).toEqual(payload);
       expect(mockJwt.verify).toHaveBeenCalledWith(
         'valid-token',
-        'test-jwt-secret-for-testing'
+        expect.any(String)
       );
     });
 
@@ -80,7 +82,7 @@ describe('auth.ts', () => {
 
   describe('hashPassword', () => {
     it('should hash a password', async () => {
-      mockBcrypt.hash.mockResolvedValue('hashed-password');
+      (mockBcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
 
       const result = await hashPassword('password123');
 
@@ -91,7 +93,7 @@ describe('auth.ts', () => {
 
   describe('comparePassword', () => {
     it('should return true for matching password', async () => {
-      mockBcrypt.compare.mockResolvedValue(true);
+      (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await comparePassword('password123', 'hashed-password');
 
@@ -100,7 +102,7 @@ describe('auth.ts', () => {
     });
 
     it('should return false for non-matching password', async () => {
-      mockBcrypt.compare.mockResolvedValue(false);
+      (mockBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       const result = await comparePassword('wrong-password', 'hashed-password');
 

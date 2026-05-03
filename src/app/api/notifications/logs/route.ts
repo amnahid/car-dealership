@@ -25,6 +25,12 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    let end: Date | undefined = undefined;
+    if (endDate) {
+      end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+    }
+
     const result = await getNotificationLogs({
       page,
       limit,
@@ -33,7 +39,7 @@ export async function GET(request: NextRequest) {
       status: status || undefined,
       referenceType: referenceType || undefined,
       startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      endDate: end,
     });
 
     return NextResponse.json(result);

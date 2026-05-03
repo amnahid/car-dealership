@@ -90,3 +90,31 @@ export async function connectDB(): Promise<typeof mongoose> {
   cached.conn = await cached.promise;
   return cached.conn;
 }
+
+/**
+ * Safely runs a callback within a MongoDB transaction.
+ * Automatically falls back to non-transactional execution if the MongoDB 
+ * instance is a standalone (not a replica set), which is common in local dev.
+ */
+export async function runInTransaction<T>(
+  callback: (session: mongoose.ClientSession) => Promise<T>
+): Promise<T> {
+  const session = await mongoose.startSession();
+  try {
+    let result: T | undefined;
+    try {
+      await session.withTransaction(async () => {
+        result = await callback(session);
+      });
+      return result as T;
+    } catch (error: any) {
+      // Error code 20 or specific message indicates standalone mode
+      if (error.code === 20 || error.message?.includes('replica set')) {
+        return await callback(session);
+      }
+      throw error;
+    }
+  } finally {
+    await session.endSession();
+  }
+}

@@ -7,7 +7,7 @@ interface ImageUploadProps {
   value?: string;
   onChange: (url: string) => void;
   onDelete?: () => void;
-  folder?: 'avatars' | 'employees' | 'customers' | 'suppliers' | 'suppliers/agents' | 'cars' | 'cars/condition' | 'repairs/before' | 'repairs/after' | 'documents';
+  folder?: 'avatars' | 'employees' | 'customers' | 'suppliers' | 'suppliers/agents' | 'cars' | 'cars/condition' | 'repairs/before' | 'repairs/after' | 'documents' | 'guarantors';
   label?: string;
   size?: number;
 }
@@ -448,10 +448,12 @@ export function DocumentUpload({
   value,
   onChange,
   label = 'Document',
+  folder = 'customers',
 }: {
   value?: string;
   onChange: (url: string) => void;
   label?: string;
+  folder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -461,7 +463,7 @@ export function DocumentUpload({
     if (!file) return;
     setUploading(true);
     try {
-      const result = await uploadFile(file, 'customers');
+      const result = await uploadFile(file, folder);
       if (result.success && result.url) {
         setTimeout(() => onChange(result.url || ''), 0);
       }
@@ -498,6 +500,81 @@ export function DocumentUpload({
         </>
       )}
       <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleUpload} disabled={uploading} style={{ display: 'none' }} />
+    </div>
+  );
+}
+
+export function MultiDocumentUpload({
+  values = [],
+  onChange,
+  folder = 'documents',
+  label = 'Documents',
+}: {
+  values?: string[];
+  onChange: (urls: string[]) => void;
+  folder?: string;
+  label?: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const newUrls = [...values];
+
+    for (const file of Array.from(files)) {
+      try {
+        const result = await uploadFile(file, folder);
+        if (result.success && result.url) {
+          newUrls.push(result.url);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    onChange(newUrls);
+    setUploading(false);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  const handleRemove = (index: number) => {
+    const newUrls = values.filter((_, i) => i !== index);
+    onChange(newUrls);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: '8px' }}>
+      {values.map((url, index) => (
+        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', height: '40px', background: '#f0fdf4', border: '1px solid #42ca7f', borderRadius: '4px' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#42ca7f" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <a href={url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: '13px', color: '#2a3142', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {url.split('/').pop() || label}
+          </a>
+          <button type="button" onClick={() => handleRemove(index)} style={{ background: '#ec4561', color: '#fff', border: 'none', borderRadius: '3px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>Remove</button>
+        </div>
+      ))}
+      <div onClick={() => !uploading && inputRef.current?.click()} style={{ padding: '8px 12px', height: '40px', border: '2px dashed #ced4da', background: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: uploading ? 'not-allowed' : 'pointer', gap: '4px', borderRadius: '4px', opacity: uploading ? 0.6 : 1 }}>
+        {uploading ? (
+          <span style={{ fontSize: '11px', color: '#28aaa9' }}>Uploading...</span>
+        ) : (
+          <>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca8b3" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span style={{ fontSize: '10px', color: '#9ca8b3' }}>Click to upload document</span>
+          </>
+        )}
+        <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple onChange={handleUpload} disabled={uploading} style={{ display: 'none' }} />
+      </div>
     </div>
   );
 }

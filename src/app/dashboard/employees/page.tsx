@@ -23,7 +23,7 @@ interface Employee {
   commissionRate?: number;
 }
 
-const DEPARTMENTS = ['Sales', 'Service', 'Accounts', 'Admin', 'Management'] as const;
+const DEPARTMENTS = ['Sales', 'Service', 'Accounts', 'Finance', 'Admin', 'Management', 'Operations'] as const;
 
 export default function EmployeesPage() {
   const t = useTranslations('Employees');

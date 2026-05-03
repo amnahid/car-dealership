@@ -84,7 +84,8 @@
     },
     "addPayment": "إضافة دفعة راتب",
     "selectEmployee": "اختر موظفاً...",
-    "savePayment": "حفظ الدفعة"
+    "savePayment": "حفظ الدفعة",
+    "active": "نشط"
   },
   "EmployeeDetail": {
     "title": "ملف الموظف",
@@ -148,6 +149,7 @@
       "sales": "المبيعات",
       "service": "الخدمة",
       "accounts": "الحسابات",
+      "finance": "المالية",
       "admin": "الإدارة",
       "management": "الإدارة العليا",
       "operations": "العمليات"
@@ -250,9 +252,14 @@
     "downPayment": "الدفعة المقدمة",
     "interestRate": "نسبة الفائدة (%)",
     "tenure": "مدة التقسيط (أشهر)",
-    "lateFee": "رسوم التأخير (%)",
+    "monthlyLateFee": "رسوم التأخير الشهرية (ريال)",
     "startDate": "تاريخ البدء",
     "agreementDoc": "عقد الاتفاقية (PDF)",
+    "commission": "العمولة",
+    "guarantorInfo": "معلومات الكفيل",
+    "selectGuarantor": "اختر الكفيل (اختياري)",
+    "guarantorName": "اسم الكفيل",
+    "guarantorPhone": "هاتف الكفيل",
     "createSale": "إنشاء عملية بيع",
     "statuses": {
       "active": "نشط",
@@ -260,6 +267,26 @@
       "defaulted": "متعثر",
       "cancelled": "ملغي"
     }
+  },
+  "Guarantors": {
+    "title": "الكفلاء",
+    "addNew": "إضافة كفيل",
+    "editGuarantor": "تعديل الكفيل",
+    "searchPlaceholder": "بحث بالاسم، الهاتف، الهوية...",
+    "noGuarantorsFound": "لم يتم العثور على كفلاء.",
+    "guarantorId": "معرف الكفيل",
+    "fullName": "الاسم الكامل",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "nationalId": "رقم الهوية",
+    "employer": "جهة العمل",
+    "salary": "الراتب",
+    "address": "العنوان",
+    "documents": "المستندات (الهوية، تعريف الراتب)",
+    "notes": "ملاحظات",
+    "created": "تاريخ الإنشاء",
+    "guaranteeing": "يكفل",
+    "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذا الكفيل؟"
   },
   "CashSales": {
     "title": "المبيعات النقدية",
@@ -433,13 +460,15 @@
     "expenses": "المصاريف",
     "incomes": "الإيرادات",
     "reports": "التقارير",
-    "crm": "إدارة العملاء",
+    "crm": "إدارة علاقات العملاء",
     "customers": "العملاء",
+    "guarantors": "الكفلاء",
     "hrm": "الموارد البشرية",
     "employees": "الموظفين",
     "salaryPayments": "مدفوعات الرواتب",
     "administration": "الإدارة",
     "users": "المستخدمين",
+    "approvals": "الموافقات",
     "activityLogs": "سجلات النشاط",
     "notificationLogs": "سجلات التنبيهات",
     "customerNotifications": "تنبيهات العملاء",
@@ -598,7 +627,8 @@
     "types": {
       "Insurance": "التأمين",
       "Road Permit": "تصريح الطريق",
-      "Registration Card": "بطاقة التسجيل (الملكية)"
+      "Registration Card": "بطاقة التسجيل (الملكية)",
+      "Purchase Document": "مستند الشراء"
     }
   },
   "CarForm": {
@@ -833,6 +863,7 @@
       "insurance": "التأمين",
       "inspection": "الفحص الدوري",
       "lease": "عقد إيجار",
+      "purchaseDocument": "مستند الشراء",
       "other": "أخرى"
     }
   },
@@ -861,8 +892,8 @@
     "incomes": "الإيرادات",
     "incomeThisMonth": "الإيرادات (هذا الشهر)",
     "expensesThisMonth": "المصاريف (هذا الشهر)",
-    "netProfit": "صافي الربح",
-    "profitMargin": "هامش الربح",
+    "netProfit": "صافي الربح (هذا الشهر)",
+    "profitMargin": "هامش الربح (هذا الشهر)",
     "allTypes": "جميع الأنواع",
     "allCategories": "جميع الفئات",
     "addTransaction": "إضافة معاملة",
@@ -886,7 +917,9 @@
       "installmentPayment": "دفعة أقساط",
       "rentalIncome": "إيراد تأجير",
       "otherIncome": "إيرادات أخرى",
-      "otherExpense": "مصاريف أخرى"
+      "otherExpense": "مصاريف أخرى",
+      "refund": "استرداد",
+      "fee": "رسوم"
     }
   },
   "Sales": {
@@ -914,8 +947,10 @@
   "Common": {
     "appName": "أميال للسيارات",
     "loading": "جاري التحميل...",
+    "saving": "جاري الحفظ...",
     "search": "بحث...",
     "all": "الكل",
+    "none": "بدون",
     "actions": "إجراءات",
     "view": "عرض",
     "add": "إضافة",
@@ -927,12 +962,14 @@
     "paid": "مدفوع",
     "pending": "قيد الانتظار",
     "overdue": "متأخر",
+    "cancelled": "ملغي",
     "next": "التالي",
     "prev": "السابق",
     "page": "صفحة {page} من {total}",
     "noData": "لم يتم العثور على بيانات.",
     "total": "الإجمالي",
     "date": "التاريخ",
+    "type": "النوع",
     "amount": "المبلغ",
     "status": "الحالة",
     "id": "المعرف",
@@ -944,6 +981,7 @@
     "price": "السعر",
     "image": "الصورة",
     "description": "الوصف",
+    "notes": "ملاحظات",
     "income": "الإيرادات",
     "expense": "المصاريف",
     "repairs": "الإصلاحات",
@@ -957,6 +995,25 @@
     "import": "استيراد CSV",
     "automatic": "تلقائي فقط",
     "statusManagedAutomatically": "يتم إدارة هذه الحالة تلقائياً من خلال عمليات البيع والإصلاح.",
-    "insurance": "التأمين"
+    "insurance": "التأمين",
+    "registration": "الملكية",
+    "roadPermit": "تصريح الطريق"
+  },
+  "Approvals": {
+    "title": "موافقات المسؤول",
+    "noRequests": "لم يتم العثور على طلبات موافقة.",
+    "module": "الوحدة",
+    "targetId": "معرف الهدف",
+    "requestedBy": "بواسطة",
+    "date": "التاريخ",
+    "actions": "الإجراءات",
+    "review": "مراجعة",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "pending": "قيد الانتظار",
+    "approved": "تمت الموافقة",
+    "rejected": "مرفوض",
+    "reviewNotes": "ملاحظات المراجعة",
+    "proposedChanges": "التغييرات المقترحة"
   }
 }

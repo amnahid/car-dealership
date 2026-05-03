@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import DataTransferButtons from '@/components/DataTransferButtons';
+import { DateRangeFilter } from '@/components/DateRangeFilter';
 
 interface ActivityLog {
   _id: string;
@@ -23,11 +24,16 @@ export default function ActivityLogsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/activity-logs?page=${page}&limit=20`);
+      const params = new URLSearchParams({ page: page.toString(), limit: '20' });
+      if (dateRange.startDate) params.append('startDate', dateRange.startDate);
+      if (dateRange.endDate) params.append('endDate', dateRange.endDate);
+
+      const res = await fetch(`/api/activity-logs?${params}`);
       const data = await res.json();
       setLogs(data.logs || []);
       setTotalPages(data.pagination?.pages || 1);
@@ -36,11 +42,15 @@ export default function ActivityLogsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, dateRange]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateRange]);
 
   return (
     <div style={{ marginBottom: '24px' }}>
@@ -48,6 +58,8 @@ export default function ActivityLogsPage() {
         <h2 className="page-title" style={{ margin: 0 }}>{t('title')}</h2>
         <DataTransferButtons entityType="activityLogs" showImport={false} />
       </div>
+
+      <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (

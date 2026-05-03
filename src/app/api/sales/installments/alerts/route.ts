@@ -4,8 +4,7 @@ import InstallmentSale from '@/models/InstallmentSale';
 import Customer from '@/models/Customer';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { sendPaymentReminderNotifications, sendOverdueNoticeNotifications } from '@/lib/saleNotifications';
-
-const DEFAULT_LATE_FEE_PERCENT = parseInt(process.env.LATE_FEE_PERCENT || '5');
+import { calculateAccruedLateFee } from '@/lib/installmentUtils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -126,13 +125,12 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { action, lateFeePercent } = body;
-    const lateFee = lateFeePercent || DEFAULT_LATE_FEE_PERCENT;
+    const { action } = body;
 
     if (action === 'send-reminders' || action === 'send-overdue') {
       const now = new Date();
 
-      const sales = await InstallmentSale.find({ status: 'Active' }).lean();
+      const sales = await InstallmentSale.find({ status: 'Active' });
 
       let remindersSent = 0;
       let overdueSent = 0;
@@ -163,6 +161,9 @@ export async function POST(request: NextRequest) {
             const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             const daysOverdue = Math.ceil((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
+            // Calculate accrued late fee: 10 day grace period, then monthlyLateFee per month
+            const accruedLateFee = calculateAccruedLateFee(daysOverdue, sale.monthlyLateFee);
+
             if (action === 'send-reminders' && daysUntilDue > 0 && daysUntilDue <= 7) {
               await sendPaymentReminderNotifications(
                 { name: sale.customerName, phone: sale.customerPhone, email: customerData.email },
@@ -175,7 +176,8 @@ export async function POST(request: NextRequest) {
                   amount: payment.amount,
                   dueDate: payment.dueDate.toString(),
                   daysUntilDue,
-                  lateFeePercent: lateFee,
+                  monthlyLateFee: sale.monthlyLateFee || 200,
+                  accruedLateFee,
                 }
               );
               remindersSent++;
@@ -193,7 +195,8 @@ export async function POST(request: NextRequest) {
                   amount: payment.amount,
                   dueDate: payment.dueDate.toString(),
                   daysOverdue,
-                  lateFeePercent: lateFee,
+                  monthlyLateFee: sale.monthlyLateFee || 200,
+                  accruedLateFee,
                 }
               );
               overdueSent++;
@@ -208,7 +211,6 @@ export async function POST(request: NextRequest) {
         remindersSent,
         overdueSent,
         failed,
-        lateFeePercent: lateFee,
       });
     }
 

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import SearchableSelect from '@/components/SearchableSelect';
 import DataTransferButtons from '@/components/DataTransferButtons';
+import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -14,6 +14,8 @@ interface Car {
   brand: string;
   model: string;
   images: string[];
+  status?: string;
+  purchasePrice?: number;
 }
 
 interface Customer {
@@ -23,6 +25,14 @@ interface Customer {
   profilePhoto?: string;
   customerType?: string;
   vatRegistrationNumber?: string;
+  licenseExpiryDate?: string;
+}
+
+interface Employee {
+  _id: string;
+  name: string;
+  designation: string;
+  commissionRate: number;
 }
 
 interface Sale {
@@ -58,11 +68,11 @@ export default function CashSalesPage() {
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const searchParams = useSearchParams();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -116,14 +126,16 @@ export default function CashSalesPage() {
     }
   };
 
-  const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; price: number; purchasePrice?: number }[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [employees, setEmployees] = useState<{ _id: string; name: string; designation: string; commissionRate: number }[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   const fetchSales = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
+    if (dateRange.startDate) params.set('startDate', dateRange.startDate);
+    if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
     try {
       const res = await fetch(`/api/sales/cash?${params}`);
@@ -136,23 +148,28 @@ export default function CashSalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch]);
+  }, [page, debouncedSearch, dateRange]);
 
   useEffect(() => {
     fetchSales();
   }, [fetchSales]);
 
   useEffect(() => {
+    setPage(1);
+  }, [dateRange]);
+
+  useEffect(() => {
     Promise.all([
       fetch('/api/cars?limit=100').then(r => r.json()),
       fetch('/api/customers?limit=100').then(r => r.json()),
-      fetch('/api/employees?limit=100&active=true').then(r => r.json()),
+      fetch('/api/employees?limit=100&active=true&department=Sales').then(r => r.json()),
     ]).then(([carData, custData, empData]) => {
-      setCars(carData.cars?.filter((c: any) => c.status === 'In Stock') || []);
+      setCars(carData.cars?.filter((c: Car) => c.status === 'In Stock') || []);
       setCustomers(custData.customers || []);
       setEmployees(empData.employees || []);
     });
   }, []);
+
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -168,13 +185,19 @@ export default function CashSalesPage() {
     } catch (err) { console.error(err); }
   };
 
-  const handleUpdateSale = async (id: string, data: any) => {
+  const handleUpdateSale = async (id: string, data: Partial<Sale>) => {
     const res = await fetch(`/api/sales/cash/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) { const resData = await res.json(); alert(resData.error || 'Failed'); throw new Error('Failed'); }
+    const resData = await res.json();
+    if (!res.ok) { alert(resData.error || 'Failed'); throw new Error('Failed'); }
+    
+    if (resData.isPending) {
+      alert(resData.message || 'Edit request submitted for admin approval');
+    }
+    
     setEditingSale(null);
     fetchSales();
   };
@@ -219,6 +242,7 @@ export default function CashSalesPage() {
           onChange={(e) => handleSearch(e.target.value)}
           style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}
         />
+        <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
 
       {selectedIds.size > 0 && (
@@ -349,9 +373,9 @@ export default function CashSalesPage() {
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-                        <Link href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</Link>
-                        <Link href={`/dashboard/sales/cash/${sale._id}/edit`} style={{ color: '#f8b425', textDecoration: 'none' }}>{commonT('edit')}</Link>
-                        {sale.status === 'Active' && (
+                        <a href={`/dashboard/sales/cash/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</a>
+                        <button onClick={() => setEditingSale(sale)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{commonT('edit')}</button>
+                        {sale.status !== 'Cancelled' && (
                           <button onClick={() => handleDelete(sale._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('cancelSale')}</button>
                         )}
                       </div>
@@ -378,7 +402,7 @@ export default function CashSalesPage() {
   );
 }
 
-function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: Customer[]; employees: any[]; onClose: () => void; onSave: () => void }) {
+function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('CashSales');
   const commonT = useTranslations('Common');
   const customersT = useTranslations('Customers');
@@ -523,9 +547,16 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
                 ]}
                 placeholder={t('selectAgent')}
               />
-              {agentId && (
-                <span style={{ fontSize: '12px', color: '#525f80' }}>{t('commission')}: {employees.find(e => e._id === agentId)?.commissionRate || 0}%</span>
-              )}
+            </div>
+            <div>
+              <label style={labelStyle}>{t('commission')} (%)</label>
+              <input 
+                type="number" 
+                value={form.agentCommission} 
+                onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} 
+                style={inputStyle} 
+                placeholder="0" 
+              />
             </div>
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
@@ -560,7 +591,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
               />
             </div>
             <div>
-              <label style={labelStyle}>Driver's Iqama Number</label>
+              <label style={labelStyle}>Driver&apos;s Iqama Number</label>
               <input
                 value={form.registrationDriverIqama}
                 onChange={(e) => setForm({ ...form, registrationDriverIqama: e.target.value })}
@@ -625,7 +656,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
   );
 }
 
-function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; employees: any[]; onClose: () => void; onSave: (id: string, data: any) => void }) {
+function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; employees: Employee[]; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
   const t = useTranslations('CashSales');
   const commonT = useTranslations('Common');
   const locale = useLocale();
@@ -653,7 +684,7 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(sale._id, form);
+      await onSave(sale._id, form as any);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -709,6 +740,16 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
                 placeholder={t('selectAgent')}
               />
             </div>
+            <div>
+              <label style={labelStyle}>{t('commission')} (%)</label>
+              <input 
+                type="number" 
+                value={form.agentCommission} 
+                onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} 
+                style={inputStyle} 
+                placeholder="0" 
+              />
+            </div>
           </div>
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>{commonT('description')}</label>
@@ -716,7 +757,7 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             {sale.status !== 'Cancelled' && (
-              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { try { await onSave(sale._id, { status: 'Cancelled' }); onClose(); } catch (e) { /* error already shown */ } } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
+              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { try { await onSave(sale._id, { status: 'Cancelled' }); onClose(); } catch (e) { console.error(e); } } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
             )}
             <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('close')}</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : commonT('save')}</button>
@@ -727,7 +768,7 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
   );
 }
 
-function ZatcaStatusBadge({ status, saleId, saleType, t }: { status?: string; saleId: string; saleType: string; t: any }) {
+function ZatcaStatusBadge({ status, saleId, saleType, t }: { status?: string; saleId: string; saleType: string; t: (key: string) => string }) {
   const [retrying, setRetrying] = useState(false);
   
   const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {

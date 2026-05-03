@@ -84,7 +84,8 @@
     },
     "addPayment": "Add Salary Payment",
     "selectEmployee": "Select employee...",
-    "savePayment": "Save Payment"
+    "savePayment": "Save Payment",
+    "active": "Active"
   },
   "EmployeeDetail": {
     "title": "Employee Profile",
@@ -148,6 +149,7 @@
       "sales": "Sales",
       "service": "Service",
       "accounts": "Accounts",
+      "finance": "Finance",
       "admin": "Admin",
       "management": "Management",
       "operations": "Operations"
@@ -250,9 +252,14 @@
     "downPayment": "Down Payment",
     "interestRate": "Interest Rate (%)",
     "tenure": "Tenure (months)",
-    "lateFee": "Late Fee (%)",
+    "monthlyLateFee": "Monthly Late Fee (SAR)",
     "startDate": "Start Date",
     "agreementDoc": "Agreement Document (PDF)",
+    "commission": "Commission",
+    "guarantorInfo": "Guarantor Information",
+    "selectGuarantor": "Select Guarantor (Optional)",
+    "guarantorName": "Guarantor Name",
+    "guarantorPhone": "Guarantor Phone",
     "createSale": "Create Sale",
     "statuses": {
       "active": "Active",
@@ -260,6 +267,26 @@
       "defaulted": "Defaulted",
       "cancelled": "Cancelled"
     }
+  },
+  "Guarantors": {
+    "title": "Guarantors",
+    "addNew": "Add Guarantor",
+    "editGuarantor": "Edit Guarantor",
+    "searchPlaceholder": "Search by name, phone, ID...",
+    "noGuarantorsFound": "No guarantors found.",
+    "guarantorId": "Guarantor ID",
+    "fullName": "Full Name",
+    "phone": "Phone",
+    "email": "Email",
+    "nationalId": "National ID",
+    "employer": "Employer",
+    "salary": "Salary",
+    "address": "Address",
+    "documents": "Documents (ID, Salary Cert)",
+    "notes": "Notes",
+    "created": "Created",
+    "guaranteeing": "Guaranteeing",
+    "deleteConfirm": "Are you sure you want to delete this guarantor?"
   },
   "CashSales": {
     "title": "Cash Sales",
@@ -435,11 +462,13 @@
     "reports": "Reports",
     "crm": "CRM",
     "customers": "Customers",
+    "guarantors": "Guarantors",
     "hrm": "HRM",
     "employees": "Employees",
     "salaryPayments": "Salary Payments",
     "administration": "Administration",
     "users": "Users",
+    "approvals": "Approvals",
     "activityLogs": "Activity Logs",
     "notificationLogs": "Notification Logs",
     "customerNotifications": "Customer Notifications",
@@ -598,7 +627,8 @@
     "types": {
       "Insurance": "Insurance",
       "Road Permit": "Road Permit",
-      "Registration Card": "Registration Card"
+      "Registration Card": "Registration Card",
+      "Purchase Document": "Purchase Document"
     }
   },
   "CarForm": {
@@ -834,6 +864,7 @@
       "insurance": "Insurance",
       "inspection": "Inspection (Fahas)",
       "lease": "Rental Agreement",
+      "purchaseDocument": "Purchase Document",
       "other": "Other"
     }
   },
@@ -862,8 +893,8 @@
     "incomes": "Incomes",
     "incomeThisMonth": "Income (This Month)",
     "expensesThisMonth": "Expenses (This Month)",
-    "netProfit": "Net Profit",
-    "profitMargin": "Profit Margin",
+    "netProfit": "Net Profit (This Month)",
+    "profitMargin": "Profit Margin (This Month)",
     "allTypes": "All Types",
     "allCategories": "All Categories",
     "addTransaction": "Add Transaction",
@@ -887,7 +918,9 @@
       "installmentPayment": "Installment Payment",
       "rentalIncome": "Rental Income",
       "otherIncome": "Other Income",
-      "otherExpense": "Other Expense"
+      "otherExpense": "Other Expense",
+      "refund": "Refund",
+      "fee": "Fee"
     }
   },
   "Sales": {
@@ -915,8 +948,10 @@
   "Common": {
     "appName": "AMYAL CAR",
     "loading": "Loading...",
+    "saving": "Saving...",
     "search": "Search...",
     "all": "All",
+    "none": "None",
     "actions": "Actions",
     "view": "View",
     "add": "Add",
@@ -928,15 +963,22 @@
     "paid": "Paid",
     "pending": "Pending",
     "overdue": "Overdue",
+    "cancelled": "Cancelled",
     "next": "Next",
     "prev": "Prev",
     "page": "Page {page} of {total}",
     "noData": "No data found.",
     "total": "Total",
     "date": "Date",
+    "type": "Type",
     "amount": "Amount",
     "status": "Status",
     "id": "ID",
+    "buildingNumber": "Building No",
+    "streetName": "Street Name",
+    "district": "District",
+    "city": "City",
+    "postalCode": "Postal Code",
     "plateNumber": "Plate Number",
     "brand": "Brand",
     "model": "Model",
@@ -945,6 +987,7 @@
     "price": "Price",
     "image": "Image",
     "description": "Description",
+    "notes": "Notes",
     "income": "Income",
     "expense": "Expense",
     "repairs": "Repairs",
@@ -958,6 +1001,25 @@
     "import": "Import CSV",
     "automatic": "Automatic Only",
     "statusManagedAutomatically": "This status is managed automatically by sales and repair workflows.",
-    "insurance": "Insurance"
+    "insurance": "Insurance",
+    "registration": "Registration (Mulkiya)",
+    "roadPermit": "Road Permit"
+  },
+  "Approvals": {
+    "title": "Admin Approvals",
+    "noRequests": "No approval requests found.",
+    "module": "Module",
+    "targetId": "Target ID",
+    "requestedBy": "Requested By",
+    "date": "Date",
+    "actions": "Actions",
+    "review": "Review",
+    "approve": "Approve",
+    "reject": "Reject",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "reviewNotes": "Review Notes",
+    "proposedChanges": "Proposed Changes"
   }
 }

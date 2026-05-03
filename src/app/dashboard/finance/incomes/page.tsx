@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useTranslations, useLocale } from 'next-intl';
+import { DateRangeFilter } from '@/components/DateRangeFilter';
 
 interface Income {
   _id: string;
@@ -30,12 +30,10 @@ function IncomesContent() {
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const searchParams = useSearchParams();
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Summary>({ total: 0, count: 0, byCategory: {}, byMonth: {} });
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
-  const [preset, setPreset] = useState('thisMonth');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -63,34 +61,8 @@ function IncomesContent() {
   }, [fetchIncomes]);
 
   useEffect(() => {
-    const preset = searchParams.get('preset') || 'thisMonth';
-    setPreset(preset);
-    const now = new Date();
-    let start: Date, end: Date = now;
-
-    switch (preset) {
-      case 'today':
-        start = now;
-        break;
-      case 'thisWeek':
-        start = new Date(now.setDate(now.getDate() - now.getDay()));
-        break;
-      case 'thisMonth':
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case 'thisYear':
-        start = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-
-    setDateRange({
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
-    });
     setPage(1);
-  }, [searchParams]);
+  }, [dateRange]);
 
   const getCategoryLabel = (cat: string) => {
     const key = cat.replace(' ', '').charAt(0).toLowerCase() + cat.replace(' ', '').slice(1);
@@ -101,38 +73,6 @@ function IncomesContent() {
   const monthData = Object.entries(summary.byMonth)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, amount]) => ({ month: month.slice(5), amount }));
-
-  const handlePresetChange = (value: string) => {
-    setPreset(value);
-    const now = new Date();
-    let start: Date, end: Date = now;
-
-    switch (value) {
-      case 'today':
-        start = now;
-        break;
-      case 'thisWeek':
-        start = new Date(now);
-        start.setDate(now.getDate() - now.getDay());
-        break;
-      case 'thisMonth':
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case 'thisYear':
-        start = new Date(now.getFullYear(), 0, 1);
-        break;
-      case 'custom':
-        return;
-      default:
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-
-    setDateRange({
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
-    });
-    setPage(1);
-  };
 
   const handlePrint = () => window.print();
 
@@ -178,31 +118,7 @@ function IncomesContent() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-        {['today', 'thisWeek', 'thisMonth', 'thisYear', 'custom'].map(p => (
-          <button
-            key={p}
-            onClick={() => handlePresetChange(p)}
-            style={{
-              padding: '8px 16px',
-              fontSize: '14px',
-              borderRadius: '3px',
-              border: '1px solid #ced4da',
-              background: preset === p ? '#28aaa9' : '#ffffff',
-              color: preset === p ? '#ffffff' : '#525f80',
-              cursor: 'pointer',
-            }}
-          >
-            {expensesT(`presets.${p}`)}
-          </button>
-        ))}
-        {preset === 'custom' && (
-          <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-            <input type="date" value={dateRange.startDate} onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
-            <input type="date" value={dateRange.endDate} onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
-          </div>
-        )}
-      </div>
+      <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} initialPreset="30d" />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '20px' }}>

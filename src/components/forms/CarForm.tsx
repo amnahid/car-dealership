@@ -297,6 +297,10 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         return;
       }
 
+      if (data.isPending) {
+        alert(data.message || 'Edit request submitted for admin approval');
+      }
+
       router.push('/dashboard/cars');
       router.refresh();
     } catch {

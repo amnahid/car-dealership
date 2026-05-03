@@ -59,13 +59,6 @@ export default function SearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setSearch('');
-      setHighlightedIndex(-1);
-    }
-  }, [isOpen]);
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
 
@@ -89,10 +82,14 @@ export default function SearchableSelect({
         if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
           onChange(filteredOptions[highlightedIndex].value);
           setIsOpen(false);
+          setSearch('');
+          setHighlightedIndex(-1);
         }
         break;
       case 'Escape':
         setIsOpen(false);
+        setSearch('');
+        setHighlightedIndex(-1);
         inputRef.current?.blur();
         break;
       case 'Backspace':
@@ -107,6 +104,7 @@ export default function SearchableSelect({
     onChange(optionValue);
     setIsOpen(false);
     setSearch('');
+    setHighlightedIndex(-1);
   };
 
   const inputStyle: React.CSSProperties = {
@@ -164,11 +162,11 @@ export default function SearchableSelect({
           }}
           onFocus={(e) => {
             e.stopPropagation();
-            !disabled && setIsOpen(true);
+            if (!disabled) setIsOpen(true);
           }}
           onClick={(e) => {
             e.stopPropagation();
-            !disabled && setIsOpen(true);
+            if (!disabled) setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
           placeholder={isOpen ? displayPlaceholder : (selectedOption?.label || displayPlaceholder)}

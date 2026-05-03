@@ -55,6 +55,7 @@ const DASHBOARD_ACCESS_RULES: AccessRule[] = [
 
 const API_ACCESS_RULES: AccessRule[] = [
   { prefix: '/api/users', roles: ['Admin'] },
+  { prefix: '/api/zatca/retry', roles: ['Admin', 'Finance Manager', 'Accountant'] },
   { prefix: '/api/zatca', roles: ['Admin'] },
   { prefix: '/api/seed', roles: ['Admin'] },
   { prefix: '/api/activity-logs', roles: FINANCE_AUDIT_ROLES },

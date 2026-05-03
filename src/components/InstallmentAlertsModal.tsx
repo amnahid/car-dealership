@@ -177,7 +177,7 @@ export default function InstallmentAlertsModal({ isOpen, onClose, onPaymentPaid 
                       </td>
                       <td style={{ padding: '10px' }}>
                         <button
-                          onClick={() => handleMarkPaid(payment.saleId, payment.installmentNumber, payment.amount)}
+                          onClick={() => handleMarkPaid(payment._id, payment.installmentNumber, payment.amount)}
                           disabled={processingId === `${payment.saleId}-${payment.installmentNumber}`}
                           style={{
                             padding: '6px 12px',

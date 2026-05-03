@@ -51,49 +51,22 @@ export async function GET(request: NextRequest) {
     }
 
     const [
-      cashSalesIncome,
-      installmentIncome,
-      rentalIncome,
-      salaryExpenses,
-      carPurchaseCosts,
-      repairCosts,
-      transactionExpenses,
-      miscIncome,
+      incomeStats,
+      expenseStats,
       profitPerCar,
       salesByMonth,
     ] = await Promise.all([
-      CashSale.aggregate([
-        { $match: { saleDate: dateFilter, status: { $ne: 'Cancelled' } } },
-        { $group: { _id: null, total: { $sum: '$finalPrice' } } },
-      ]),
-      InstallmentSale.aggregate([
-        { $match: { startDate: dateFilter, status: { $ne: 'Cancelled' } } },
-        { $group: { _id: null, total: { $sum: '$totalPaid' } } },
-      ]),
-      Rental.aggregate([
-        { $match: { startDate: dateFilter, status: { $ne: 'Cancelled' } } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-      ]),
-      SalaryPayment.aggregate([
-        { $match: { paymentDate: dateFilter } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
-      ]),
-      Car.aggregate([
-        { $match: { createdAt: dateFilter, isDeleted: { $ne: true } } },
-        { $group: { _id: null, total: { $sum: '$purchasePrice' } } },
-      ]),
-      Car.aggregate([
-        { $match: { createdAt: dateFilter, isDeleted: { $ne: true } } },
-        { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
-      ]),
+      // Aggregate all incomes by category
       Transaction.aggregate([
-        { $match: { type: 'Expense', date: dateFilter, category: { $nin: ['Salary Payment', 'Car Purchase', 'Car Repair'] }, isDeleted: { $ne: true } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+        { $match: { type: 'Income', date: dateFilter, isDeleted: { $ne: true } } },
+        { $group: { _id: '$category', total: { $sum: '$amount' } } },
       ]),
+      // Aggregate all expenses by category
       Transaction.aggregate([
-        { $match: { type: 'Income', date: dateFilter, category: { $nin: ['Cash Sale', 'Installment Payment', 'Rental Income'] }, isDeleted: { $ne: true } } },
-        { $group: { _id: null, total: { $sum: '$amount' } } },
+        { $match: { type: 'Expense', date: dateFilter, isDeleted: { $ne: true } } },
+        { $group: { _id: '$category', total: { $sum: '$amount' } } },
       ]),
+      // Profit per car (based on Active cash sales)
       CashSale.aggregate([
         { $match: { saleDate: dateFilter, status: { $ne: 'Cancelled' } } },
         {
@@ -121,30 +94,49 @@ export async function GET(request: NextRequest) {
         },
         { $group: { _id: null, avgProfit: { $avg: '$profit' }, totalProfit: { $sum: '$profit' } } },
       ]),
-      CashSale.aggregate([
-        { $match: { saleDate: dateFilter, status: { $ne: 'Cancelled' } } },
+      // Sales counts and totals by month (from Transactions)
+      Transaction.aggregate([
+        { $match: { type: 'Income', category: 'Cash Sale', date: dateFilter, isDeleted: { $ne: true } } },
         {
           $group: {
-            _id: { $month: '$saleDate' },
+            _id: { $month: '$date' },
             count: { $sum: 1 },
-            total: { $sum: '$finalPrice' },
+            total: { $sum: '$amount' },
           },
         },
         { $sort: { _id: 1 } },
       ]),
     ]);
 
-    const totalIncome =
-      (cashSalesIncome[0]?.total || 0) +
-      (installmentIncome[0]?.total || 0) +
-      (rentalIncome[0]?.total || 0) +
-      (miscIncome[0]?.total || 0);
+    // Parse income stats
+    const incomeBreakdown = {
+      cashSales: incomeStats.find(s => s._id === 'Cash Sale')?.total || 0,
+      installmentPayments: incomeStats.find(s => s._id === 'Installment Payment')?.total || 0,
+      rentalIncome: incomeStats.find(s => s._id === 'Rental Income')?.total || 0,
+      miscIncome: incomeStats.reduce((sum, s) => {
+        if (!['Cash Sale', 'Installment Payment', 'Rental Income'].includes(s._id)) {
+          return sum + s.total;
+        }
+        return sum;
+      }, 0),
+    };
 
-    const totalExpense =
-      (salaryExpenses[0]?.total || 0) +
-      (carPurchaseCosts[0]?.total || 0) +
-      (repairCosts[0]?.total || 0) +
-      (transactionExpenses[0]?.total || 0);
+    const totalIncome = incomeStats.reduce((sum, s) => sum + s.total, 0);
+
+    // Parse expense stats
+    const expenseBreakdown = {
+      salaryExpenses: expenseStats.find(s => s._id === 'Salary Payment')?.total || 0,
+      carPurchaseCosts: expenseStats.find(s => s._id === 'Car Purchase')?.total || 0,
+      repairCosts: expenseStats.find(s => s._id === 'Car Repair')?.total || 0,
+      otherExpenses: expenseStats.reduce((sum, s) => {
+        if (!['Salary Payment', 'Car Purchase', 'Car Repair'].includes(s._id)) {
+          return sum + s.total;
+        }
+        return sum;
+      }, 0),
+    };
+
+    const totalExpense = expenseStats.reduce((sum, s) => sum + s.total, 0);
 
     return NextResponse.json({
       summary: {
@@ -154,14 +146,8 @@ export async function GET(request: NextRequest) {
         profitMargin: totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome * 100).toFixed(2) : 0,
       },
       breakdown: {
-        cashSales: cashSalesIncome[0]?.total || 0,
-        installmentPayments: installmentIncome[0]?.total || 0,
-        rentalIncome: rentalIncome[0]?.total || 0,
-        miscIncome: miscIncome[0]?.total || 0,
-        salaryExpenses: salaryExpenses[0]?.total || 0,
-        carPurchaseCosts: carPurchaseCosts[0]?.total || 0,
-        repairCosts: repairCosts[0]?.total || 0,
-        otherExpenses: transactionExpenses[0]?.total || 0,
+        ...incomeBreakdown,
+        ...expenseBreakdown,
       },
       carProfit: {
         average: profitPerCar[0]?.avgProfit || 0,

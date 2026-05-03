@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
-import { normalizeRole } from '@/lib/rbac';
+import { normalizeRole, UserRole } from '@/lib/rbac';
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     if (user.role !== normalizedRole) {
       await User.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
-      user.role = normalizedRole as any;
+      user.role = normalizedRole as UserRole;
     }
 
     return NextResponse.json({

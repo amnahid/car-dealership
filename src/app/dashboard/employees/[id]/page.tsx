@@ -73,7 +73,7 @@ export default function EmployeeDetailPage() {
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>;
   if (!data) notFound();
 
-  const { employee, payments, sales, rentals } = data;
+  const { employee, payments = [], sales = [], rentals = [] } = data;
 
   const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
 

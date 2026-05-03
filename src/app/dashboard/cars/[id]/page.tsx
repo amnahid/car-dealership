@@ -5,6 +5,7 @@ import { notFound, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import GpsMap from '@/components/GpsMap';
+import Barcode from 'react-barcode';
 import { CarStatus } from '@/types';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -118,19 +119,26 @@ export default function CarDetailPage() {
     <div className={`space-y-6 ${isRtl ? 'text-right' : 'text-left'}`} dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="flex items-center justify-between">
         <div>
-          <Link href="/dashboard/cars" className="text-sm text-indigo-600 hover:underline">{isRtl ? '←' : '←'} {t('back')}</Link>
+          <Link href="/dashboard/cars" className="text-sm text-indigo-600 hover:underline no-print">{isRtl ? '←' : '←'} {t('back')}</Link>
           <h2 className="text-2xl font-bold text-gray-800 mt-1">{car.brand} {car.model} ({car.year})</h2>
           <p className="text-gray-500 font-mono text-sm">{car.carId}</p>
         </div>
         <div className={`flex gap-3 items-center ${isRtl ? 'flex-row-reverse' : 'flex-row'}`}>
+          <button
+            onClick={() => window.print()}
+            className="bg-gray-100 text-gray-700 text-sm font-semibold px-4 py-2 rounded-md hover:bg-gray-200 flex items-center gap-2 no-print"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+            {isRtl ? 'طباعة الباركود' : 'Print Barcode'}
+          </button>
           <StatusBadge status={car.status} />
-          <Link href={`/dashboard/cars/${car._id}/edit`} className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-indigo-500">
+          <Link href={`/dashboard/cars/${car._id}/edit`} className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-indigo-500 no-print">
             {commonT('edit')}
           </Link>
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="bg-red-100 text-red-600 text-sm font-semibold px-4 py-2 rounded-md hover:bg-red-200 disabled:opacity-50"
+            className="bg-red-100 text-red-600 text-sm font-semibold px-4 py-2 rounded-md hover:bg-red-200 disabled:opacity-50 no-print"
           >
             {deleting ? commonT('loading') : commonT('delete')}
           </button>
@@ -301,7 +309,19 @@ export default function CarDetailPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card" style={{ padding: '24px' }}>
-          <h3 className="font-semibold text-gray-800 mb-4">{t('vehicleDetails')}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <h3 className="font-semibold text-gray-800 mb-4">{t('vehicleDetails')}</h3>
+            <div className="bg-white p-2 rounded shadow-sm border border-gray-100 flex flex-col items-center">
+              <Barcode 
+                value={car.carId} 
+                width={1.5} 
+                height={40} 
+                fontSize={12} 
+                margin={0}
+                background="#ffffff"
+              />
+            </div>
+          </div>
           <div className="space-y-4 text-sm">
             {[
               [t('plateNumber'), car.plateNumber],
@@ -344,7 +364,7 @@ export default function CarDetailPage() {
       <div className="card" style={{ padding: '24px' }}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-semibold text-gray-800">{t('repairHistory')}</h3>
-          <Link href={`/dashboard/repairs/new?carId=${car._id}`} className="text-sm text-indigo-600 hover:underline font-medium">{t('addRepair')}</Link>
+          <Link href={`/dashboard/repairs/new?carId=${car._id}`} className="text-sm text-indigo-600 hover:underline font-medium no-print">{t('addRepair')}</Link>
         </div>
         {repairs.length === 0 ? (
           <p className="text-sm text-gray-500 italic">{t('noRepairs')}</p>
@@ -379,7 +399,7 @@ export default function CarDetailPage() {
       <div className="card" style={{ padding: '24px' }}>
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-semibold text-gray-800">{t('documents')}</h3>
-          <Link href={`/dashboard/documents/new?carId=${car._id}`} className="text-sm text-indigo-600 hover:underline font-medium">{t('addDocument')}</Link>
+          <Link href={`/dashboard/documents/new?carId=${car._id}`} className="text-sm text-indigo-600 hover:underline font-medium no-print">{t('addDocument')}</Link>
         </div>
         {documents.length === 0 ? (
           <p className="text-sm text-gray-500 italic">{t('noDocuments')}</p>

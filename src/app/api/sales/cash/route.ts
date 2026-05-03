@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB, DatabaseConnectionError } from '@/lib/db';
-import CashSale from '@/models/CashSale';
-import Car from '@/models/Car';
-import Customer from '@/models/Customer';
+import { connectDB, DatabaseConnectionError, runInTransaction } from '@/lib/db';
+import CashSale, { ICashSaleDocument } from '@/models/CashSale';
+import Car, { ICarRaw } from '@/models/Car';
+import Customer, { ICustomerDocument } from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
@@ -28,11 +28,24 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '15');
     const search = searchParams.get('search') || '';
     const customerId = searchParams.get('customer');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
-    let query: Record<string, unknown> = { isDeleted: { $ne: true } };
+    const query: any = { isDeleted: { $ne: true } };
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
+    }
+
+    if (startDate || endDate) {
+      const dateQuery: any = {};
+      if (startDate) dateQuery.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        dateQuery.$lte = end;
+      }
+      query.saleDate = dateQuery;
     }
 
     if (search) {
@@ -106,92 +119,91 @@ export async function POST(request: NextRequest) {
     const finalPrice = salePrice - computedDiscountAmount;
     const { vatAmount, totalWithVat } = calculateVat(finalPrice, ZATCA_VAT_RATE);
 
-    const session = await mongoose.startSession();
-    let sale;
-    let customerData;
-    let carData;
+    let sale: any = null;
+    let customerData: any = null;
+    let carData: any = null;
 
-    try {
-      await session.withTransaction(async () => {
-        const carCheck = await Car.findById(car).session(session);
-        if (!carCheck) throw new Error('Car not found');
-        if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
+    const result = await runInTransaction(async (session) => {
+      const carCheck = await Car.findById(car).session(session);
+      if (!carCheck) throw new Error('Car not found');
+      if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
 
-        const customerDocInTx = await Customer.findById(customer).session(session).lean();
-        if (!customerDocInTx) throw new Error('Customer not found');
+      const customerDocInTx = await Customer.findById(customer).session(session).lean() as unknown as ICustomerDocument;
+      if (!customerDocInTx) throw new Error('Customer not found');
 
-        const sales = await CashSale.create([{
-          car: car,
-          carId,
-          customer,
-          customerName,
-          customerPhone,
-          salePrice,
-          discountType,
-          discountValue: discountValue || 0,
-          discountAmount: computedDiscountAmount,
-          finalPrice,
-          vatRate: ZATCA_VAT_RATE,
-          vatAmount,
-          finalPriceWithVat: totalWithVat,
-          agentName,
-          agentCommission: agentCommission || 0,
-          saleDate,
-          notes,
-          invoiceType,
-          zatcaStatus: 'Pending',
-          registrationDriverName: registrationDriverName || customerName,
-          registrationDriverIqama: registrationDriverIqama || '',
-          registrationDriverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate
-            ? new Date((customerDocInTx as any).licenseExpiryDate)
-            : undefined,
-          createdBy: user.userId,
-        }], { session });
-        
-        sale = sales[0];
+      const sales = await CashSale.create([{
+        car: car,
+        carId,
+        customer,
+        customerName,
+        customerPhone,
+        salePrice,
+        discountType,
+        discountValue: discountValue || 0,
+        discountAmount: computedDiscountAmount,
+        finalPrice,
+        vatRate: ZATCA_VAT_RATE,
+        vatAmount,
+        finalPriceWithVat: totalWithVat,
+        agentName,
+        agentCommission: agentCommission || 0,
+        saleDate,
+        notes,
+        invoiceType,
+        zatcaStatus: 'Pending',
+        registrationDriverName: registrationDriverName || customerName,
+        registrationDriverIqama: registrationDriverIqama || '',
+        registrationDriverLicenseExpiryDate: customerDocInTx.licenseExpiryDate
+          ? new Date(customerDocInTx.licenseExpiryDate)
+          : undefined,
+        createdBy: user.userId,
+      }], { session });
+      
+      const s = sales[0];
 
-        await Car.findByIdAndUpdate(car, {
-          status: 'Sold',
-          tafweedStatus: 'None',
-          tafweedAuthorizedTo: registrationDriverName || customerName,
-          tafweedDriverIqama: registrationDriverIqama || '',
-          tafweedDurationMonths: undefined,
-          tafweedExpiryDate: undefined,
-          driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate
-            ? new Date((customerDocInTx as any).licenseExpiryDate)
-            : undefined,
-        }, { session });
-        
-        await Transaction.create([{
-          date: new Date(saleDate),
-          type: 'Income',
-          category: 'Cash Sale',
-          amount: finalPrice,
-          description: `Cash sale ${sale.saleId} - Car ${carId}`,
-          referenceId: sale._id.toString(),
-          referenceType: 'CashSale',
-          isAutoGenerated: true,
-          createdBy: user.userId,
-        }], { session });
+      await Car.findByIdAndUpdate(car, {
+        status: 'Sold',
+        tafweedStatus: 'None',
+        tafweedAuthorizedTo: registrationDriverName || customerName,
+        tafweedDriverIqama: registrationDriverIqama || '',
+        tafweedDurationMonths: undefined,
+        tafweedExpiryDate: undefined,
+        driverLicenseExpiryDate: customerDocInTx.licenseExpiryDate
+          ? new Date(customerDocInTx.licenseExpiryDate)
+          : undefined,
+      }, { session });
+      
+      await Transaction.create([{
+        date: new Date(saleDate),
+        type: 'Income',
+        category: 'Cash Sale',
+        amount: finalPrice,
+        description: `Cash sale ${s.saleId} - Car ${carId}`,
+        referenceId: s._id.toString(),
+        referenceType: 'CashSale',
+        isAutoGenerated: true,
+        createdBy: user.userId,
+      }], { session });
 
-        customerData = customerDocInTx;
-        carData = await Car.findById(car).session(session).lean();
+      return {
+        sale: s,
+        customerData: customerDocInTx,
+        carData: await Car.findById(car).session(session).lean() as unknown as ICarRaw
+      };
+    });
 
-        await logActivity({
-          userId: user.userId,
-          userName: user.name,
-          action: `Created cash sale: ${sale.saleId} for car ${carId}`,
-          module: 'Sales',
-          targetId: sale._id.toString(),
-          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        });
-      });
-    } catch (txError) {
-      console.error('Transaction failed:', txError);
-      throw txError;
-    } finally {
-      await session.endSession();
-    }
+    sale = result.sale;
+    customerData = result.customerData;
+    carData = result.carData;
+
+    await logActivity({
+      userId: user.userId,
+      userName: user.name,
+      action: `Created cash sale: ${sale.saleId} for car ${carId}`,
+      module: 'Sales',
+      targetId: sale._id.toString(),
+      ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+    });
 
     if (!sale) {
       throw new Error('Failed to create sale');
@@ -202,28 +214,28 @@ export async function POST(request: NextRequest) {
     let zatcaResult;
     try {
       zatcaResult = await processZatcaInvoice({
-        referenceId: (sale as any)._id.toString(),
+        referenceId: (sale as ICashSaleDocument)._id.toString(),
         referenceType: 'CashSale',
-        saleId: (sale as any).saleId,
+        saleId: (sale as ICashSaleDocument).saleId,
         invoiceType,
         issueDate: new Date(saleDate),
         supplyDate: new Date(saleDate),
         buyer: {
           name: customerName,
           trn: buyerTrn,
-          buildingNumber: (customerData as any)?.buildingNumber,
-          streetName: (customerData as any)?.streetName,
-          district: (customerData as any)?.district,
-          city: (customerData as any)?.city,
-          postalCode: (customerData as any)?.postalCode,
-          countryCode: (customerData as any)?.countryCode || 'SA',
-          otherId: (customerData as any)?.otherId ? {
-            id: (customerData as any).otherId,
-            type: (customerData as any).otherIdType || 'CRN'
+          buildingNumber: customerData?.buildingNumber,
+          streetName: customerData?.streetName,
+          district: customerData?.district,
+          city: customerData?.city,
+          postalCode: customerData?.postalCode,
+          countryCode: customerData?.countryCode || 'SA',
+          otherId: customerData?.otherId ? {
+            id: customerData.otherId,
+            type: customerData.otherIdType || 'CRN'
           } : undefined
         },
         lineItems: [{
-          name: `${(carData as any)?.brand || ''} ${(carData as any)?.model || ''} (${carId})`.trim(),
+          name: `${carData?.brand || ''} ${carData?.carModel || ''} (${carId})`.trim(),
           quantity: 1,
           unitPrice: finalPrice,
           vatRate: ZATCA_VAT_RATE,
@@ -242,43 +254,49 @@ export async function POST(request: NextRequest) {
       if (updatedSale) {
         updatedSale.zatcaUUID = zatcaResult.uuid;
         updatedSale.zatcaQRCode = zatcaResult.qrCode;
-        updatedSale.zatcaStatus = zatcaResult.status as 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
+        updatedSale.zatcaStatus = zatcaResult.status as any;
         updatedSale.zatcaHash = zatcaResult.xmlHash;
         updatedSale.zatcaResponse = zatcaResult.zatcaResponse;
         if (zatcaResult.errorMessage) updatedSale.zatcaErrorMessage = zatcaResult.errorMessage;
-        await updatedSale.save();
-        sale = updatedSale;
+        
+        try {
+          await updatedSale.save();
+          sale = updatedSale;
+        } catch (saveError) {
+          console.error('Failed to update CashSale with ZATCA status:', saveError);
+        }
       }
     } catch (zatcaError) {
       console.error('ZATCA processing failed:', zatcaError);
     }
 
     try {
+      const s = sale as ICashSaleDocument;
       invoiceUrl = await generateInvoice({
-        saleId: (sale as any).saleId,
-        saleDate: (sale as any).saleDate.toString(),
-        carId: (sale as any).carId,
-        carBrand: (carData as any)?.brand,
-        carModel: (carData as any)?.model,
-        customerName: (sale as any).customerName,
-        customerPhone: (sale as any).customerPhone,
-        customerAddress: (customerData as any) ? `${(customerData as any).buildingNumber} ${(customerData as any).streetName}, ${(customerData as any).district}, ${(customerData as any).city} ${(customerData as any).postalCode}` : '',
-        salePrice: (sale as any).salePrice,
-        discountType: (sale as any).discountType,
-        discountValue: (sale as any).discountValue,
-        discountAmount: (sale as any).discountAmount,
-        finalPrice: (sale as any).finalPrice,
-        vatRate: (sale as any).vatRate,
-        vatAmount: (sale as any).vatAmount,
-        finalPriceWithVat: (sale as any).finalPriceWithVat,
-        agentName: (sale as any).agentName,
-        agentCommission: (sale as any).agentCommission,
+        saleId: s.saleId,
+        saleDate: s.saleDate.toString(),
+        carId: s.carId,
+        carBrand: carData?.brand,
+        carModel: carData?.carModel,
+        customerName: s.customerName,
+        customerPhone: s.customerPhone,
+        customerAddress: customerData ? `${customerData.buildingNumber} ${customerData.streetName}, ${customerData.district}, ${customerData.city} ${customerData.postalCode}` : '',
+        salePrice: s.salePrice,
+        discountType: s.discountType,
+        discountValue: s.discountValue,
+        discountAmount: s.discountAmount,
+        finalPrice: s.finalPrice,
+        vatRate: s.vatRate,
+        vatAmount: s.vatAmount,
+        finalPriceWithVat: s.finalPriceWithVat,
+        agentName: s.agentName,
+        agentCommission: s.agentCommission,
         zatcaQRCode: zatcaResult?.qrCode,
         zatcaUUID: zatcaResult?.uuid,
         invoiceType,
       });
 
-      const finalSale = await CashSale.findById((sale as any)._id);
+      const finalSale = await CashSale.findById(s._id);
       if (finalSale) {
         finalSale.invoiceUrl = invoiceUrl;
         await finalSale.save();
@@ -289,38 +307,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Send thank-you notifications to customer
-  try {
-    await sendSaleThankYouNotifications(
-      {
-        name: customerName,
-        phone: customerPhone,
-        email: (customerData as any)?.email,
-      },
-      {
-        saleId: (sale as any).saleId,
-        carId: (sale as any).carId,
-        carBrand: (carData as any)?.brand,
-        carModel: (carData as any)?.model,
-        salePrice: (sale as any).salePrice,
-        discountType: (sale as any).discountType as 'flat' | 'percentage',
-        discountValue: (sale as any).discountValue,
-        discountAmount: (sale as any).discountAmount,
-        finalPrice: (sale as any).finalPrice,
-        vatRate: (sale as any).vatRate,
-        vatAmount: (sale as any).vatAmount,
-        finalPriceWithVat: (sale as any).finalPriceWithVat,
-      }
-    );
-  } catch (notifyError) {
-    console.error('Customer notification failed:', notifyError);
-  }
+    try {
+      const s = sale as ICashSaleDocument;
+      await sendSaleThankYouNotifications(
+        {
+          name: customerName,
+          phone: customerPhone,
+          email: customerData?.email,
+        },
+        {
+          saleId: s.saleId,
+          carId: s.carId,
+          carBrand: carData?.brand,
+          carModel: carData?.carModel,
+          salePrice: s.salePrice,
+          discountType: s.discountType,
+          discountValue: s.discountValue,
+          discountAmount: s.discountAmount,
+          finalPrice: s.finalPrice,
+          vatRate: s.vatRate,
+          vatAmount: s.vatAmount,
+          finalPriceWithVat: s.finalPriceWithVat,
+        }
+      );
+    } catch (notifyError) {
+      console.error('Customer notification failed:', notifyError);
+    }
 
     return NextResponse.json({ sale, invoiceUrl, zatcaStatus: zatcaResult?.status }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create cash sale error:', error);
     if (error instanceof DatabaseConnectionError) {
       return NextResponse.json({ error: error.message }, { status: error.statusCode });
     }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

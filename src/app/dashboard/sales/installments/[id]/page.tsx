@@ -37,9 +37,11 @@ interface Sale {
   vatRate?: number;
   vatAmount?: number;
   finalPriceWithVat?: number;
-  lateFeePercent?: number;
+  monthlyLateFee?: number;
   lateFeeCharged?: number;
   agreementDocument?: string;
+  agreementUrl?: string;
+  invoiceUrl?: string;
   invoiceType?: 'Standard' | 'Simplified';
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   zatcaUUID?: string;
@@ -52,6 +54,9 @@ interface Sale {
   tafweedDurationMonths?: number;
   tafweedExpiryDate?: string;
   driverLicenseExpiryDate?: string;
+  guarantor?: any;
+  guarantorName?: string;
+  guarantorPhone?: string;
 }
 
 export default function InstallmentSaleDetailPage() {
@@ -59,8 +64,11 @@ export default function InstallmentSaleDetailPage() {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showPaymentModal, setShowModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
 
-  useEffect(() => {
+  const fetchSale = () => {
     const id = params?.id;
     if (!id) return;
 
@@ -76,7 +84,41 @@ export default function InstallmentSaleDetailPage() {
         setError(err.message || 'Failed to load sale');
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchSale();
   }, [params?.id]);
+
+  const handleRecordPayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowModal(true);
+  };
+
+  const handleRegenerateAgreement = async () => {
+    const id = params?.id;
+    if (!id || !confirm('Are you sure you want to regenerate the agreement?')) return;
+
+    setRegeneratingAgreement(true);
+    try {
+      const res = await fetch(`/api/sales/installments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate-agreement' }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to regenerate agreement');
+      }
+
+      fetchSale();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setRegeneratingAgreement(false);
+    }
+  };
 
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>;
@@ -109,18 +151,39 @@ export default function InstallmentSaleDetailPage() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 className="page-title">Installment Sale Details</h2>
-        <span
-          style={{
-            padding: '6px 12px',
-            borderRadius: '4px',
-            background: statusColors[sale.status] || '#28aaa9',
-            color: '#ffffff',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
-        >
-          {sale.status}
-        </span>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {sale.agreementUrl && (
+            <a
+              href={sale.agreementUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+            >
+              Download Agreement
+            </a>
+          )}
+          <button
+            onClick={handleRegenerateAgreement}
+            disabled={regeneratingAgreement}
+            className="no-print"
+            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingAgreement ? 0.7 : 1 }}
+          >
+            {regeneratingAgreement ? 'Regenerating...' : 'Regenerate Agreement'}
+          </button>
+          <span
+            style={{
+              padding: '6px 12px',
+              borderRadius: '4px',
+              background: statusColors[sale.status] || '#28aaa9',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 500,
+            }}
+          >
+            {sale.status}
+          </span>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
@@ -155,6 +218,30 @@ export default function InstallmentSaleDetailPage() {
             </div>
           </div>
         </div>
+
+        {sale.guarantorName && (
+            <div className="card" style={{ padding: '24px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Guarantor Information</h3>
+            <div style={{ display: 'grid', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>Name</span>
+                <span style={{ color: '#2a3142', fontWeight: 500 }}>
+                    {sale.guarantor ? <Link href={`/dashboard/crm/guarantors/${(sale.guarantor as any)._id || sale.guarantor}`} style={{ color: '#28aaa9' }}>{sale.guarantorName}</Link> : sale.guarantorName}
+                </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>Phone</span>
+                <span style={{ color: '#2a3142' }}>{sale.guarantorPhone}</span>
+                </div>
+                {(sale.guarantor as any)?.nationalId && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#9ca8b3' }}>National ID</span>
+                        <span style={{ color: '#2a3142' }}>{(sale.guarantor as any).nationalId}</span>
+                    </div>
+                )}
+            </div>
+            </div>
+        )}
 
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Tafweed Authorization</h3>
@@ -239,10 +326,10 @@ export default function InstallmentSaleDetailPage() {
               <span style={{ color: '#9ca8b3' }}>Next Payment</span>
               <span style={{ color: '#2a3142' }}>SAR {(sale.nextPaymentAmount || 0).toLocaleString()} ({new Date(sale.nextPaymentDate).toLocaleDateString()})</span>
             </div>
-            {sale.lateFeePercent !== undefined && sale.lateFeePercent > 0 && (
+            {sale.monthlyLateFee !== undefined && sale.monthlyLateFee > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca8b3' }}>Late Fee</span>
-                <span style={{ color: '#f8b425', fontWeight: 600 }}>{sale.lateFeePercent}%</span>
+                <span style={{ color: '#9ca8b3' }}>Monthly Late Fee</span>
+                <span style={{ color: '#f8b425', fontWeight: 600 }}>SAR {(sale.monthlyLateFee || 0).toLocaleString()}</span>
               </div>
             )}
             {sale.lateFeeCharged !== undefined && sale.lateFeeCharged > 0 && (
@@ -258,7 +345,7 @@ export default function InstallmentSaleDetailPage() {
       <div className="card" style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Payment Schedule</h3>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', fontSize: '14px', minWidth: '600px' }}>
+          <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
             <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
               <tr>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>#</th>
@@ -267,6 +354,7 @@ export default function InstallmentSaleDetailPage() {
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Status</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Late Fee</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Paid Date</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -288,6 +376,24 @@ export default function InstallmentSaleDetailPage() {
                     <td style={{ padding: '12px', color: '#9ca8b3' }}>
                       {payment.paidDate ? new Date(payment.paidDate).toLocaleDateString() : '-'}
                     </td>
+                    <td style={{ padding: '12px' }}>
+                      {payment.status !== 'Paid' && (
+                        <button
+                          onClick={() => handleRecordPayment(payment)}
+                          style={{
+                            padding: '6px 12px',
+                            background: '#42ca7f',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                          }}
+                        >
+                          Record Payment
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -295,6 +401,17 @@ export default function InstallmentSaleDetailPage() {
           </table>
         </div>
       </div>
+
+      <RecordPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowModal(false)}
+        onSave={() => {
+          setShowModal(false);
+          fetchSale();
+        }}
+        saleId={sale._id}
+        payment={selectedPayment}
+      />
 
       {sale.agreementDocument && (
         <div className="card" style={{ padding: '24px', marginTop: '24px' }}>
@@ -346,6 +463,127 @@ export default function InstallmentSaleDetailPage() {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+interface RecordPaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  saleId: string;
+  payment: Payment | null;
+}
+
+function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: RecordPaymentModalProps) {
+  const [amount, setAmount] = useState('');
+  const [lateFeeAmount, setLateFeeAmount] = useState('0');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (payment) {
+      setAmount(payment.amount.toString());
+      setLateFeeAmount((payment.lateFee || 0).toString());
+      setPaymentDate(new Date().toISOString().split('T')[0]);
+      setNotes('');
+      setError('');
+    }
+  }, [payment]);
+
+  if (!isOpen || !payment) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/sales/installments/${saleId}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          installmentNumber: payment.installmentNumber,
+          amount: parseFloat(amount),
+          lateFeeAmount: parseFloat(lateFeeAmount),
+          paymentDate,
+          notes,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to record payment');
+      }
+
+      onSave();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalToPay = (parseFloat(amount) || 0) + (parseFloat(lateFeeAmount) || 0);
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Record Payment - #{payment.installmentNumber}</h3>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Base Amount (SAR)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee Collected (SAR)</label>
+            <input
+              type="number"
+              value={lateFeeAmount}
+              onChange={(e) => setLateFeeAmount(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ marginBottom: '20px', padding: '10px', background: '#f8f9fa', borderRadius: '4px', textAlign: 'center' }}>
+            <span style={{ fontSize: '14px', color: '#525f80' }}>Total to Collect: </span>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: '#28aaa9' }}>SAR {totalToPay.toLocaleString()}</span>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Payment Date</label>
+            <input
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes (Optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px', height: '80px', resize: 'none' }}
+            />
+          </div>
+          {error && <div style={{ color: '#ec4561', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: '#42ca7f', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Saving...' : 'Record Payment'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

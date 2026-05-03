@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { getAuthPayload } from '@/lib/apiAuth';
 
+interface SaleLike {
+  _id: string;
+  saleId?: string;
+  rentalId?: string;
+  carId: string;
+  car?: { brand: string; model: string; images: string[] };
+  customerName: string;
+  customerPhone: string;
+  finalPrice?: number;
+  totalPrice?: number;
+  totalAmount?: number;
+  status: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthPayload(request);
@@ -42,39 +56,39 @@ export async function GET(request: NextRequest) {
         : [],
     ]);
 
-    (cashSales as any[]).forEach((s) => results.push({
+    (cashSales as unknown as SaleLike[]).forEach((s) => results.push({
       id: s._id,
-      saleId: s.saleId,
+      saleId: s.saleId || '',
       type: 'Cash',
       carId: s.carId,
       car: s.car,
       customerName: s.customerName,
       customerPhone: s.customerPhone,
-      totalPrice: s.finalPrice || s.totalPrice,
+      totalPrice: s.finalPrice || s.totalPrice || 0,
       status: s.status,
     }));
 
-    (installmentSales as any[]).forEach((s) => results.push({
+    (installmentSales as unknown as SaleLike[]).forEach((s) => results.push({
       id: s._id,
-      saleId: s.saleId,
+      saleId: s.saleId || '',
       type: 'Installment',
       carId: s.carId,
       car: s.car,
       customerName: s.customerName,
       customerPhone: s.customerPhone,
-      totalPrice: s.totalPrice,
+      totalPrice: s.totalPrice || 0,
       status: s.status,
     }));
 
-    (rentals as any[]).forEach((s) => results.push({
+    (rentals as unknown as SaleLike[]).forEach((s) => results.push({
       id: s._id,
-      saleId: s.rentalId,
+      saleId: s.rentalId || '',
       type: 'Rental',
       carId: s.carId,
       car: s.car,
       customerName: s.customerName,
       customerPhone: s.customerPhone,
-      totalPrice: s.totalAmount,
+      totalPrice: s.totalAmount || 0,
       status: s.status,
     }));
 

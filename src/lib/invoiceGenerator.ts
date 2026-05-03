@@ -1,19 +1,62 @@
 import { jsPDF } from 'jspdf';
 import fs from 'fs';
 import path from 'path';
-// @ts-ignore
+// @ts-expect-error
 import arabicReshaper from 'arabic-reshaper';
-// @ts-ignore
-import bidiFactory from 'bidi-js';
-const bidi = bidiFactory();
+// @ts-expect-error
+import bidiFactoryImport from 'bidi-js';
+
+// Robust detection for CJS/ESM interop in Turbopack/Next.js
+const bidiFactory = typeof bidiFactoryImport === 'function' 
+  ? bidiFactoryImport 
+  : (bidiFactoryImport as any).default;
+
+const bidi = typeof bidiFactory === 'function' 
+  ? bidiFactory() 
+  : { 
+      getReorderedString: (s: string) => s,
+      getEmbeddingLevels: (s: string) => ({ paragraphs: [] })
+    };
 
 function processArabic(text: string): string {
   if (!text) return '';
   // Check if text contains Arabic characters
   if (!/[\u0600-\u06FF]/.test(text)) return text;
   
-  const reshaped = arabicReshaper.reshape(text);
-  return bidi.getReorderedString(reshaped);
+  // Robust detection for CJS/ESM interop
+  let reshaper: any = arabicReshaper;
+  const findReshape = (obj: any): Function | null => {
+    if (!obj) return null;
+    if (typeof obj.convertArabic === 'function') return obj.convertArabic.bind(obj);
+    if (typeof obj.reshape === 'function') return obj.reshape.bind(obj);
+    if (obj.default) {
+      const d = obj.default;
+      if (typeof d.convertArabic === 'function') return d.convertArabic.bind(d);
+      if (typeof d.reshape === 'function') return d.reshape.bind(d);
+      if (d.default) {
+        const dd = d.default;
+        if (typeof dd.convertArabic === 'function') return dd.convertArabic.bind(dd);
+        if (typeof dd.reshape === 'function') return dd.reshape.bind(dd);
+      }
+    }
+    return null;
+  };
+
+  const reshapeFn = findReshape(reshaper);
+  
+  try {
+    // 1. Reshape: Convert to positional forms (joined characters)
+    let reshaped = reshapeFn ? reshapeFn(text) : text;
+    
+    // 2. Reorder Surgically: Only reverse the Arabic character blocks.
+    // This prevents English text (like "Customer Details") from being reversed.
+    return reshaped.replace(/[\u0600-\u06FF\uFE70-\uFEFF]+/g, (match: string) => {
+      return match.split('').reverse().join('');
+    });
+  } catch (e) {
+    console.error('Arabic processing error:', e);
+    return text;
+  }
 }
 
 interface InvoiceData {
@@ -38,6 +81,45 @@ interface InvoiceData {
   zatcaQRCode?: string;    // base64 QR image data URL
   zatcaUUID?: string;
   invoiceType?: string;    // 'Standard' | 'Simplified'
+}
+
+function drawBarcode(doc: any, text: string, x: number, y: number, width: number, height: number) {
+  const code39: Record<string, string> = {
+    '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
+    '4': '101001101011', '5': '110100110101', '6': '101100110101', '7': '101001011011',
+    '8': '110100101101', '9': '101100101101', 'A': '110101001011', 'B': '101101001011',
+    'C': '110110100101', 'D': '101011001011', 'E': '110101100101', 'F': '101101100101',
+    'G': '101010011011', 'H': '110101001101', 'I': '101101001101', 'J': '101011001101',
+    'K': '110101010011', 'L': '101101010011', 'M': '110110101001', 'N': '101011010011',
+    'O': '110101101001', 'P': '101101101001', 'Q': '101010110011', 'R': '110101011001',
+    'S': '101101011001', 'T': '101011011001', 'U': '110010101011', 'V': '100110101011',
+    'W': '110011010101', 'X': '100101101011', 'Y': '110010110101', 'Z': '100110110101',
+    '-': '100101011011', '.': '110010101101', ' ': '100110101101', '*': '100101101101',
+    '$': '100100100101', '/': '100100101001', '+': '100101001001', '%': '101001001001'
+  };
+
+  const fullText = `*${text.toUpperCase()}*`;
+  let totalModules = 0;
+  for (const char of fullText) {
+    if (code39[char]) totalModules += code39[char].length + 1;
+  }
+  
+  const moduleWidth = width / totalModules;
+  let currentX = x;
+
+  doc.setDrawColor(0);
+  doc.setFillColor(0);
+
+  for (const char of fullText) {
+    const pattern = code39[char] || code39[' '];
+    for (let i = 0; i < pattern.length; i++) {
+      if (pattern[i] === '1') {
+        doc.rect(currentX, y, moduleWidth, height, 'F');
+      }
+      currentX += moduleWidth;
+    }
+    currentX += moduleWidth; // Inter-character gap
+  }
 }
 
 export async function generateInvoice(data: InvoiceData): Promise<string> {
@@ -251,24 +333,44 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setLineWidth(0.3);
   doc.line(margin, y, pageWidth - margin, y);
 
-  // Agent commission
-  if (data.agentName && data.agentCommission) {
-    y += 8;
-    doc.setFont('Cairo', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(60, 60, 60);
-    doc.text(`Agent: ${processArabic(data.agentName)}`, margin, y);
-    doc.text(`Commission: ${fmt(data.agentCommission)}`, pageWidth - margin, y, { align: 'right' });
-  }
-
   // QR code (ZATCA compliant — mandatory for simplified invoices)
   if (data.zatcaQRCode) {
-    const qrSize = 35;
-    const qrY = pageHeight - margin - qrSize - 20;
-    doc.setFontSize(7);
+    try {
+      const qrSize = 35;
+      const qrY = pageHeight - margin - qrSize - 20;
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 120);
+      doc.text(processArabic('ZATCA QR Code / رمز الاستجابة السريعة'), margin, qrY - 2);
+      
+      const format = data.zatcaQRCode.includes('jpeg') || data.zatcaQRCode.includes('jpg') ? 'JPEG' : 'PNG';
+      const base64Data = data.zatcaQRCode.includes(';base64,') 
+        ? data.zatcaQRCode.split(';base64,').pop() || ''
+        : data.zatcaQRCode;
+      
+      doc.addImage(base64Data, format, margin, qrY, qrSize, qrSize);
+
+      // Add 1D Barcode on the right side
+      const barcodeWidth = 50;
+      const barcodeHeight = 10;
+      const barcodeX = pageWidth - margin - barcodeWidth;
+      const barcodeY = qrY + (qrSize / 2) - (barcodeHeight / 2);
+      drawBarcode(doc, data.saleId, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
+      doc.setFontSize(7);
+      doc.text(`Invoice ID: ${data.saleId}`, barcodeX + barcodeWidth / 2, barcodeY + barcodeHeight + 4, { align: 'center' });
+
+    } catch (qrError) {
+      console.error('Failed to embed ZATCA QR Code in PDF:', qrError);
+    }
+  } else {
+    // If no ZATCA QR, still add the 1D Barcode at the bottom
+    const barcodeWidth = 60;
+    const barcodeHeight = 12;
+    const barcodeX = (pageWidth - barcodeWidth) / 2;
+    const barcodeY = pageHeight - margin - 40;
+    drawBarcode(doc, data.saleId, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
+    doc.setFontSize(8);
     doc.setTextColor(120, 120, 120);
-    doc.text(processArabic('ZATCA QR Code / رمز الاستجابة السريعة'), margin, qrY - 2);
-    doc.addImage(data.zatcaQRCode, 'PNG', margin, qrY, qrSize, qrSize);
+    doc.text(`Invoice ID: ${data.saleId}`, pageWidth / 2, barcodeY + barcodeHeight + 5, { align: 'center' });
   }
 
   // Footer

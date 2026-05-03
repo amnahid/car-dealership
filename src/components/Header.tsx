@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useLocale, useTranslations } from 'next-intl';
 
@@ -20,6 +21,7 @@ export default function Header({ userName, userRole, expiringDocsCount = 0, user
 
   return (
     <header
+      className="no-print"
       style={{
         position: 'fixed',
         top: 0,
@@ -42,7 +44,7 @@ export default function Header({ userName, userRole, expiringDocsCount = 0, user
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {expiringDocsCount > 0 && (
-            <a
+            <Link
               href="/dashboard/documents"
               style={{ position: 'relative', textDecoration: 'none' }}
             >
@@ -71,7 +73,7 @@ export default function Header({ userName, userRole, expiringDocsCount = 0, user
               >
                 {expiringDocsCount > 9 ? '9+' : expiringDocsCount}
               </span>
-            </a>
+            </Link>
           )}
           
           <div style={{ borderRight: isRtl ? 'none' : '1px solid #eee', borderLeft: isRtl ? '1px solid #eee' : 'none', paddingRight: isRtl ? 0 : '16px', paddingLeft: isRtl ? '16px' : 0 }}>

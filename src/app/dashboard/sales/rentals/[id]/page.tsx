@@ -20,6 +20,8 @@ interface Rental {
   actualReturnDate?: string;
   lateFee?: number;
   agreementDocument?: string;
+  agreementUrl?: string;
+  invoiceUrl?: string;
   notes?: string;
   vatRate?: number;
   vatAmount?: number;
@@ -42,8 +44,9 @@ export default function RentalDetailPage() {
   const [rental, setRental] = useState<Rental | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
 
-  useEffect(() => {
+  const fetchRental = () => {
     const id = params?.id;
     if (!id) return;
 
@@ -59,7 +62,36 @@ export default function RentalDetailPage() {
         setError(err.message || 'Failed to load rental');
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchRental();
   }, [params?.id]);
+
+  const handleRegenerateAgreement = async () => {
+    const id = params?.id;
+    if (!id || !confirm('Are you sure you want to regenerate the agreement?')) return;
+
+    setRegeneratingAgreement(true);
+    try {
+      const res = await fetch(`/api/sales/rentals/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate-agreement' }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to regenerate agreement');
+      }
+
+      fetchRental();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setRegeneratingAgreement(false);
+    }
+  };
 
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>;
@@ -94,18 +126,39 @@ export default function RentalDetailPage() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 className="page-title">Rental Details</h2>
-        <span
-          style={{
-            padding: '6px 12px',
-            borderRadius: '4px',
-            background: statusColors[rental.status] || '#28aaa9',
-            color: '#ffffff',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
-        >
-          {rental.status}
-        </span>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          {rental.agreementUrl && (
+            <a
+              href={rental.agreementUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+            >
+              Download Agreement
+            </a>
+          )}
+          <button
+            onClick={handleRegenerateAgreement}
+            disabled={regeneratingAgreement}
+            className="no-print"
+            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingAgreement ? 0.7 : 1 }}
+          >
+            {regeneratingAgreement ? 'Regenerating...' : 'Regenerate Agreement'}
+          </button>
+          <span
+            style={{
+              padding: '6px 12px',
+              borderRadius: '4px',
+              background: statusColors[rental.status] || '#28aaa9',
+              color: '#ffffff',
+              fontSize: '14px',
+              fontWeight: 500,
+            }}
+          >
+            {rental.status}
+          </span>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>

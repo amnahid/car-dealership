@@ -1,4 +1,5 @@
 jest.mock('twilio');
+import { NotificationResult } from '../../../src/lib/saleNotifications';
 jest.mock('../../../src/lib/notificationLogger', () => ({
   logNotification: jest.fn().mockResolvedValue(undefined),
 }));
@@ -40,7 +41,6 @@ describe('saleNotifications.ts', () => {
 
   describe('NotificationResult interface', () => {
     it('should define NotificationResult interface', async () => {
-      const { NotificationResult } = await import('../../../src/lib/saleNotifications');
       const result: NotificationResult = {
         smsSent: true,
         emailSent: true,
@@ -193,6 +193,59 @@ describe('saleNotifications.ts', () => {
 
       expect(result).toHaveProperty('smsSent');
       expect(result).toHaveProperty('emailSent');
+    });
+  });
+
+  describe('sendPaymentReminderNotifications', () => {
+    it('should send payment reminder notifications', async () => {
+      const { sendPaymentReminderNotifications } = await import('../../../src/lib/saleNotifications');
+
+      const result = await sendPaymentReminderNotifications(
+        {
+          name: 'John Doe',
+          phone: '+1234567890',
+          email: 'john@example.com',
+        },
+        {
+          saleId: 'INS-001',
+          carId: 'CAR-001',
+          installmentNumber: 1,
+          amount: 1000,
+          dueDate: '2025-02-01',
+          daysUntilDue: 3,
+          monthlyLateFee: 200,
+        }
+      );
+
+      expect(result.smsSent).toBe(true);
+      expect(result.emailSent).toBe(true);
+    });
+  });
+
+  describe('sendOverdueNoticeNotifications', () => {
+    it('should send overdue notice notifications', async () => {
+      const { sendOverdueNoticeNotifications } = await import('../../../src/lib/saleNotifications');
+
+      const result = await sendOverdueNoticeNotifications(
+        {
+          name: 'John Doe',
+          phone: '+1234567890',
+          email: 'john@example.com',
+        },
+        {
+          saleId: 'INS-001',
+          carId: 'CAR-001',
+          installmentNumber: 1,
+          amount: 1000,
+          dueDate: '2025-02-01',
+          daysOverdue: 15,
+          monthlyLateFee: 200,
+          accruedLateFee: 200,
+        }
+      );
+
+      expect(result.smsSent).toBe(true);
+      expect(result.emailSent).toBe(true);
     });
   });
 });

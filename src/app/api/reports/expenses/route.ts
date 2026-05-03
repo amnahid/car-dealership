@@ -33,7 +33,11 @@ export async function GET(request: NextRequest) {
     if (startDate || endDate) {
       matchStage.date = {};
       if (startDate) (matchStage.date as Record<string, Date>).$gte = new Date(startDate);
-      if (endDate) (matchStage.date as Record<string, Date>).$lte = new Date(endDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        (matchStage.date as Record<string, Date>).$lte = end;
+      }
     }
 
     const [result] = await Transaction.aggregate([

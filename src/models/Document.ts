@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IDocumentDocument extends Document {
   car: mongoose.Types.ObjectId;
   carId: string;
-  documentType: 'Insurance' | 'Road Permit' | 'Registration Card';
+  documentType: 'Insurance' | 'Road Permit' | 'Registration Card' | 'Purchase Document';
   issueDate: Date;
   expiryDate: Date;
   fileUrl: string;
@@ -21,7 +21,7 @@ const DocumentSchema = new Schema<IDocumentDocument>(
     carId: { type: String, required: true },
     documentType: {
       type: String,
-      enum: ['Insurance', 'Road Permit', 'Registration Card'],
+      enum: ['Insurance', 'Road Permit', 'Registration Card', 'Purchase Document'],
       required: true,
     },
     issueDate: { type: Date, required: true },

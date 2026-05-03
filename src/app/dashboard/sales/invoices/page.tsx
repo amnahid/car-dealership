@@ -44,6 +44,7 @@ export default function InvoicesPage() {
   const [sendingInvoice, setSendingInvoice] = useState<Invoice | null>(null);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -99,6 +100,51 @@ export default function InvoicesPage() {
         window.open(`/uploads/invoices/invoice-${inv.saleId}.pdf`, '_blank');
       }
     });
+  };
+
+  const handleBulkRegenerate = async () => {
+    if (!confirm(t('regenerateConfirm') || 'Are you sure you want to regenerate the selected invoices?')) return;
+    
+    setRegenerating(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      for (const id of Array.from(selectedIds)) {
+        const inv = invoices.find(i => i._id === id);
+        if (!inv) continue;
+
+        const res = await fetch('/api/zatca/retry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            referenceId: inv.saleId,
+            referenceType: inv.referenceType
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const result = data.results?.[0];
+          if (result && result.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } else {
+          failCount++;
+        }
+      }
+
+      alert(`Regeneration complete.\nSuccess: ${successCount}\nFailed: ${failCount}`);
+      setSelectedIds(new Set());
+      fetchInvoices();
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred during bulk regeneration.');
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   const openSendModal = (invoice: Invoice) => {
@@ -197,8 +243,12 @@ export default function InvoicesPage() {
             <button onClick={handleBulkDownload} style={{ background: '#28aaa9', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '3px', cursor: 'pointer', fontSize: '14px' }}>
               {t('downloadSelected')}
             </button>
-            <button style={{ background: '#f5a623', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '3px', cursor: 'pointer', fontSize: '14px' }}>
-              {t('regenerateSelected')}
+            <button 
+              onClick={handleBulkRegenerate}
+              disabled={regenerating}
+              style={{ background: '#f5a623', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '3px', cursor: regenerating ? 'not-allowed' : 'pointer', fontSize: '14px', opacity: regenerating ? 0.7 : 1 }}
+            >
+              {regenerating ? commonT('loading') : t('regenerateSelected')}
             </button>
           </div>
         )}

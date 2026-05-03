@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import { connectDB } from '@/lib/db';
-import Car from '@/models/Car';
+import { connectDB, runInTransaction } from '@/lib/db';
+import Car, { ICarRaw } from '@/models/Car';
 import CarPurchase from '@/models/CarPurchase';
 import Repair from '@/models/Repair';
 import VehicleDocument from '@/models/Document';
 import Transaction from '@/models/Transaction';
 import User from '@/models/User';
 import Supplier from '@/models/Supplier';
+import EditRequest from '@/models/EditRequest';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
 import { getTafweedStatus } from '@/lib/tafweed';
+import { syncPurchaseDocuments } from '@/lib/syncDocuments';
 
 export async function GET(
   _request: NextRequest,
@@ -40,7 +42,7 @@ export async function GET(
 
     const carWithTafweedStatus = {
       ...car,
-      tafweedStatus: getTafweedStatus((car as any).tafweedExpiryDate ?? null),
+      tafweedStatus: getTafweedStatus((car as unknown as ICarRaw).tafweedExpiryDate ?? null),
     };
 
     return NextResponse.json({ car: carWithTafweedStatus, repairs, documents });
@@ -67,111 +69,125 @@ export async function PUT(
     const body = await request.json();
     const { purchase, ...carData } = body;
 
-    const session = await mongoose.startSession();
-    let car;
+    // INTERCEPTION: If not Admin, queue for approval
+    if (auth.normalizedRole !== 'Admin') {
+      await EditRequest.create({
+        targetModel: 'Car',
+        targetId: id,
+        requestedBy: auth.userId,
+        proposedChanges: body, // Store the full body including purchase info
+        status: 'Pending'
+      });
 
-    try {
-      await session.withTransaction(async () => {
-        car = await Car.findById(id).session(session);
-        if (!car) throw new Error('Car not found');
+      await logActivity({
+        userId: auth.userId,
+        userName: auth.name,
+        action: `Requested update for car: ${id}`,
+        module: 'Cars',
+        targetId: id,
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
 
-        // Prevent manual status changes for critical states
-        if (carData.status && carData.status !== car.status) {
-          const protectedStatuses = ['Sold', 'Rented', 'Defaulted', 'On Installment', 'Reserved', 'Under Repair'];
-          if (protectedStatuses.includes(car.status)) {
-            throw new Error(`Cannot manually change status of a ${car.status} car. Use the appropriate sale, rental, or repair workflow.`);
-          }
-          if (protectedStatuses.includes(carData.status)) {
-            throw new Error(`Cannot manually set status to ${carData.status}. Use the appropriate sale, rental, or repair workflow.`);
-          }
+      return NextResponse.json({ 
+        message: 'Edit request submitted for admin approval', 
+        isPending: true 
+      });
+    }
+
+    const updatedCar = await runInTransaction(async (session) => {
+      const car = await Car.findById(id).session(session);
+      if (!car) throw new Error('Car not found');
+
+      // Prevent manual status changes for critical states
+      if (carData.status && carData.status !== car.status) {
+        const protectedStatuses = ['Sold', 'Rented', 'Defaulted', 'On Installment', 'Reserved', 'Under Repair'];
+        if (protectedStatuses.includes(car.status)) {
+          throw new Error(`Cannot manually change status of a ${car.status} car. Use the appropriate sale, rental, or repair workflow.`);
         }
+        if (protectedStatuses.includes(carData.status)) {
+          throw new Error(`Cannot manually set status to ${carData.status}. Use the appropriate sale, rental, or repair workflow.`);
+        }
+      }
 
-        if (Object.keys(carData).length > 0) {
-          Object.assign(car, carData);
+      if (Object.keys(carData).length > 0) {
+        Object.assign(car, carData);
+        await car.save({ session });
+      }
+
+      if (purchase) {
+        if (car.purchase) {
+          const existingPurchase = await CarPurchase.findById(car.purchase).session(session);
+          const oldTransaction = await Transaction.findOne({ 
+            referenceId: car.carId, 
+            referenceType: 'CarPurchase' 
+          }).session(session);
+
+          if (existingPurchase && existingPurchase.purchasePrice !== purchase.purchasePrice) {
+            if (oldTransaction) {
+              oldTransaction.amount = purchase.purchasePrice;
+              oldTransaction.description = `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`;
+              await oldTransaction.save({ session });
+              purchase.transactionId = oldTransaction._id;
+            } else {
+              const transactions = await Transaction.create([{
+                date: purchase.purchaseDate || new Date(),
+                type: 'Expense',
+                category: 'Car Purchase',
+                amount: purchase.purchasePrice,
+                description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
+                referenceId: car.carId,
+                referenceType: 'CarPurchase',
+                createdBy: auth.userId,
+              }], { session });
+              purchase.transactionId = transactions[0]._id;
+            }
+          }
+
+          await CarPurchase.findByIdAndUpdate(car.purchase, purchase, { session });
+        } else {
+          const transactions = await Transaction.create([{
+            date: purchase.purchaseDate || new Date(),
+            type: 'Expense',
+            category: 'Car Purchase',
+            amount: purchase.purchasePrice,
+            description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
+            referenceId: car.carId,
+            referenceType: 'CarPurchase',
+            createdBy: auth.userId,
+          }], { session });
+          
+          const carPurchases = await CarPurchase.create([{
+            car: car._id,
+            ...purchase,
+            transactionId: transactions[0]._id,
+            createdBy: auth.userId,
+          }], { session });
+          
+          car.purchase = carPurchases[0]._id;
           await car.save({ session });
         }
 
-        if (purchase) {
-          if (car.purchase) {
-            const existingPurchase = await CarPurchase.findById(car.purchase).session(session);
-            const oldTransaction = await Transaction.findOne({ 
-              referenceId: car.carId, 
-              referenceType: 'CarPurchase' 
-            }).session(session);
-
-            if (existingPurchase && existingPurchase.purchasePrice !== purchase.purchasePrice) {
-              if (oldTransaction) {
-                oldTransaction.amount = purchase.purchasePrice;
-                oldTransaction.description = `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`;
-                await oldTransaction.save({ session });
-                purchase.transactionId = oldTransaction._id;
-              } else {
-                const transactions = await Transaction.create([{
-                  date: purchase.purchaseDate || new Date(),
-                  type: 'Expense',
-                  category: 'Car Purchase',
-                  amount: purchase.purchasePrice,
-                  description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
-                  referenceId: car.carId,
-                  referenceType: 'CarPurchase',
-                  createdBy: auth.userId,
-                }], { session });
-                purchase.transactionId = transactions[0]._id;
-              }
-            }
-
-            await CarPurchase.findByIdAndUpdate(car.purchase, purchase, { session });
-          } else {
-            const transactions = await Transaction.create([{
-              date: purchase.purchaseDate || new Date(),
-              type: 'Expense',
-              category: 'Car Purchase',
-              amount: purchase.purchasePrice,
-              description: `Purchase: ${car.brand} ${car.model} (${car.carId}) from ${purchase.supplierName}`,
-              referenceId: car.carId,
-              referenceType: 'CarPurchase',
-              createdBy: auth.userId,
-            }], { session });
-            
-            const carPurchases = await CarPurchase.create([{
-              car: car._id,
-              ...purchase,
-              transactionId: transactions[0]._id,
-              createdBy: auth.userId,
-            }], { session });
-            
-            car.purchase = carPurchases[0]._id;
-            await car.save({ session });
-          }
-        }
-
-        await logActivity({
-          userId: auth.userId,
-          userName: auth.name,
-          action: `Updated car ${car.carId}`,
-          module: 'Cars',
-          targetId: car._id.toString(),
-          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        });
-      });
-    } catch (txError: any) {
-      console.error('Car update transaction failed:', txError);
-      if (txError.message === 'Car not found') {
-        return NextResponse.json({ error: 'Car not found' }, { status: 404 });
+        // Sync documents to VehicleDocument collection
+        await syncPurchaseDocuments(car.carId, car._id, purchase, auth.userId, session);
       }
-      throw txError;
-    } finally {
-      await session.endSession();
-    }
 
-    const updatedCar = await Car.findById(id)
-      .populate('createdBy', 'name email')
-      .populate('purchase');
+      await logActivity({
+        userId: auth.userId,
+        userName: auth.name,
+        action: `Updated car ${car.carId}`,
+        module: 'Cars',
+        targetId: car._id.toString(),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return await Car.findById(id).session(session).populate('createdBy', 'name email').populate('purchase');
+    });
 
     return NextResponse.json({ car: updatedCar });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update car error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    if (error.message === 'Car not found') return NextResponse.json({ error: 'Car not found' }, { status: 404 });
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 400 });
   }
 }
 

@@ -8,7 +8,7 @@
  * @param data Array of objects to convert.
  * @returns CSV string.
  */
-export function jsonToCsv(data: any[]): string {
+export function jsonToCsv(data: Record<string, unknown>[]): string {
   if (!data || data.length === 0) return '';
 
   // Get headers from the first object, excluding MongoDB internal fields
@@ -22,7 +22,7 @@ export function jsonToCsv(data: any[]): string {
   // Add data rows
   for (const row of data) {
     const values = headers.map(header => {
-      let val = row[header];
+      const val = row[header];
       
       // Handle null/undefined
       if (val === null || val === undefined) return '';
@@ -48,14 +48,14 @@ export function jsonToCsv(data: any[]): string {
  * @param csv CSV string to parse.
  * @returns Array of objects.
  */
-export function csvToJson(csv: string): any[] {
+export function csvToJson(csv: string): Record<string, unknown>[] {
   if (!csv || csv.trim() === '') return [];
 
   const lines = csv.split(/\r?\n/);
   if (lines.length < 2) return [];
 
   const headers = lines[0].split(',');
-  const result = [];
+  const result: Record<string, unknown>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
@@ -82,7 +82,7 @@ export function csvToJson(csv: string): any[] {
     }
     values.push(currentVal);
 
-    const obj: any = {};
+    const obj: Record<string, unknown> = {};
     headers.forEach((header, index) => {
       const val = values[index];
       // Try to parse numbers or booleans
