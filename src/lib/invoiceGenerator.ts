@@ -85,6 +85,8 @@ interface InvoiceData {
 }
 
 function drawBarcode(doc: any, text: string, x: number, y: number, width: number, height: number) {
+  if (!text) return;
+  const safeText = String(text).toUpperCase();
   const code39: Record<string, string> = {
     '0': '101001101101', '1': '110100101011', '2': '101100101011', '3': '110110010101',
     '4': '101001101011', '5': '110100110101', '6': '101100110101', '7': '101001011011',
@@ -99,7 +101,7 @@ function drawBarcode(doc: any, text: string, x: number, y: number, width: number
     '$': '100100100101', '/': '100100101001', '+': '100101001001', '%': '101001001001'
   };
 
-  const fullText = `*${text.toUpperCase()}*`;
+  const fullText = `*${safeText}*`;
   let totalModules = 0;
   for (const char of fullText) {
     if (code39[char]) totalModules += code39[char].length + 1;
@@ -334,44 +336,48 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setLineWidth(0.3);
   doc.line(margin, y, pageWidth - margin, y);
 
-  // QR code (ZATCA compliant — mandatory for simplified invoices)
+  // QR code and Barcode Section
   const visualQR = await ensureVisualQRCode(data.zatcaQRCode || '');
+  const qrSize = 32;
+  const qrX = margin;
+  const qrY = pageHeight - margin - qrSize - 15; // Raised slightly
+
   if (visualQR && visualQR !== 'N/A') {
     try {
-      const qrSize = 35;
-      const qrY = pageHeight - margin - qrSize - 20;
       doc.setFontSize(7);
-      doc.setTextColor(120, 120, 120);
-      doc.text(processArabic('ZATCA QR Code / رمز الاستجابة السريعة'), margin, qrY - 2);
+      doc.setTextColor(100, 100, 100);
+      doc.text(processArabic('ZATCA QR Code / رمز الاستجابة السريعة'), qrX, qrY - 2);
       
       const format = visualQR.includes('jpeg') || visualQR.includes('jpg') ? 'JPEG' : 'PNG';
       const base64Data = visualQR.includes(';base64,') 
         ? visualQR.split(';base64,').pop() || ''
         : visualQR;
       
-      doc.addImage(base64Data, format, margin, qrY, qrSize, qrSize);
+      doc.addImage(base64Data, format, qrX, qrY, qrSize, qrSize);
 
-      // Add 1D Barcode on the right side
+      // 1D Barcode on the right
       const barcodeWidth = 50;
       const barcodeHeight = 10;
       const barcodeX = pageWidth - margin - barcodeWidth;
       const barcodeY = qrY + (qrSize / 2) - (barcodeHeight / 2);
+      
       drawBarcode(doc, data.saleId, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
       doc.setFontSize(7);
       doc.text(`Invoice ID: ${data.saleId}`, barcodeX + barcodeWidth / 2, barcodeY + barcodeHeight + 4, { align: 'center' });
 
     } catch (qrError) {
-      console.error('Failed to embed ZATCA QR Code in PDF:', qrError);
+      console.error('Failed to embed QR Code in PDF:', qrError);
     }
   } else {
-    // If no ZATCA QR, still add the 1D Barcode at the bottom
+    // Fallback: 1D Barcode only if no ZATCA QR
     const barcodeWidth = 60;
     const barcodeHeight = 12;
     const barcodeX = (pageWidth - barcodeWidth) / 2;
-    const barcodeY = pageHeight - margin - 40;
+    const barcodeY = pageHeight - margin - 35;
+    
     drawBarcode(doc, data.saleId, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
     doc.setFontSize(8);
-    doc.setTextColor(120, 120, 120);
+    doc.setTextColor(100, 100, 100);
     doc.text(`Invoice ID: ${data.saleId}`, pageWidth / 2, barcodeY + barcodeHeight + 5, { align: 'center' });
   }
 
