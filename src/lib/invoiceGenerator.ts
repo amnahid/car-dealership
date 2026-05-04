@@ -42,13 +42,17 @@ function processArabic(text: string): string {
   const reshapeFn = findReshape(reshaper);
   
   try {
-    // 1. Reshape: Convert to positional forms (joined characters)
+    // 1. Reshape first to handle joining
     let reshaped = reshapeFn ? reshapeFn(text) : text;
     
-    // 2. Visual Order: jsPDF with custom fonts needs visual order (reversed for RTL)
-    // We split by lines if any, or just reverse character-by-character.
-    // Note: Simple reversal works because reshaper already joined the characters into positional forms.
-    return reshaped.split('').reverse().join('');
+    // 2. Surgically reverse ONLY segments that contain Arabic/reshaped characters.
+    // This regex targets Arabic characters (original and reshaped forms).
+    // \u0600-\u06FF (Standard Arabic)
+    // \uFE70-\uFEFF (Arabic Presentation Forms-B / Reshaped)
+    // \uFB50-\uFDFF (Arabic Presentation Forms-A / Reshaped)
+    return reshaped.replace(/[\u0600-\u06FF\uFE70-\uFEFF\uFB50-\uFDFF]+/g, (match: string) => {
+      return match.split('').reverse().join('');
+    });
   } catch (e) {
     console.error('Arabic processing error:', e);
     return text;
@@ -61,9 +65,13 @@ interface InvoiceData {
   carId: string;
   carBrand?: string;
   carModel?: string;
+  carYear?: number;
+  carPlate?: string;
+  carVin?: string;
   customerName: string;
   customerPhone: string;
   customerAddress?: string;
+  customerId?: string;
   salePrice: number;
   discountType?: 'flat' | 'percentage';
   discountValue?: number;
@@ -72,6 +80,12 @@ interface InvoiceData {
   vatRate?: number;
   vatAmount?: number;
   finalPriceWithVat?: number;
+  downPayment?: number;
+  loanAmount?: number;
+  monthlyPayment?: number;
+  tenureMonths?: number;
+  startDate?: string;
+  endDate?: string;
   agentName?: string;
   agentCommission?: number;
   zatcaQRCode?: string;    // base64 QR image data URL
@@ -232,6 +246,11 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setTextColor(60, 60, 60);
   doc.text(`Name: ${processArabic(data.customerName)}`, margin, y);
 
+  if (data.customerId) {
+    y += 5;
+    doc.text(`ID/Iqama: ${data.customerId}`, margin, y);
+  }
+
   y += 5;
   doc.text(`Phone: ${data.customerPhone}`, margin, y);
 
@@ -252,10 +271,53 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
   doc.text(`Car ID: ${data.carId}`, margin, y);
+  
+  if (data.carPlate) {
+    doc.text(`Plate: ${data.carPlate}`, pageWidth / 2 + 5, y);
+  }
 
   if (data.carBrand || data.carModel) {
     y += 5;
     doc.text(`Vehicle: ${processArabic((data.carBrand || '') + ' ' + (data.carModel || ''))}`.trim(), margin, y);
+    if (data.carYear) {
+      doc.text(`Year: ${data.carYear}`, pageWidth / 2 + 5, y);
+    }
+  }
+
+  if (data.carVin) {
+    y += 5;
+    doc.text(`VIN: ${data.carVin}`, margin, y);
+  }
+
+  // Financial / Rental Details (if applicable)
+  if (data.downPayment !== undefined || data.tenureMonths || data.startDate) {
+    y += 12;
+    doc.setFontSize(10);
+    doc.setFont('Cairo', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(processArabic('Financial & Contract Details / التفاصيل المالية والتعاقدية'), margin, y);
+
+    y += 6;
+    doc.setFont('Cairo', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(60, 60, 60);
+
+    if (data.startDate) {
+      const dates = data.endDate ? `${new Date(data.startDate).toLocaleDateString('en-SA')} - ${new Date(data.endDate).toLocaleDateString('en-SA')}` : new Date(data.startDate).toLocaleDateString('en-SA');
+      doc.text(`Period: ${dates}`, margin, y);
+    }
+
+    if (data.tenureMonths) {
+      doc.text(`Tenure: ${data.tenureMonths} Months`, pageWidth / 2 + 5, y);
+    }
+
+    if (data.downPayment !== undefined) {
+      y += 5;
+      doc.text(`Down Payment: ${fmt(data.downPayment)}`, margin, y);
+      if (data.monthlyPayment) {
+        doc.text(`Monthly Payment: ${fmt(data.monthlyPayment)}`, pageWidth / 2 + 5, y);
+      }
+    }
   }
 
   // Payment table

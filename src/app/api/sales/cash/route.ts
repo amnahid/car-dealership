@@ -285,15 +285,19 @@ export async function POST(request: NextRequest) {
 
     try {
       const s = sale as ICashSaleDocument;
-      invoiceUrl = await generateInvoice({
+      const invoiceUrl = await generateInvoice({
         saleId: s.saleId,
         saleDate: s.saleDate.toString(),
         carId: s.carId,
         carBrand: carData?.brand,
-        carModel: carData?.carModel,
+        carModel: (carData as any)?.carModel || (carData as any)?.model,
+        carYear: carData?.year,
+        carPlate: carData?.plateNumber,
+        carVin: carData?.chassisNumber,
         customerName: s.customerName,
         customerPhone: s.customerPhone,
-        customerAddress: customerData ? `${customerData.buildingNumber} ${customerData.streetName}, ${customerData.district}, ${customerData.city} ${customerData.postalCode}` : '',
+        customerId: (customerData as any)?.otherId || (customerData as any)?.customerId,
+        customerAddress: customerData ? `${customerData.buildingNumber || ''} ${customerData.streetName || ''}, ${customerData.district || ''}, ${customerData.city || ''} ${customerData.postalCode || ''}`.trim() : '',
         salePrice: s.salePrice,
         discountType: s.discountType,
         discountValue: s.discountValue,
@@ -304,10 +308,11 @@ export async function POST(request: NextRequest) {
         finalPriceWithVat: s.finalPriceWithVat,
         agentName: s.agentName,
         agentCommission: s.agentCommission,
-        zatcaQRCode: zatcaResult?.qrCode,
-        zatcaUUID: zatcaResult?.uuid,
-        invoiceType,
+        zatcaQRCode: sale.zatcaQRCode,
+        zatcaUUID: sale.zatcaUUID,
+        invoiceType: s.invoiceType || 'Simplified',
       });
+
 
       const finalSale = await CashSale.findById(s._id);
       if (finalSale) {
