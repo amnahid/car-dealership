@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
-import InstallmentSale from '@/models/InstallmentSale';
+import InstallmentSale, { IInstallmentPayment } from '@/models/InstallmentSale';
 import EditRequest from '@/models/EditRequest';
-import Car from '@/models/Car';
-import Customer from '@/models/Customer';
+import Car, { ICarRaw } from '@/models/Car';
+import Customer, { ICustomerDocument } from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
@@ -149,12 +149,43 @@ export async function PUT(
     if (interestRate !== undefined) sale.interestRate = interestRate;
     if (tenureMonths !== undefined) sale.tenureMonths = tenureMonths;
     if (monthlyLateFee !== undefined) sale.monthlyLateFee = monthlyLateFee;
+
+    // Recalculate loan amount and schedule if financial terms changed
+    const financialsChanged = downPayment !== undefined || interestRate !== undefined || tenureMonths !== undefined;
+    if (financialsChanged) {
+      const principalAmount = sale.totalPrice - sale.downPayment;
+      const totalInterest = principalAmount * (sale.interestRate / 100);
+      sale.loanAmount = principalAmount + totalInterest;
+      
+      // If monthlyPayment wasn't explicitly provided, recalculate it
+      if (monthlyPayment === undefined) {
+        sale.monthlyPayment = Math.round((sale.loanAmount / sale.tenureMonths) * 100) / 100;
+      }
+      
+      sale.remainingAmount = sale.loanAmount - sale.totalPaid;
+
+      // Regenerate payment schedule
+      const start = new Date(sale.startDate);
+      const newSchedule: IInstallmentPayment[] = [];
+      for (let i = 1; i <= sale.tenureMonths; i++) {
+        const dueDate = new Date(start);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        newSchedule.push({
+          installmentNumber: i,
+          dueDate,
+          amount: sale.monthlyPayment,
+          status: 'Pending',
+        });
+      }
+      sale.paymentSchedule = newSchedule;
+    }
+
     if (notes !== undefined) sale.notes = notes;
-    if (agentName !== undefined) (sale as any).agentName = agentName;
-    if (agentCommission !== undefined) (sale as any).agentCommission = agentCommission;
-    if (guarantor !== undefined) (sale as any).guarantor = guarantor;
-    if (guarantorName !== undefined) (sale as any).guarantorName = guarantorName;
-    if (guarantorPhone !== undefined) (sale as any).guarantorPhone = guarantorPhone;
+    if (agentName !== undefined) sale.agentName = agentName;
+    if (agentCommission !== undefined) sale.agentCommission = agentCommission;
+    if (guarantor !== undefined) sale.guarantor = guarantor ? new mongoose.Types.ObjectId(guarantor) : undefined;
+    if (guarantorName !== undefined) sale.guarantorName = guarantorName;
+    if (guarantorPhone !== undefined) sale.guarantorPhone = guarantorPhone;
     if (
       tafweedAuthorizedTo !== undefined ||
       tafweedDriverIqama !== undefined ||
@@ -183,12 +214,12 @@ export async function PUT(
       sale.tafweedDriverIqama = validated.driverIqama;
       sale.tafweedDurationMonths = validated.durationMonths;
       sale.tafweedExpiryDate = validated.expiryDate;
-      (sale as any).tafweedStatus = getTafweedStatus(validated.expiryDate);
+      sale.tafweedStatus = getTafweedStatus(validated.expiryDate);
     }
 
     const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
     if (invoiceType !== undefined) sale.invoiceType = invoiceType;
-    if (buyerTrn !== undefined) (sale as any).buyerTrn = buyerTrn;
+    if (buyerTrn !== undefined) sale.buyerTrn = buyerTrn;
 
     await sale.save();
 
@@ -212,8 +243,8 @@ export async function PUT(
     if (zatcaFieldChanged) {
       try {
         const [customerDoc, carDoc] = await Promise.all([
-          Customer.findById(sale.customer).lean(),
-          Car.findById(sale.car).lean(),
+          Customer.findById(sale.customer).lean() as Promise<ICustomerDocument | null>,
+          Car.findById(sale.car).lean() as Promise<ICarRaw | null>,
         ]);
         const vatInfo = calculateVat(sale.totalPrice, ZATCA_VAT_RATE);
         const zatcaResult = await processZatcaInvoice({
@@ -225,20 +256,20 @@ export async function PUT(
           supplyDate: new Date(sale.startDate),
           buyer: {
             name: sale.customerName,
-            trn: (sale as any).buyerTrn || '',
-            buildingNumber: (customerDoc as any)?.buildingNumber,
-            streetName: (customerDoc as any)?.streetName,
-            district: (customerDoc as any)?.district,
-            city: (customerDoc as any)?.city,
-            postalCode: (customerDoc as any)?.postalCode,
-            countryCode: (customerDoc as any)?.countryCode || 'SA',
-            otherId: (customerDoc as any)?.otherId ? {
-              id: (customerDoc as any).otherId,
-              type: (customerDoc as any).otherIdType || 'CRN'
+            trn: sale.buyerTrn || '',
+            buildingNumber: customerDoc?.buildingNumber || '',
+            streetName: customerDoc?.streetName || '',
+            district: customerDoc?.district || '',
+            city: customerDoc?.city || '',
+            postalCode: customerDoc?.postalCode || '',
+            countryCode: customerDoc?.countryCode || 'SA',
+            otherId: customerDoc?.otherId ? {
+              id: customerDoc.otherId,
+              type: customerDoc.otherIdType || 'CRN'
             } : undefined
           },
           lineItems: [{
-            name: carDoc ? `${carDoc.brand} ${carDoc.model} (${sale.carId})`.trim() : sale.carId,
+            name: carDoc ? `${carDoc.brand} ${carDoc.carModel} (${sale.carId})`.trim() : sale.carId,
             quantity: 1,
             unitPrice: vatInfo.subtotal,
             vatRate: ZATCA_VAT_RATE,
@@ -313,8 +344,8 @@ export async function PATCH(
       }
 
       const [carData, customerData] = await Promise.all([
-        Car.findById(sale.car).lean() as any,
-        Customer.findById(sale.customer).lean() as any,
+        Car.findById(sale.car).lean() as Promise<ICarRaw | null>,
+        Customer.findById(sale.customer).lean() as Promise<ICustomerDocument | null>,
       ]);
 
       const invoiceUrl = await generateInvoice({
@@ -322,13 +353,13 @@ export async function PATCH(
         saleDate: sale.startDate.toString(),
         carId: sale.carId,
         carBrand: carData?.brand,
-        carModel: (carData as any)?.model || (carData as any)?.carModel,
+        carModel: carData?.carModel || '',
         carYear: carData?.year,
         carPlate: carData?.plateNumber,
         carVin: carData?.chassisNumber,
         customerName: sale.customerName,
         customerPhone: sale.customerPhone,
-        customerId: (customerData as any)?.otherId || (customerData as any)?.customerId,
+        customerId: customerData?.otherId || customerData?.customerId,
         customerAddress: customerData ? `${customerData.buildingNumber || ''} ${customerData.streetName || ''}, ${customerData.district || ''}, ${customerData.city || ''} ${customerData.postalCode || ''}`.trim() : '',
         salePrice: sale.totalPrice,
         discountAmount: 0,
@@ -369,7 +400,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
       }
 
-      const carData = await Car.findById(sale.car).lean() as any;
+      const carData = await Car.findById(sale.car).lean() as ICarRaw | null;
 
       const agreementUrl = await generateInstallmentAgreement({
         saleId: sale.saleId,
@@ -378,7 +409,7 @@ export async function PATCH(
         customerPhone: sale.customerPhone,
         carId: sale.carId,
         carBrand: carData?.brand || '',
-        carModel: carData?.model || '',
+        carModel: carData?.carModel || '',
         carYear: carData?.year || 0,
         carPlate: carData?.plateNumber || '',
         carVin: carData?.chassisNumber || '',

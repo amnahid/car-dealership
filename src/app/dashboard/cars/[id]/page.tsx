@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
-import GpsMap from '@/components/GpsMap';
 import Barcode from 'react-barcode';
 import { CarStatus } from '@/types';
 import { useTranslations, useLocale } from 'next-intl';
@@ -351,8 +350,6 @@ export default function CarDetailPage() {
           </div>
         )}
       </div>
-
-      <GpsMap carId={car._id} carName={`${car.brand} ${car.model}`} />
 
       {car.notes && (
         <div className="card" style={{ padding: '24px' }}>

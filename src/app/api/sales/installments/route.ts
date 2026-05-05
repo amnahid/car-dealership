@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError, runInTransaction } from '@/lib/db';
-import InstallmentSale, { IInstallmentPayment } from '@/models/InstallmentSale';
-import Car from '@/models/Car';
-import Customer from '@/models/Customer';
+import InstallmentSale, { IInstallmentSaleDocument, IInstallmentPayment } from '@/models/InstallmentSale';
+import Car, { ICarRaw } from '@/models/Car';
+import Customer, { ICustomerDocument } from '@/models/Customer';
 import Transaction from '@/models/Transaction';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
@@ -194,16 +194,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let sale: any = null;
-    let customerDoc: any = null;
-    let carDoc: any = null;
+    let sale: IInstallmentSaleDocument | null = null;
+    let customerDoc: ICustomerDocument | null = null;
+    let carDoc: ICarRaw | null = null;
 
     const result = await runInTransaction(async (session) => {
       const carCheck = await Car.findById(car).session(session);
       if (!carCheck) throw new Error('Car not found');
       if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
 
-      const customerDocInTx = await Customer.findById(customer).session(session).lean();
+      const customerDocInTx = await Customer.findById(customer).session(session).lean() as ICustomerDocument | null;
       if (!customerDocInTx) throw new Error('Customer not found');
 
       const sales = await InstallmentSale.create([{
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
         monthlyLateFee: monthlyLateFee ?? 200,
         agentName: agentName || '',
         agentCommission: agentCommission || 0,
-        guarantor: guarantor || undefined,
+        guarantor: (guarantor ? new mongoose.Types.ObjectId(guarantor) : undefined),
         guarantorName: guarantorName || '',
         guarantorPhone: guarantorPhone || '',
         status: 'Active',
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
         tafweedDriverIqama: tafweedData.driverIqama,
         tafweedDurationMonths: tafweedData.durationMonths,
         tafweedExpiryDate: tafweedData.expiryDate,
-        driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
+        driverLicenseExpiryDate: customerDocInTx.licenseExpiryDate ? new Date(customerDocInTx.licenseExpiryDate) : undefined,
         notes,
         vatRate: ZATCA_VAT_RATE,
         vatAmount: vatInfo.vatAmount,
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
         tafweedDriverIqama: tafweedData.driverIqama,
         tafweedDurationMonths: tafweedData.durationMonths,
         tafweedExpiryDate: tafweedData.expiryDate,
-        driverLicenseExpiryDate: (customerDocInTx as any).licenseExpiryDate ? new Date((customerDocInTx as any).licenseExpiryDate) : undefined,
+        driverLicenseExpiryDate: customerDocInTx.licenseExpiryDate ? new Date(customerDocInTx.licenseExpiryDate) : undefined,
       }, { session });
       
       await Transaction.create([{
@@ -297,28 +297,28 @@ export async function POST(request: NextRequest) {
     // Process ZATCA invoice
     try {
       const zatcaResult = await processZatcaInvoice({
-        referenceId: (sale as any)._id.toString(),
+        referenceId: sale._id.toString(),
         referenceType: 'InstallmentSale',
-        saleId: (sale as any).saleId,
+        saleId: sale.saleId,
         invoiceType: (invoiceType as 'Standard' | 'Simplified') || 'Simplified',
         issueDate: new Date(startDate),
         supplyDate: new Date(startDate),
         buyer: {
           name: customerName,
           trn: buyerTrn,
-          buildingNumber: (customerDoc as any)?.buildingNumber,
-          streetName: (customerDoc as any)?.streetName,
-          district: (customerDoc as any)?.district,
-          city: (customerDoc as any)?.city,
-          postalCode: (customerDoc as any)?.postalCode,
-          countryCode: (customerDoc as any)?.countryCode || 'SA',
-          otherId: (customerDoc as any)?.otherId ? {
-            id: (customerDoc as any).otherId,
-            type: (customerDoc as any).otherIdType || 'CRN'
+          buildingNumber: customerDoc?.buildingNumber || '',
+          streetName: customerDoc?.streetName || '',
+          district: customerDoc?.district || '',
+          city: customerDoc?.city || '',
+          postalCode: customerDoc?.postalCode || '',
+          countryCode: customerDoc?.countryCode || 'SA',
+          otherId: customerDoc?.otherId ? {
+            id: customerDoc.otherId,
+            type: customerDoc.otherIdType || 'CRN'
           } : undefined
         },
         lineItems: [{
-          name: carDoc ? `${(carDoc as any).brand} ${(carDoc as any).model} (${carId})`.trim() : carId,
+          name: carDoc ? `${carDoc.brand} ${carDoc.carModel} (${carId})`.trim() : carId,
           quantity: 1,
           unitPrice: vatInfo.subtotal,
           vatRate: ZATCA_VAT_RATE,
@@ -417,7 +417,7 @@ export async function POST(request: NextRequest) {
         customerPhone: s.customerPhone,
         carId: s.carId,
         carBrand: carDoc?.brand || '',
-        carModel: carDoc?.model || '',
+        carModel: carDoc?.carModel || '',
         carYear: carDoc?.year || 0,
         carPlate: carDoc?.plateNumber || '',
         carVin: carDoc?.chassisNumber || '',

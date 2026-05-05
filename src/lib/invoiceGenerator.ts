@@ -1,24 +1,10 @@
 import { jsPDF } from 'jspdf';
 import fs from 'fs';
 import path from 'path';
-// @ts-expect-error
+// @ts-expect-error - No type definitions for arabic-reshaper
 import arabicReshaper from 'arabic-reshaper';
-// @ts-expect-error
-import bidiFactoryImport from 'bidi-js';
 
-// Robust detection for CJS/ESM interop in Turbopack/Next.js
-const bidiFactory = typeof bidiFactoryImport === 'function' 
-  ? bidiFactoryImport 
-  : (bidiFactoryImport as any).default;
-
-const bidi = typeof bidiFactory === 'function' 
-  ? bidiFactory() 
-  : { 
-      getReorderedString: (s: string) => s,
-      getEmbeddingLevels: (s: string) => ({ paragraphs: [] })
-    };
-
-import { processZatcaInvoice, ZATCA_VAT_RATE, ensureVisualQRCode } from '@/lib/zatca/invoiceService';
+import { ensureVisualQRCode } from '@/lib/zatca/invoiceService';
 
 function processArabic(text: string): string {
   if (!text) return '';
@@ -26,8 +12,13 @@ function processArabic(text: string): string {
   if (!/[\u0600-\u06FF]/.test(text)) return text;
   
   // Robust detection for CJS/ESM interop
-  let reshaper: any = arabicReshaper;
-  const findReshape = (obj: any): Function | null => {
+  interface ReshaperObj {
+    convertArabic?: (s: string) => string;
+    reshape?: (s: string) => string;
+    default?: ReshaperObj;
+  }
+  const reshaper = arabicReshaper as ReshaperObj;
+  const findReshape = (obj: ReshaperObj): ((t: string) => string) | null => {
     if (!obj) return null;
     if (typeof obj.convertArabic === 'function') return obj.convertArabic.bind(obj);
     if (typeof obj.reshape === 'function') return obj.reshape.bind(obj);
@@ -43,7 +34,7 @@ function processArabic(text: string): string {
   
   try {
     // 1. Reshape first to handle joining
-    let reshaped = reshapeFn ? reshapeFn(text) : text;
+    const reshaped = reshapeFn ? reshapeFn(text) : text;
     
     // 2. Surgically reverse ONLY segments that contain Arabic/reshaped characters.
     // This regex targets Arabic characters (original and reshaped forms).
@@ -93,7 +84,7 @@ interface InvoiceData {
   invoiceType?: string;    // 'Standard' | 'Simplified'
 }
 
-function drawBarcode(doc: any, text: string, x: number, y: number, width: number, height: number) {
+function drawBarcode(doc: jsPDF, text: string, x: number, y: number, width: number, height: number) {
   if (!text) return;
   const safeText = String(text).toUpperCase();
   const code39: Record<string, string> = {
@@ -119,8 +110,8 @@ function drawBarcode(doc: any, text: string, x: number, y: number, width: number
   const moduleWidth = width / totalModules;
   let currentX = x;
 
-  doc.setDrawColor(0);
-  doc.setFillColor(0);
+  doc.setDrawColor(0, 0, 0);
+  doc.setFillColor(0, 0, 0);
 
   for (const char of fullText) {
     const pattern = code39[char] || code39[' '];
@@ -213,13 +204,13 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setFontSize(9);
   doc.setTextColor(51, 51, 51);
   doc.setFont('Cairo', 'bold');
-  doc.text('Invoice No:', margin, y);
+  doc.text(`${processArabic('Invoice No / رقم الفاتورة')}:`, margin, y);
   doc.setFont('Cairo', 'normal');
-  doc.text(data.saleId, margin + 22, y);
+  doc.text(data.saleId, margin + 35, y);
   doc.setFont('Cairo', 'bold');
-  doc.text('Date:', pageWidth / 2 + 5, y);
+  doc.text(`${processArabic('Date / التاريخ')}:`, pageWidth / 2 + 5, y);
   doc.setFont('Cairo', 'normal');
-  doc.text(new Date(data.saleDate).toLocaleDateString('en-SA'), pageWidth / 2 + 18, y);
+  doc.text(new Date(data.saleDate).toLocaleDateString('en-SA'), pageWidth / 2 + 25, y);
 
   if (data.zatcaUUID) {
     y += 5;
@@ -244,19 +235,19 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setFont('Cairo', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
-  doc.text(`Name: ${processArabic(data.customerName)}`, margin, y);
+  doc.text(`${processArabic('Name / الاسم')}: ${processArabic(data.customerName)}`, margin, y);
 
   if (data.customerId) {
     y += 5;
-    doc.text(`ID/Iqama: ${data.customerId}`, margin, y);
+    doc.text(`${processArabic('ID/Iqama / الهوية/الإقامة')}: ${data.customerId}`, margin, y);
   }
 
   y += 5;
-  doc.text(`Phone: ${data.customerPhone}`, margin, y);
+  doc.text(`${processArabic('Phone / الهاتف')}: ${data.customerPhone}`, margin, y);
 
   if (data.customerAddress) {
     y += 5;
-    doc.text(`Address: ${processArabic(data.customerAddress)}`, margin, y);
+    doc.text(`${processArabic('Address / العنوان')}: ${processArabic(data.customerAddress)}`, margin, y);
   }
 
   // Vehicle details
@@ -270,23 +261,23 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setFont('Cairo', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
-  doc.text(`Car ID: ${data.carId}`, margin, y);
+  doc.text(`${processArabic('Car ID / رقم المركبة')}: ${data.carId}`, margin, y);
   
   if (data.carPlate) {
-    doc.text(`Plate: ${data.carPlate}`, pageWidth / 2 + 5, y);
+    doc.text(`${processArabic('Plate / رقم اللوحة')}: ${data.carPlate}`, pageWidth / 2 + 5, y);
   }
 
   if (data.carBrand || data.carModel) {
     y += 5;
-    doc.text(`Vehicle: ${processArabic((data.carBrand || '') + ' ' + (data.carModel || ''))}`.trim(), margin, y);
+    doc.text(`${processArabic('Vehicle / المركبة')}: ${processArabic((data.carBrand || '') + ' ' + (data.carModel || ''))}`.trim(), margin, y);
     if (data.carYear) {
-      doc.text(`Year: ${data.carYear}`, pageWidth / 2 + 5, y);
+      doc.text(`${processArabic('Year / سنة الصنع')}: ${data.carYear}`, pageWidth / 2 + 5, y);
     }
   }
 
   if (data.carVin) {
     y += 5;
-    doc.text(`VIN: ${data.carVin}`, margin, y);
+    doc.text(`${processArabic('VIN / رقم الهيكل')}: ${data.carVin}`, margin, y);
   }
 
   // Financial / Rental Details (if applicable)
@@ -304,18 +295,18 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
 
     if (data.startDate) {
       const dates = data.endDate ? `${new Date(data.startDate).toLocaleDateString('en-SA')} - ${new Date(data.endDate).toLocaleDateString('en-SA')}` : new Date(data.startDate).toLocaleDateString('en-SA');
-      doc.text(`Period: ${dates}`, margin, y);
+      doc.text(`${processArabic('Period / الفترة')}: ${dates}`, margin, y);
     }
 
     if (data.tenureMonths) {
-      doc.text(`Tenure: ${data.tenureMonths} Months`, pageWidth / 2 + 5, y);
+      doc.text(`${processArabic('Tenure / المدة')}: ${data.tenureMonths} ${processArabic('Months / شهر')}`, pageWidth / 2 + 5, y);
     }
 
     if (data.downPayment !== undefined) {
       y += 5;
-      doc.text(`Down Payment: ${fmt(data.downPayment)}`, margin, y);
+      doc.text(`${processArabic('Down Payment / الدفعة الأولى')}: ${fmt(data.downPayment)}`, margin, y);
       if (data.monthlyPayment) {
-        doc.text(`Monthly Payment: ${fmt(data.monthlyPayment)}`, pageWidth / 2 + 5, y);
+        doc.text(`${processArabic('Monthly Payment / القسط الشهري')}: ${fmt(data.monthlyPayment)}`, pageWidth / 2 + 5, y);
       }
     }
   }
@@ -335,8 +326,8 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setFont('Cairo', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
-  doc.text('Description', margin, y);
-  doc.text(`Amount (${currency})`, pageWidth - margin, y, { align: 'right' });
+  doc.text(processArabic('Description / الوصف'), margin, y);
+  doc.text(processArabic(`Amount (${currency}) / المبلغ (${currency})`), pageWidth - margin, y, { align: 'right' });
 
   y += 4;
   doc.line(margin, y, pageWidth - margin, y);
@@ -425,7 +416,7 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
       
       drawBarcode(doc, data.saleId, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
       doc.setFontSize(7);
-      doc.text(`Invoice ID: ${data.saleId}`, barcodeX + barcodeWidth / 2, barcodeY + barcodeHeight + 4, { align: 'center' });
+      doc.text(`${processArabic('Invoice ID / رقم الفاتورة')}: ${data.saleId}`, barcodeX + barcodeWidth / 2, barcodeY + barcodeHeight + 4, { align: 'center' });
 
     } catch (qrError) {
       console.error('Failed to embed QR Code in PDF:', qrError);
@@ -440,7 +431,7 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
     drawBarcode(doc, data.saleId, barcodeX, barcodeY, barcodeWidth, barcodeHeight);
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Invoice ID: ${data.saleId}`, pageWidth / 2, barcodeY + barcodeHeight + 5, { align: 'center' });
+    doc.text(`${processArabic('Invoice ID / رقم الفاتورة')}: ${data.saleId}`, pageWidth / 2, barcodeY + barcodeHeight + 5, { align: 'center' });
   }
 
   // Footer
@@ -449,7 +440,7 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setTextColor(136, 136, 136);
   doc.setFont('Cairo', 'normal');
   doc.text(processArabic('Thank you for your business! / شكراً لتعاملكم معنا'), pageWidth / 2, footerY, { align: 'center' });
-  doc.text('This is a computer-generated tax invoice.', pageWidth / 2, footerY + 5, { align: 'center' });
+  doc.text(processArabic('This is a computer-generated tax invoice. / هذه الفاتورة تم إنشاؤها آلياً.'), pageWidth / 2, footerY + 5, { align: 'center' });
 
   const pdfBuffer = doc.output('arraybuffer');
   fs.writeFileSync(filePath, Buffer.from(pdfBuffer));

@@ -261,6 +261,7 @@
     "guarantorName": "اسم الكفيل",
     "guarantorPhone": "هاتف الكفيل",
     "createSale": "إنشاء عملية بيع",
+    "notes": "ملاحظات",
     "statuses": {
       "active": "نشط",
       "completed": "مكتمل",
@@ -447,6 +448,7 @@
     "purchases": "المشتريات",
     "repairs": "الإصلاحات",
     "stock": "المخزون",
+    "gps_tracking": "تتبع الـ GPS",
     "documents": "المستندات",
     "sales": "المبيعات",
     "allSales": "جميع المبيعات",
@@ -1015,5 +1017,9 @@
     "rejected": "مرفوض",
     "reviewNotes": "ملاحظات المراجعة",
     "proposedChanges": "التغييرات المقترحة"
+  },
+  "GpsDashboard": {
+    "title": "لوحة متابعة الـ GPS",
+    "selectProvider": "اختر مزود الـ GPS"
   }
 }

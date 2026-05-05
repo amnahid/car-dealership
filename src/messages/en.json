@@ -261,6 +261,7 @@
     "guarantorName": "Guarantor Name",
     "guarantorPhone": "Guarantor Phone",
     "createSale": "Create Sale",
+    "notes": "Notes",
     "statuses": {
       "active": "Active",
       "completed": "Completed",
@@ -447,6 +448,7 @@
     "purchases": "Purchases",
     "repairs": "Repairs",
     "stock": "Stock",
+    "gps_tracking": "GPS Tracking",
     "documents": "Documents",
     "sales": "Sales",
     "allSales": "All Sales",
@@ -1021,5 +1023,9 @@
     "rejected": "Rejected",
     "reviewNotes": "Review Notes",
     "proposedChanges": "Proposed Changes"
+  },
+  "GpsDashboard": {
+    "title": "GPS Tracking Dashboard",
+    "selectProvider": "Select GPS Provider"
   }
 }

@@ -35,6 +35,7 @@ const navItems: MenuItem[] = [
       { href: '/dashboard/cars/purchases', labelKey: 'purchases', icon: '', roles: ['Admin', 'Car Manager'] },
       { href: '/dashboard/repairs', labelKey: 'repairs', icon: '', roles: ['Admin', 'Car Manager'] },
       { href: '/dashboard/cars/stock', labelKey: 'stock', icon: '', roles: ['Admin', 'Car Manager'] },
+      { href: '/dashboard/cars/gps', labelKey: 'gps_tracking', icon: '', roles: ['Admin', 'Car Manager'] },
       { href: '/dashboard/documents', labelKey: 'documents', icon: '', roles: ['Admin', 'Car Manager'] },
     ]
   },

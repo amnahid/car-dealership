@@ -820,7 +820,16 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '500px', maxWidth: '90%', textAlign: isRtl ? 'right' : 'left' }}>
+      <div style={{ 
+        background: '#ffffff', 
+        padding: '24px', 
+        borderRadius: '8px', 
+        width: '500px', 
+        maxWidth: '90%', 
+        maxHeight: '90vh', 
+        overflowY: 'auto', 
+        textAlign: isRtl ? 'right' : 'left' 
+      }}>
         <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('editSale', { id: sale.saleId })}</h3>
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
