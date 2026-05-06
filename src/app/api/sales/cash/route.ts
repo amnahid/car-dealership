@@ -107,6 +107,9 @@ export async function POST(request: NextRequest) {
       buyerTrn,
       registrationDriverName,
       registrationDriverIqama,
+      applyVat = true,
+      vatInclusive = false,
+      vatRate = ZATCA_VAT_RATE,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !salePrice || !saleDate) {
@@ -117,7 +120,10 @@ export async function POST(request: NextRequest) {
       ? Math.round(salePrice * (discountValue || 0) / 100 * 100) / 100
       : (discountValue || 0);
     const finalPrice = salePrice - computedDiscountAmount;
-    const { vatAmount, totalWithVat } = calculateVat(finalPrice, ZATCA_VAT_RATE);
+    const effectiveApplyVat = Boolean(applyVat);
+    const effectiveVatRate = effectiveApplyVat ? Number(vatRate) || ZATCA_VAT_RATE : 0;
+    const effectiveVatInclusive = effectiveApplyVat ? Boolean(vatInclusive) : false;
+    const { subtotal, vatAmount, totalWithVat } = calculateVat(finalPrice, effectiveVatRate, effectiveVatInclusive);
 
     let sale: any = null;
     let customerData: any = null;
@@ -141,9 +147,11 @@ export async function POST(request: NextRequest) {
         discountType,
         discountValue: discountValue || 0,
         discountAmount: computedDiscountAmount,
-        finalPrice,
-        vatRate: ZATCA_VAT_RATE,
+        finalPrice: subtotal,
+        applyVat: effectiveApplyVat,
+        vatRate: effectiveVatRate,
         vatAmount,
+        vatInclusive: effectiveVatInclusive,
         finalPriceWithVat: totalWithVat,
         agentName,
         agentCommission: agentCommission || 0,
@@ -235,10 +243,10 @@ export async function POST(request: NextRequest) {
           } : undefined
         },
         lineItems: [{
-          name: `${carData?.brand || ''} ${carData?.carModel || ''} (${carId})`.trim(),
+          name: `${carData?.brand || ''} ${carData?.carModel || (carData as any)?.model || ''} - Plate: ${carData?.plateNumber || '-'} - VIN: ${carData?.chassisNumber || '-'}`.trim(),
           quantity: 1,
           unitPrice: finalPrice,
-          vatRate: ZATCA_VAT_RATE,
+          vatRate: effectiveVatRate,
           vatAmount,
           totalAmount: totalWithVat,
         }],
@@ -285,7 +293,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const s = sale as ICashSaleDocument;
-      const invoiceUrl = await generateInvoice({
+      invoiceUrl = await generateInvoice({
         saleId: s.saleId,
         saleDate: s.saleDate.toString(),
         carId: s.carId,
@@ -294,6 +302,9 @@ export async function POST(request: NextRequest) {
         carYear: carData?.year,
         carPlate: carData?.plateNumber,
         carVin: carData?.chassisNumber,
+        carEngineNumber: carData?.engineNumber,
+        carSequenceNumber: carData?.sequenceNumber,
+        carColor: carData?.color,
         customerName: s.customerName,
         customerPhone: s.customerPhone,
         customerId: (customerData as any)?.otherId || (customerData as any)?.customerId,

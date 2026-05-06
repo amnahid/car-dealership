@@ -59,6 +59,9 @@ interface InvoiceData {
   carYear?: number;
   carPlate?: string;
   carVin?: string;
+  carEngineNumber?: string;
+  carSequenceNumber?: string;
+  carColor?: string;
   customerName: string;
   customerPhone: string;
   customerAddress?: string;
@@ -278,6 +281,19 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   if (data.carVin) {
     y += 5;
     doc.text(`${processArabic('VIN / رقم الهيكل')}: ${data.carVin}`, margin, y);
+    if (data.carEngineNumber) {
+      doc.text(`${processArabic('Engine / رقم المحرك')}: ${data.carEngineNumber}`, pageWidth / 2 + 5, y);
+    }
+  }
+
+  if (data.carSequenceNumber) {
+    y += 5;
+    doc.text(`${processArabic('Sequence / رقم التسلسل')}: ${data.carSequenceNumber}`, margin, y);
+  }
+
+  if (data.carColor) {
+    y += 5;
+    doc.text(`${processArabic('Color / اللون')}: ${processArabic(data.carColor)}`, margin, y);
   }
 
   // Financial / Rental Details (if applicable)

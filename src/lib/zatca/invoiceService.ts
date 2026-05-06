@@ -207,11 +207,21 @@ export async function processZatcaInvoice(input: ZatcaSaleInput): Promise<ZatcaP
  */
 export function calculateVat(
   finalPrice: any,
-  vatRate: any = ZATCA_VAT_RATE
+  vatRate: any = ZATCA_VAT_RATE,
+  inclusive: boolean = false
 ): { subtotal: number; vatAmount: number; totalWithVat: number } {
-  const subtotal = Number(finalPrice) || 0;
+  const price = Number(finalPrice) || 0;
   const rate = Number(vatRate) || 0;
-  const vatAmount = Math.round(subtotal * (rate / 100) * 100) / 100;
-  const totalWithVat = Math.round((subtotal + vatAmount) * 100) / 100;
-  return { subtotal, vatAmount, totalWithVat };
+
+  if (inclusive && rate > 0) {
+    const totalWithVat = price;
+    const subtotal = Math.round((totalWithVat / (1 + rate / 100)) * 100) / 100;
+    const vatAmount = Math.round((totalWithVat - subtotal) * 100) / 100;
+    return { subtotal, vatAmount, totalWithVat };
+  } else {
+    const subtotal = price;
+    const vatAmount = Math.round(subtotal * (rate / 100) * 100) / 100;
+    const totalWithVat = Math.round((subtotal + vatAmount) * 100) / 100;
+    return { subtotal, vatAmount, totalWithVat };
+  }
 }

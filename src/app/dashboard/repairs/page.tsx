@@ -28,7 +28,7 @@ export default function RepairsPage() {
   const isRtl = locale === 'ar';
 
   const [repairs, setRepairs] = useState<Repair[]>([]);
-  const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string }[]>([]);
+  const [cars, setCars] = useState<{ _id: string; carId: string; brand: string; model: string; year: number; color?: string; plateNumber?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);

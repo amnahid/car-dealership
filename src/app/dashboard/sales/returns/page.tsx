@@ -10,7 +10,7 @@ interface Sale {
   saleId: string;
   type: string;
   carId: string;
-  car?: { brand: string; model: string; images: string[] };
+  car?: { brand: string; model: string; year: number; color?: string; plateNumber?: string; images: string[] };
   customerName: string;
   customerPhone: string;
   totalPrice: number;
@@ -30,7 +30,7 @@ interface PurchaseReturn {
   penaltyAmount: number;
   returnDate: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Completed';
-  car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
+  car?: { _id: string; carId: string; brand: string; model: string; year: number; color?: string; plateNumber?: string; images: string[] };
   customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
 }
 
@@ -335,7 +335,7 @@ export default function ReturnsPage() {
                   <option value="">{t('selectSalePlaceholder')}</option>
                   {availableSales.map((sale) => (
                     <option key={sale.saleId} value={sale.saleId}>
-                      {sale.saleId} - {sale.carId} - {sale.customerName} ({formatCurrency(sale.totalPrice)})
+                      {sale.saleId} - {sale.car?.brand} {sale.car?.model} ({sale.car?.year}) - {sale.customerName} ({formatCurrency(sale.totalPrice)})
                     </option>
                   ))}
                 </select>
@@ -345,7 +345,7 @@ export default function ReturnsPage() {
                 <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f9fa', borderRadius: '4px' }}>
                   <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>{t('details')}</div>
                   <div style={{ fontSize: '13px', color: '#525f80', display: 'grid', gap: '4px' }}>
-                    <div><strong>{t('car')}:</strong> {selectedSale.carId} - {selectedSale.car?.brand} {selectedSale.car?.model}</div>
+                    <div><strong>{t('car')}:</strong> {selectedSale.car?.brand} {selectedSale.car?.model} ({selectedSale.car?.year}){selectedSale.car?.plateNumber ? ` - ${selectedSale.car?.plateNumber}` : ` - ${selectedSale.carId}`}{selectedSale.car?.color ? ` - ${selectedSale.car?.color}` : ''}</div>
                     <div><strong>{t('customer')}:</strong> {selectedSale.customerName} ({selectedSale.customerPhone})</div>
                     <div><strong>{t('price')}:</strong> {formatCurrency(selectedSale.totalPrice)}</div>
                   </div>

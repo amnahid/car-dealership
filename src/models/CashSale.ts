@@ -15,8 +15,10 @@ export interface ICashSaleDocument extends Document {
   discountValue: number;
   discountAmount: number;
   finalPrice: number;
+  applyVat: boolean;
   vatRate: number;
   vatAmount: number;
+  vatInclusive: boolean;
   finalPriceWithVat: number;
   agentName?: string;
   agentCommission?: number;
@@ -53,8 +55,10 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     discountValue: { type: Number, default: 0, min: 0 },
     discountAmount: { type: Number, default: 0, min: 0 },
     finalPrice: { type: Number, required: true, min: 0 },
+    applyVat: { type: Boolean, default: true },
     vatRate: { type: Number, default: 15, min: 0 },
     vatAmount: { type: Number, default: 0, min: 0 },
+    vatInclusive: { type: Boolean, default: false },
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },

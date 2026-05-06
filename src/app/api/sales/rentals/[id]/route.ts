@@ -30,7 +30,7 @@ export async function GET(
 
     await connectDB();
 
-    const rental = await Rental.findById(id).lean();
+    const rental = await Rental.findById(id).populate('car').lean();
     if (!rental) {
       return NextResponse.json({ error: 'Rental not found' }, { status: 404 });
     }
@@ -79,7 +79,8 @@ export async function PUT(
 
     const body = await request.json();
     const {
-      dailyRate, securityDeposit, returnDate, actualReturnDate, notes, status, invoiceType, buyerTrn, agentName, agentCommission,
+      dailyRate, rateType, securityDeposit, returnDate, actualReturnDate, notes, status, invoiceType, buyerTrn, agentName, agentCommission,
+      applyVat, vatRate, vatInclusive,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
     } = body;
 
@@ -132,7 +133,8 @@ export async function PUT(
             rental.lateFee = (rental.lateFee || 0) + extraCharge;
             
             // Re-calculate totals
-            const totalWithVat = rental.totalAmountWithVat + extraCharge * (1 + (rental.vatRate || 15) / 100);
+            const effectiveVatRate = rental.applyVat ? (rental.vatRate || ZATCA_VAT_RATE) : 0;
+            const totalWithVat = rental.totalAmountWithVat + extraCharge * (1 + effectiveVatRate / 100);
             rental.totalAmountWithVat = Math.round(totalWithVat * 100) / 100;
             
             // Generate a transaction for the late fee
@@ -184,6 +186,7 @@ export async function PUT(
     }
 
     if (dailyRate !== undefined) rental.dailyRate = dailyRate;
+    if (rateType !== undefined) rental.rateType = rateType;
     if (securityDeposit !== undefined) rental.securityDeposit = securityDeposit;
     if (returnDate !== undefined) rental.returnDate = new Date(returnDate);
     if (actualReturnDate !== undefined) rental.actualReturnDate = new Date(actualReturnDate);
@@ -220,6 +223,23 @@ export async function PUT(
     if (notes !== undefined) rental.notes = notes;
     if (agentName !== undefined) (rental as any).agentName = agentName;
     if (agentCommission !== undefined) (rental as any).agentCommission = agentCommission;
+    const applyVatChanged = applyVat !== undefined;
+    const vatRateChanged = vatRate !== undefined;
+    const vatInclusiveChanged = vatInclusive !== undefined;
+
+    if (applyVatChanged) {
+      rental.applyVat = Boolean(applyVat);
+    }
+
+    const effectiveApplyVat = Boolean(rental.applyVat ?? ((rental.vatRate ?? 0) > 0));
+    const requestedVatRate = vatRateChanged ? Number(vatRate) : Number(rental.vatRate);
+    const effectiveVatRate = effectiveApplyVat ? (requestedVatRate || ZATCA_VAT_RATE) : 0;
+    const effectiveVatInclusive = effectiveApplyVat ? (vatInclusiveChanged ? Boolean(vatInclusive) : Boolean(rental.vatInclusive)) : false;
+    const vatInfo = calculateVat(rental.totalAmount, effectiveVatRate, effectiveVatInclusive);
+    rental.vatRate = effectiveVatRate;
+    rental.vatInclusive = effectiveVatInclusive;
+    rental.vatAmount = vatInfo.vatAmount;
+    rental.totalAmountWithVat = vatInfo.totalWithVat;
 
     const zatcaFieldChanged = invoiceType !== undefined || buyerTrn !== undefined;
     if (invoiceType !== undefined) rental.invoiceType = invoiceType;
@@ -243,8 +263,15 @@ export async function PUT(
       });
     }
 
-    // Re-run ZATCA if invoiceType or buyerTrn changed
-    if (zatcaFieldChanged) {
+    const shouldRerunZatca =
+      zatcaFieldChanged ||
+      dailyRate !== undefined ||
+      applyVatChanged ||
+      vatRateChanged ||
+      vatInclusiveChanged;
+
+    // Re-run ZATCA when invoice/pricing data changes
+    if (shouldRerunZatca) {
       try {
         const [customerDoc, carDoc] = await Promise.all([
           Customer.findById(rental.customer).lean(),
@@ -252,9 +279,8 @@ export async function PUT(
         ]);
         const diffTime = Math.abs(new Date(rental.endDate).getTime() - new Date(rental.startDate).getTime());
         const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-        const vatInfo = calculateVat(rental.totalAmount, ZATCA_VAT_RATE);
         const rentalDesc = carDoc
-          ? `Rental - ${carDoc.brand} ${carDoc.model} (${days} days)`.trim()
+          ? `Rental - ${carDoc.brand} ${carDoc.model || (carDoc as any).carModel} (${days} days) - Plate: ${carDoc.plateNumber || '-'} - VIN: ${carDoc.chassisNumber || '-'}`.trim()
           : `Rental - ${rental.carId} (${days} days)`;
         const zatcaResult = await processZatcaInvoice({
           referenceId: rental._id.toString(),
@@ -281,13 +307,13 @@ export async function PUT(
             name: rentalDesc,
             quantity: days,
             unitPrice: rental.dailyRate,
-            vatRate: ZATCA_VAT_RATE,
-            vatAmount: vatInfo.vatAmount,
-            totalAmount: vatInfo.totalWithVat,
+            vatRate: rental.vatRate || 0,
+            vatAmount: rental.vatAmount || 0,
+            totalAmount: rental.totalAmountWithVat || rental.totalAmount,
           }],
-          subtotal: vatInfo.subtotal,
-          vatTotal: vatInfo.vatAmount,
-          totalWithVat: vatInfo.totalWithVat,
+          subtotal: rental.totalAmount,
+          vatTotal: rental.vatAmount || 0,
+          totalWithVat: rental.totalAmountWithVat || rental.totalAmount,
           notes: rental.notes,
           createdBy: user.userId,
         });
@@ -297,7 +323,11 @@ export async function PUT(
           zatcaHash: zatcaResult.xmlHash,
           zatcaStatus: zatcaResult.status,
           zatcaResponse: zatcaResult.zatcaResponse,
-          vatAmount: vatInfo.vatAmount,
+          applyVat: rental.applyVat,
+          vatRate: rental.vatRate,
+          vatInclusive: rental.vatInclusive,
+          vatAmount: rental.vatAmount,
+          totalAmountWithVat: rental.totalAmountWithVat,
         });
       } catch (zatcaError) {
         console.error('ZATCA reprocessing failed:', zatcaError);
@@ -365,6 +395,9 @@ export async function PATCH(
         carYear: carData?.year,
         carPlate: carData?.plateNumber,
         carVin: carData?.chassisNumber,
+        carEngineNumber: carData?.engineNumber,
+        carSequenceNumber: carData?.sequenceNumber,
+        carColor: carData?.color,
         customerName: rental.customerName,
         customerPhone: rental.customerPhone,
         customerId: (customerData as any)?.otherId || (customerData as any)?.customerId,
@@ -372,9 +405,9 @@ export async function PATCH(
         salePrice: rental.totalAmount,
         discountAmount: 0,
         finalPrice: rental.totalAmount,
-        vatRate: rental.vatRate || 15,
+        vatRate: rental.vatRate || 0,
         vatAmount: rental.vatAmount || 0,
-        finalPriceWithVat: rental.totalAmountWithVat || 0,
+        finalPriceWithVat: rental.totalAmountWithVat || rental.totalAmount,
         startDate: rental.startDate.toString(),
         endDate: rental.endDate.toString(),
         agentName: rental.agentName,
@@ -418,6 +451,9 @@ export async function PATCH(
         carYear: carData?.year || 0,
         carPlate: carData?.plateNumber || '',
         carVin: carData?.chassisNumber || '',
+        carEngineNumber: carData?.engineNumber,
+        carSequenceNumber: carData?.sequenceNumber,
+        carColor: carData?.color,
         startDate: rental.startDate.toString(),
         endDate: rental.endDate.toString(),
         dailyRate: rental.dailyRate,

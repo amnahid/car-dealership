@@ -23,7 +23,7 @@ export async function GET(
     const { id } = await params;
 
     const purchase = await CarPurchase.findById(id)
-      .populate('car', 'carId brand model year color engineNumber chassisNumber')
+      .populate('car', 'carId brand model year color engineNumber chassisNumber sequenceNumber plateNumber')
       .populate('supplier', 'companyName supplierId phone email address')
       .populate('createdBy', 'name email')
       .lean();

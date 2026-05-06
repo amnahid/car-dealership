@@ -13,6 +13,12 @@ interface Car {
   carId: string;
   brand: string;
   model: string;
+  plateNumber?: string;
+  chassisNumber?: string;
+  engineNumber?: string;
+  sequenceNumber?: string;
+  year?: number;
+  color?: string;
   images: string[];
   status?: string;
   purchasePrice?: number;
@@ -58,6 +64,9 @@ interface Sale {
   buyerTrn?: string;
   zatcaUUID?: string;
   zatcaQRCode?: string;
+  applyVat?: boolean;
+  vatRate?: number;
+  vatInclusive?: boolean;
   vatAmount?: number;
   finalPriceWithVat?: number;
 }
@@ -409,7 +418,27 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', salePrice: '', discountType: 'flat' as 'flat' | 'percentage', discountValue: '0', agentName: '', agentCommission: '', saleDate: new Date().toISOString().split('T')[0], notes: '', invoiceType: 'Simplified', buyerTrn: '', registrationDriverName: '', registrationDriverIqama: '' });
+  const [form, setForm] = useState({
+    car: '',
+    carId: '',
+    customer: '',
+    customerName: '',
+    customerPhone: '',
+    salePrice: '',
+    discountType: 'flat' as 'flat' | 'percentage',
+    discountValue: '0',
+    agentName: '',
+    agentCommission: '',
+    saleDate: new Date().toISOString().split('T')[0],
+    notes: '',
+    invoiceType: 'Simplified',
+    buyerTrn: '',
+    registrationDriverName: '',
+    registrationDriverIqama: '',
+    calculateVat: true,
+    vatInclusive: false,
+  });
+
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -462,10 +491,16 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
     if (!form.car || !form.customer) { alert('Please select a car and customer'); return; }
     setLoading(true);
     try {
+      const payload = {
+        ...form,
+        applyVat: form.calculateVat,
+        vatRate: form.calculateVat ? 15 : 0,
+        vatInclusive: form.calculateVat ? form.vatInclusive : false,
+      };
       const res = await fetch('/api/sales/cash', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
       onSave();
@@ -500,7 +535,10 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
               label={`${t('selectCar')} *`}
               value={form.carId}
               onChange={handleCarChange}
-              options={cars.map(c => ({ value: c.carId, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+              options={cars.map(c => ({ 
+                value: c.carId, 
+                label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}`
+              }))}
               placeholder={t('searchCar')}
             />
           </div>
@@ -561,6 +599,18 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>{t('taxInvoice')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, calculateVat: !form.calculateVat })}>
+                <input type="checkbox" checked={form.calculateVat} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'حساب ضريبة القيمة المضافة (15%)' : 'Calculate 15% VAT'}</span>
+              </div>
+              {form.calculateVat && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, vatInclusive: !form.vatInclusive })}>
+                  <input type="checkbox" checked={form.vatInclusive} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                  <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'السعر شامل الضريبة' : 'Price is VAT Inclusive'}</span>
+                </div>
+              )}
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <div>
                 <label style={labelStyle}>{t('invoiceType')}</label>
@@ -670,6 +720,8 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
     agentCommission: sale.agentCommission?.toString() || '',
     saleDate: sale.saleDate.split('T')[0],
     notes: sale.notes || '',
+    calculateVat: sale.applyVat ?? ((sale.vatRate || 0) > 0),
+    vatInclusive: !!(sale as any).vatInclusive,
   });
   const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
@@ -684,7 +736,13 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(sale._id, form as any);
+      const payload = {
+        ...form,
+        applyVat: form.calculateVat,
+        vatRate: form.calculateVat ? 15 : 0,
+        vatInclusive: form.calculateVat ? form.vatInclusive : false,
+      };
+      await onSave(sale._id, payload as any);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -750,6 +808,18 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
                 placeholder="0" 
               />
             </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, calculateVat: !form.calculateVat })}>
+              <input type="checkbox" checked={form.calculateVat} onChange={() => {}} style={{ cursor: 'pointer' }} />
+              <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'حساب ضريبة القيمة المضافة (15%)' : 'Calculate 15% VAT'}</span>
+            </div>
+            {form.calculateVat && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, vatInclusive: !form.vatInclusive })}>
+                <input type="checkbox" checked={form.vatInclusive} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'السعر شامل الضريبة' : 'Price is VAT Inclusive'}</span>
+              </div>
+            )}
           </div>
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>{commonT('description')}</label>

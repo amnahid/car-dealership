@@ -26,7 +26,7 @@ export async function GET(
     await connectDB();
 
     const returnItem = await PurchaseReturn.findById(id)
-      .populate('car', 'carId brand model images')
+      .populate('car', 'carId brand model year plateNumber chassisNumber engineNumber sequenceNumber color images')
       .populate('customer', 'fullName phone profilePhoto')
       .populate('createdBy', 'name')
       .populate('approvedBy', 'name')

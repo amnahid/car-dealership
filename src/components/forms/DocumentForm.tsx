@@ -11,6 +11,9 @@ interface CarOption {
   carId: string;
   brand: string;
   model: string;
+  year: number;
+  color?: string;
+  plateNumber?: string;
 }
 
 interface DocSection {
@@ -207,7 +210,10 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
           label={commonT('brand')}
           value={selectedCar}
           onChange={setSelectedCar}
-          options={cars.map(c => ({ value: c._id, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+          options={cars.map(c => ({ 
+            value: c._id, 
+            label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}`
+          }))}
           placeholder={t('selectCar')}
         />
         <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '8px' }}>

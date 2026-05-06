@@ -31,7 +31,7 @@ export async function GET(
     await connectDB();
 
     const sale = await InstallmentSale.findById(id)
-      .populate('car', 'carId brand model images')
+      .populate('car', 'carId brand model year plateNumber chassisNumber engineNumber sequenceNumber color images')
       .populate('customer', 'fullName phone email nationalId buildingNumber streetName district city postalCode otherId otherIdType vatRegistrationNumber')
       .populate('guarantor', 'fullName phone nationalId employer salary buildingNumber streetName district city postalCode documents profilePhoto')
       .lean();
@@ -85,6 +85,7 @@ export async function PUT(
     const body = await request.json();
     const {
       downPayment, monthlyPayment, interestRate, tenureMonths, monthlyLateFee, notes, invoiceType, buyerTrn, agentName, agentCommission, status,
+      applyVat, vatRate, vatInclusive,
       guarantor, guarantorName, guarantorPhone,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
     } = body;
@@ -183,6 +184,24 @@ export async function PUT(
     if (notes !== undefined) sale.notes = notes;
     if (agentName !== undefined) sale.agentName = agentName;
     if (agentCommission !== undefined) sale.agentCommission = agentCommission;
+    const applyVatChanged = applyVat !== undefined;
+    const vatRateChanged = vatRate !== undefined;
+    const vatInclusiveChanged = vatInclusive !== undefined;
+
+    if (applyVatChanged) {
+      sale.applyVat = Boolean(applyVat);
+    }
+
+    const effectiveApplyVat = Boolean(sale.applyVat ?? ((sale.vatRate ?? 0) > 0));
+    const requestedVatRate = vatRateChanged ? Number(vatRate) : Number(sale.vatRate);
+    const effectiveVatRate = effectiveApplyVat ? (requestedVatRate || ZATCA_VAT_RATE) : 0;
+    const effectiveVatInclusive = effectiveApplyVat ? (vatInclusiveChanged ? Boolean(vatInclusive) : Boolean(sale.vatInclusive)) : false;
+    const vatInfo = calculateVat(sale.totalPrice, effectiveVatRate, effectiveVatInclusive);
+    sale.vatRate = effectiveVatRate;
+    sale.vatInclusive = effectiveVatInclusive;
+    sale.vatAmount = vatInfo.vatAmount;
+    sale.finalPriceWithVat = vatInfo.totalWithVat;
+
     if (guarantor !== undefined) sale.guarantor = guarantor ? new mongoose.Types.ObjectId(guarantor) : undefined;
     if (guarantorName !== undefined) sale.guarantorName = guarantorName;
     if (guarantorPhone !== undefined) sale.guarantorPhone = guarantorPhone;
@@ -239,14 +258,20 @@ export async function PUT(
       });
     }
 
-    // Re-run ZATCA if invoiceType or buyerTrn changed
-    if (zatcaFieldChanged) {
+    const shouldRerunZatca =
+      zatcaFieldChanged ||
+      financialsChanged ||
+      applyVatChanged ||
+      vatRateChanged ||
+      vatInclusiveChanged;
+
+    // Re-run ZATCA when invoice/financial data changes
+    if (shouldRerunZatca) {
       try {
         const [customerDoc, carDoc] = await Promise.all([
           Customer.findById(sale.customer).lean() as Promise<ICustomerDocument | null>,
           Car.findById(sale.car).lean() as Promise<ICarRaw | null>,
         ]);
-        const vatInfo = calculateVat(sale.totalPrice, ZATCA_VAT_RATE);
         const zatcaResult = await processZatcaInvoice({
           referenceId: sale._id.toString(),
           referenceType: 'InstallmentSale',
@@ -269,16 +294,16 @@ export async function PUT(
             } : undefined
           },
           lineItems: [{
-            name: carDoc ? `${carDoc.brand} ${carDoc.carModel} (${sale.carId})`.trim() : sale.carId,
+            name: carDoc ? `${carDoc.brand} ${carDoc.carModel || (carDoc as any).model} - Plate: ${carDoc.plateNumber || '-'} - VIN: ${carDoc.chassisNumber || '-'}`.trim() : sale.carId,
             quantity: 1,
-            unitPrice: vatInfo.subtotal,
-            vatRate: ZATCA_VAT_RATE,
-            vatAmount: vatInfo.vatAmount,
-            totalAmount: vatInfo.totalWithVat,
+            unitPrice: sale.totalPrice,
+            vatRate: sale.vatRate || 0,
+            vatAmount: sale.vatAmount || 0,
+            totalAmount: sale.finalPriceWithVat || sale.totalPrice,
           }],
-          subtotal: vatInfo.subtotal,
-          vatTotal: vatInfo.vatAmount,
-          totalWithVat: vatInfo.totalWithVat,
+          subtotal: sale.totalPrice,
+          vatTotal: sale.vatAmount || 0,
+          totalWithVat: sale.finalPriceWithVat || sale.totalPrice,
           notes: sale.notes,
           createdBy: user.userId,
         });
@@ -288,8 +313,11 @@ export async function PUT(
           zatcaHash: zatcaResult.xmlHash,
           zatcaStatus: zatcaResult.status,
           zatcaResponse: zatcaResult.zatcaResponse,
-          vatAmount: vatInfo.vatAmount,
-          finalPriceWithVat: vatInfo.totalWithVat,
+          applyVat: sale.applyVat,
+          vatRate: sale.vatRate,
+          vatInclusive: sale.vatInclusive,
+          vatAmount: sale.vatAmount,
+          finalPriceWithVat: sale.finalPriceWithVat,
         });
       } catch (zatcaError) {
         console.error('ZATCA reprocessing failed:', zatcaError);
@@ -357,6 +385,9 @@ export async function PATCH(
         carYear: carData?.year,
         carPlate: carData?.plateNumber,
         carVin: carData?.chassisNumber,
+        carEngineNumber: carData?.engineNumber,
+        carSequenceNumber: carData?.sequenceNumber,
+        carColor: carData?.color,
         customerName: sale.customerName,
         customerPhone: sale.customerPhone,
         customerId: customerData?.otherId || customerData?.customerId,
@@ -364,9 +395,9 @@ export async function PATCH(
         salePrice: sale.totalPrice,
         discountAmount: 0,
         finalPrice: sale.totalPrice,
-        vatRate: sale.vatRate || 15,
+        vatRate: sale.vatRate || 0,
         vatAmount: sale.vatAmount || 0,
-        finalPriceWithVat: sale.finalPriceWithVat || 0,
+        finalPriceWithVat: sale.finalPriceWithVat || sale.totalPrice,
         downPayment: sale.downPayment,
         loanAmount: sale.loanAmount,
         monthlyPayment: sale.monthlyPayment,
@@ -413,6 +444,9 @@ export async function PATCH(
         carYear: carData?.year || 0,
         carPlate: carData?.plateNumber || '',
         carVin: carData?.chassisNumber || '',
+        carEngineNumber: carData?.engineNumber,
+        carSequenceNumber: carData?.sequenceNumber,
+        carColor: carData?.color,
         totalPrice: sale.totalPrice,
         downPayment: sale.downPayment,
         loanAmount: sale.loanAmount,

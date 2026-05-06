@@ -147,6 +147,9 @@ export async function POST(request: NextRequest) {
       agentName, agentCommission,
       guarantor, guarantorName, guarantorPhone,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
+      applyVat = true,
+      vatInclusive = false,
+      vatRate = ZATCA_VAT_RATE,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !totalPrice || !downPayment || !tenureMonths || !startDate) {
@@ -159,7 +162,10 @@ export async function POST(request: NextRequest) {
     const monthlyPayment = loanAmount / tenureMonths;
     const remainingAmount = loanAmount;
 
-    const vatInfo = calculateVat(totalPrice, ZATCA_VAT_RATE);
+    const effectiveApplyVat = Boolean(applyVat);
+    const effectiveVatRate = effectiveApplyVat ? Number(vatRate) || ZATCA_VAT_RATE : 0;
+    const effectiveVatInclusive = effectiveApplyVat ? Boolean(vatInclusive) : false;
+    const vatInfo = calculateVat(totalPrice, effectiveVatRate, effectiveVatInclusive);
 
     const start = new Date(startDate);
     const paymentSchedule: IInstallmentPayment[] = [];
@@ -212,7 +218,7 @@ export async function POST(request: NextRequest) {
         customer,
         customerName,
         customerPhone,
-        totalPrice,
+        totalPrice: vatInfo.subtotal,
         downPayment,
         loanAmount,
         monthlyPayment: Math.round(monthlyPayment * 100) / 100,
@@ -239,8 +245,10 @@ export async function POST(request: NextRequest) {
         tafweedExpiryDate: tafweedData.expiryDate,
         driverLicenseExpiryDate: customerDocInTx.licenseExpiryDate ? new Date(customerDocInTx.licenseExpiryDate) : undefined,
         notes,
-        vatRate: ZATCA_VAT_RATE,
+        applyVat: effectiveApplyVat,
+        vatRate: effectiveVatRate,
         vatAmount: vatInfo.vatAmount,
+        vatInclusive: effectiveVatInclusive,
         finalPriceWithVat: vatInfo.totalWithVat,
         invoiceType: invoiceType || 'Simplified',
         createdBy: user.userId,
@@ -321,7 +329,7 @@ export async function POST(request: NextRequest) {
           name: carDoc ? `${carDoc.brand} ${carDoc.carModel} (${carId})`.trim() : carId,
           quantity: 1,
           unitPrice: vatInfo.subtotal,
-          vatRate: ZATCA_VAT_RATE,
+          vatRate: effectiveVatRate,
           vatAmount: vatInfo.vatAmount,
           totalAmount: vatInfo.totalWithVat,
         }],
@@ -375,6 +383,9 @@ export async function POST(request: NextRequest) {
         carYear: carDoc?.year,
         carPlate: carDoc?.plateNumber,
         carVin: carDoc?.chassisNumber,
+        carEngineNumber: (carDoc as any)?.engineNumber,
+        carSequenceNumber: (carDoc as any)?.sequenceNumber,
+        carColor: (carDoc as any)?.color,
         customerName: s.customerName,
         customerPhone: s.customerPhone,
         customerId: (customerDoc as any)?.otherId || (customerDoc as any)?.customerId,
@@ -421,6 +432,9 @@ export async function POST(request: NextRequest) {
         carYear: carDoc?.year || 0,
         carPlate: carDoc?.plateNumber || '',
         carVin: carDoc?.chassisNumber || '',
+        carEngineNumber: carDoc?.engineNumber,
+        carSequenceNumber: carDoc?.sequenceNumber,
+        carColor: carDoc?.color,
         totalPrice: s.totalPrice,
         downPayment: s.downPayment,
         loanAmount: s.loanAmount,

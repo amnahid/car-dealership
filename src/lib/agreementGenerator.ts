@@ -66,6 +66,9 @@ interface CommonData {
   carYear: number;
   carPlate: string;
   carVin: string;
+  carEngineNumber?: string;
+  carSequenceNumber?: string;
+  carColor?: string;
 }
 
 interface InstallmentData extends CommonData {
@@ -202,6 +205,21 @@ export async function generateInstallmentAgreement(data: InstallmentData): Promi
   y += 5;
   doc.text(`Plate No: ${data.carPlate}`, margin, y);
   doc.text(`VIN (Chassis): ${data.carVin}`, pageWidth - margin, y, { align: 'right' });
+  
+  if (data.carEngineNumber || data.carSequenceNumber) {
+    y += 5;
+    if (data.carEngineNumber) {
+      doc.text(`Engine No: ${data.carEngineNumber}`, margin, y);
+    }
+    if (data.carSequenceNumber) {
+      doc.text(`Sequence No: ${data.carSequenceNumber}`, pageWidth - margin, y, { align: 'right' });
+    }
+  }
+
+  if (data.carColor) {
+    y += 5;
+    doc.text(`Color: ${processArabic(data.carColor)}`, margin, y);
+  }
 
   // Payment
   y += 12;
@@ -308,6 +326,21 @@ export async function generateRentalAgreement(data: RentalData): Promise<string>
   y += 5;
   doc.text(`Plate No: ${data.carPlate}`, margin, y);
   doc.text(`VIN (Chassis): ${data.carVin}`, pageWidth - margin, y, { align: 'right' });
+  
+  if (data.carEngineNumber || data.carSequenceNumber) {
+    y += 5;
+    if (data.carEngineNumber) {
+      doc.text(`Engine No: ${data.carEngineNumber}`, margin, y);
+    }
+    if (data.carSequenceNumber) {
+      doc.text(`Sequence No: ${data.carSequenceNumber}`, pageWidth - margin, y, { align: 'right' });
+    }
+  }
+
+  if (data.carColor) {
+    y += 5;
+    doc.text(`Color: ${processArabic(data.carColor)}`, margin, y);
+  }
 
   // Rental Details
   y += 12;

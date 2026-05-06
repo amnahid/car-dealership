@@ -15,9 +15,21 @@ export interface IRentalDocument extends Document {
   endDate: Date;
   dailyRate: number;
   totalAmount: number;
+  applyVat: boolean;
   vatRate: number;
   vatAmount: number;
+  vatInclusive: boolean;
   totalAmountWithVat: number;
+  paidAmount: number;
+  remainingAmount: number;
+  rateType: 'Daily' | 'Monthly';
+  payments: Array<{
+    amount: number;
+    date: Date;
+    method: 'Cash' | 'Bank' | 'Online';
+    reference?: string;
+    note?: string;
+  }>;
   securityDeposit: number;
   status: RentalStatus;
   isDeleted: boolean;
@@ -60,9 +72,23 @@ const RentalSchema = new Schema<IRentalDocument>(
     endDate: { type: Date, required: true },
     dailyRate: { type: Number, required: true, min: 0 },
     totalAmount: { type: Number, required: true, min: 0 },
+    applyVat: { type: Boolean, default: true },
     vatRate: { type: Number, default: 15, min: 0 },
     vatAmount: { type: Number, default: 0, min: 0 },
+    vatInclusive: { type: Boolean, default: false },
     totalAmountWithVat: { type: Number, default: 0, min: 0 },
+    paidAmount: { type: Number, default: 0, min: 0 },
+    remainingAmount: { type: Number, default: 0, min: 0 },
+    rateType: { type: String, enum: ['Daily', 'Monthly'], default: 'Daily' },
+    payments: [
+      {
+        amount: { type: Number, required: true },
+        date: { type: Date, default: Date.now },
+        method: { type: String, enum: ['Cash', 'Bank', 'Online'], default: 'Cash' },
+        reference: { type: String },
+        note: { type: String },
+      },
+    ],
     securityDeposit: { type: Number, default: 0, min: 0 },
     status: { type: String, enum: ['Active', 'Completed', 'Cancelled', 'Overdue'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },

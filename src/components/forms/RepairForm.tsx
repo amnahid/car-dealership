@@ -25,6 +25,9 @@ interface CarOption {
   carId: string;
   brand: string;
   model: string;
+  year: number;
+  color?: string;
+  plateNumber?: string;
 }
 
 interface RepairFormProps {
@@ -169,7 +172,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
             <option value="">{t('selectCar')}</option>
             {cars.map((car) => (
               <option key={car._id} value={car._id}>
-                {car.carId} - {car.brand} {car.model}
+                {car.brand} {car.model} ({car.year}){car.plateNumber ? ` - ${car.plateNumber}` : ` - ${car.carId}`}{car.color ? ` - ${car.color}` : ''}
               </option>
             ))}
           </select>

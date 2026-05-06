@@ -28,7 +28,7 @@ export async function GET(
 
     await connectDB();
 
-    const sale = await CashSale.findById(id).lean();
+    const sale = await CashSale.findById(id).populate('car').lean();
     if (!sale) {
       return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
     }
@@ -77,7 +77,21 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { saleDate, salePrice, discountType, discountValue, agentName, agentCommission, notes, status, invoiceType, buyerTrn } = body;
+    const {
+      saleDate,
+      salePrice,
+      discountType,
+      discountValue,
+      applyVat,
+      vatRate,
+      vatInclusive,
+      agentName,
+      agentCommission,
+      notes,
+      status,
+      invoiceType,
+      buyerTrn,
+    } = body;
 
     // INTERCEPTION: If not Admin, queue for approval
     if (user.normalizedRole !== 'Admin') {
@@ -164,6 +178,25 @@ export async function PUT(
       }
     }
     sale.finalPrice = sale.salePrice - sale.discountAmount;
+    const applyVatChanged = applyVat !== undefined;
+    const vatRateChanged = vatRate !== undefined;
+    const vatInclusiveChanged = vatInclusive !== undefined;
+
+    if (applyVatChanged) {
+      sale.applyVat = Boolean(applyVat);
+    }
+
+    const effectiveApplyVat = Boolean(sale.applyVat ?? ((sale.vatRate ?? 0) > 0));
+    const requestedVatRate = vatRateChanged ? Number(vatRate) : Number(sale.vatRate);
+    const effectiveVatRate = effectiveApplyVat ? (requestedVatRate || ZATCA_VAT_RATE) : 0;
+    const effectiveVatInclusive = effectiveApplyVat ? (vatInclusiveChanged ? Boolean(vatInclusive) : Boolean(sale.vatInclusive)) : false;
+    const vatInfo = calculateVat(sale.finalPrice, effectiveVatRate, effectiveVatInclusive);
+
+    sale.vatRate = effectiveVatRate;
+    sale.vatInclusive = effectiveVatInclusive;
+    sale.vatAmount = vatInfo.vatAmount;
+    sale.finalPriceWithVat = vatInfo.totalWithVat;
+
     if (agentName !== undefined) sale.agentName = agentName;
     if (agentCommission !== undefined) sale.agentCommission = agentCommission;
     if (notes !== undefined) sale.notes = notes;
@@ -184,12 +217,20 @@ export async function PUT(
       }
     );
 
-    // Re-run ZATCA if invoiceType or buyerTrn changed
-    if (zatcaFieldChanged) {
+    const shouldRerunZatca =
+      zatcaFieldChanged ||
+      salePrice !== undefined ||
+      discountType !== undefined ||
+      discountValue !== undefined ||
+      applyVatChanged ||
+      vatRateChanged ||
+      vatInclusiveChanged;
+
+    // Re-run ZATCA when invoice data changes
+    if (shouldRerunZatca) {
       try {
         const customerDoc = await Customer.findById(sale.customer).lean() as unknown as ICustomerDocument;
         const carDoc = await Car.findById(sale.car).lean() as unknown as ICarRaw;
-        const vatInfo = calculateVat(sale.finalPrice, ZATCA_VAT_RATE);
         const zatcaResult = await processZatcaInvoice({
           referenceId: sale._id.toString(),
           referenceType: 'CashSale',
@@ -212,16 +253,16 @@ export async function PUT(
             } : undefined
           },
           lineItems: [{
-            name: carDoc ? `${carDoc.brand} ${carDoc.carModel} (${sale.carId})`.trim() : sale.carId,
+            name: carDoc ? `${carDoc.brand} ${carDoc.carModel || (carDoc as any).model} - Plate: ${carDoc.plateNumber || '-'} - VIN: ${carDoc.chassisNumber || '-'}`.trim() : sale.carId,
             quantity: 1,
-            unitPrice: vatInfo.subtotal,
-            vatRate: ZATCA_VAT_RATE,
-            vatAmount: vatInfo.vatAmount,
-            totalAmount: vatInfo.totalWithVat,
+            unitPrice: sale.finalPrice,
+            vatRate: sale.vatRate || 0,
+            vatAmount: sale.vatAmount || 0,
+            totalAmount: sale.finalPriceWithVat || sale.finalPrice,
           }],
-          subtotal: vatInfo.subtotal,
-          vatTotal: vatInfo.vatAmount,
-          totalWithVat: vatInfo.totalWithVat,
+          subtotal: sale.finalPrice,
+          vatTotal: sale.vatAmount || 0,
+          totalWithVat: sale.finalPriceWithVat || sale.finalPrice,
           notes: sale.notes,
           createdBy: user.userId,
         });
@@ -231,8 +272,11 @@ export async function PUT(
           zatcaHash: zatcaResult.xmlHash,
           zatcaStatus: zatcaResult.status,
           zatcaResponse: zatcaResult.zatcaResponse,
-          vatAmount: vatInfo.vatAmount,
-          finalPriceWithVat: vatInfo.totalWithVat,
+          applyVat: sale.applyVat,
+          vatRate: sale.vatRate,
+          vatInclusive: sale.vatInclusive,
+          vatAmount: sale.vatAmount,
+          finalPriceWithVat: sale.finalPriceWithVat,
         });
       } catch (zatcaError) {
         console.error('ZATCA reprocessing failed:', zatcaError);
@@ -374,6 +418,9 @@ export async function PATCH(
         carYear: carData?.year,
         carPlate: carData?.plateNumber,
         carVin: carData?.chassisNumber,
+        carEngineNumber: carData?.engineNumber,
+        carSequenceNumber: carData?.sequenceNumber,
+        carColor: carData?.color,
         customerName: sale.customerName,
         customerPhone: sale.customerPhone,
         customerId: (customerData as any)?.otherId || (customerData as any)?.customerId,
@@ -383,9 +430,9 @@ export async function PATCH(
         discountValue: sale.discountValue,
         discountAmount: sale.discountAmount,
         finalPrice: sale.finalPrice,
-        vatRate: sale.vatRate || 15,
+        vatRate: sale.vatRate || 0,
         vatAmount: sale.vatAmount || 0,
-        finalPriceWithVat: sale.finalPriceWithVat || 0,
+        finalPriceWithVat: sale.finalPriceWithVat || sale.finalPrice,
         agentName: sale.agentName,
         agentCommission: sale.agentCommission,
         zatcaQRCode: sale.zatcaQRCode,

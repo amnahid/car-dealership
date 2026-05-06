@@ -11,7 +11,9 @@ interface Car {
   model: string;
   year: number;
   color: string;
+  plateNumber?: string;
   engineNumber: string;
+  sequenceNumber?: string;
   chassisNumber: string;
 }
 
@@ -236,6 +238,22 @@ export default function PurchaseDetailPage() {
           <div>
             <p style={labelStyle}>Purchase Date</p>
             <p style={valueStyle}>{new Date(purchase.purchaseDate).toLocaleDateString()}</p>
+          </div>
+          <div>
+            <p style={labelStyle}>Plate Number</p>
+            <p style={valueStyle}>{purchase.car?.plateNumber || '-'}</p>
+          </div>
+          <div>
+            <p style={labelStyle}>Chassis Number</p>
+            <p style={valueStyle}>{purchase.car?.chassisNumber || '-'}</p>
+          </div>
+          <div>
+            <p style={labelStyle}>Engine Number</p>
+            <p style={valueStyle}>{purchase.car?.engineNumber || '-'}</p>
+          </div>
+          <div>
+            <p style={labelStyle}>Sequence Number</p>
+            <p style={valueStyle}>{purchase.car?.sequenceNumber || '-'}</p>
           </div>
           <div>
             <p style={labelStyle}>Supplier Contact</p>

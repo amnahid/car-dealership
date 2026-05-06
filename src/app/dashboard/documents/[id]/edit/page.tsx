@@ -10,6 +10,9 @@ interface CarOption {
   carId: string;
   brand: string;
   model: string;
+  year: number;
+  color?: string;
+  plateNumber?: string;
 }
 
 interface DocData {
@@ -146,7 +149,10 @@ export default function EditDocumentPage() {
         label="Car *"
         value={form.car}
         onChange={(v) => setForm(p => ({ ...p, car: v }))}
-        options={cars.map(c => ({ value: c._id, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+        options={cars.map(c => ({ 
+          value: c._id, 
+          label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}`
+        }))}
         placeholder="Select car..."
       />
 

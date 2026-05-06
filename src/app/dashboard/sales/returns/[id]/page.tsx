@@ -21,7 +21,19 @@ interface PurchaseReturn {
   notes?: string;
   createdAt: string;
   approvedAt?: string;
-  car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
+  car?: { 
+    _id: string; 
+    carId: string; 
+    brand: string; 
+    model: string; 
+    plateNumber?: string;
+    chassisNumber?: string;
+    engineNumber?: string;
+    sequenceNumber?: string;
+    year?: number;
+    color?: string;
+    images: string[] 
+  };
   customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string };
 }
 
@@ -145,10 +157,18 @@ export default function ReturnDetailPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px' }}>
             <div><span style={{ color: '#9ca8b3' }}>Car ID:</span></div>
             <div style={{ fontFamily: 'monospace', color: '#28aaa9' }}>{ret.carId}</div>
-            <div><span style={{ color: '#9ca8b3' }}>Brand:</span></div>
-            <div>{ret.car?.brand || '-'}</div>
-            <div><span style={{ color: '#9ca8b3' }}>Model:</span></div>
-            <div>{ret.car?.model || '-'}</div>
+            <div><span style={{ color: '#9ca8b3' }}>Vehicle:</span></div>
+            <div>{ret.car ? `${ret.car.brand} ${ret.car.model} (${ret.car.year})` : '-'}</div>
+            <div><span style={{ color: '#9ca8b3' }}>Plate:</span></div>
+            <div>{ret.car?.plateNumber || '-'}</div>
+            <div><span style={{ color: '#9ca8b3' }}>VIN:</span></div>
+            <div>{ret.car?.chassisNumber || '-'}</div>
+            <div><span style={{ color: '#9ca8b3' }}>Engine:</span></div>
+            <div>{ret.car?.engineNumber || '-'}</div>
+            <div><span style={{ color: '#9ca8b3' }}>Sequence:</span></div>
+            <div>{ret.car?.sequenceNumber || '-'}</div>
+            <div><span style={{ color: '#9ca8b3' }}>Color:</span></div>
+            <div>{ret.car?.color || '-'}</div>
           </div>
         </div>
 

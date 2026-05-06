@@ -50,7 +50,7 @@ export async function GET(
     await connectDB();
     const { id } = await params;
     const repair = await Repair.findById(id)
-      .populate('car', 'carId brand model')
+      .populate('car', 'carId brand model year plateNumber chassisNumber engineNumber sequenceNumber color')
       .populate('createdBy', 'name')
       .lean();
     if (!repair) return NextResponse.json({ error: 'Repair not found' }, { status: 404 });

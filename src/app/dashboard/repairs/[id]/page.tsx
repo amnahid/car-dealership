@@ -17,7 +17,18 @@ interface Repair {
   status: string;
   beforeImages: string[];
   afterImages: string[];
-  car?: { _id: string; carId: string; brand: string; model: string };
+  car?: { 
+    _id: string; 
+    carId: string; 
+    brand: string; 
+    model: string;
+    year: number;
+    plateNumber?: string;
+    chassisNumber?: string;
+    engineNumber?: string;
+    sequenceNumber?: string;
+    color?: string;
+  };
 }
 
 interface Car {
@@ -25,6 +36,9 @@ interface Car {
   carId: string;
   brand: string;
   model: string;
+  year: number;
+  color?: string;
+  plateNumber?: string;
 }
 
 export default function RepairDetailPage() {

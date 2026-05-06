@@ -18,6 +18,17 @@ interface Sale {
   _id: string;
   saleId: string;
   carId: string;
+  car?: {
+    brand: string;
+    model: string;
+    year: number;
+    plateNumber?: string;
+    chassisNumber: string;
+    engineNumber?: string;
+    sequenceNumber?: string;
+    color?: string;
+    images?: string[];
+  };
   customerName: string;
   customerPhone: string;
   totalPrice: number;
@@ -244,6 +255,36 @@ export default function InstallmentSaleDetailPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Car ID</span>
               <span style={{ color: '#2a3142', fontWeight: 500 }}>{sale.carId}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Vehicle Information</h3>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Vehicle</span>
+              <span style={{ color: '#2a3142', fontWeight: 500 }}>{sale.car ? `${sale.car.brand} ${sale.car.model} (${sale.car.year})` : '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Plate Number</span>
+              <span style={{ color: '#2a3142', fontWeight: 500 }}>{sale.car?.plateNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Chassis Number (VIN)</span>
+              <span style={{ color: '#2a3142' }}>{sale.car?.chassisNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Engine Number</span>
+              <span style={{ color: '#2a3142' }}>{sale.car?.engineNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Sequence Number</span>
+              <span style={{ color: '#2a3142' }}>{sale.car?.sequenceNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Color</span>
+              <span style={{ color: '#2a3142' }}>{sale.car?.color || '-'}</span>
             </div>
           </div>
         </div>

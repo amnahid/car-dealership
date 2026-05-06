@@ -16,7 +16,7 @@ interface Repair {
 
 interface EditRepairModalProps {
   repair: Repair;
-  cars: { _id: string; carId: string; brand: string; model: string }[];
+  cars: { _id: string; carId: string; brand: string; model: string; year: number; color?: string; plateNumber?: string }[];
   onClose: () => void;
   onSave: (data: Partial<Repair>) => void;
 }
@@ -93,7 +93,11 @@ export default function EditRepairModal({ repair, cars, onClose, onSave }: EditR
               <input required value={form.carId} onChange={(e) => setForm({ ...form, carId: e.target.value })} style={{ width: '100%', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da' }} list="carIds" />
               <datalist id="carIds">
                 {cars.map(car => (
-                  <option key={car._id} value={car.carId} />
+                  <option 
+                    key={car._id} 
+                    value={car.plateNumber || car.carId} 
+                    label={`${car.brand} ${car.model} (${car.year})${car.color ? ` - ${car.color}` : ''}`}
+                  />
                 ))}
               </datalist>
             </div>

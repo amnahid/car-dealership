@@ -8,6 +8,17 @@ interface Rental {
   _id: string;
   rentalId: string;
   carId: string;
+  car?: {
+    brand: string;
+    model: string;
+    year: number;
+    plateNumber?: string;
+    chassisNumber: string;
+    engineNumber?: string;
+    sequenceNumber?: string;
+    color?: string;
+    images?: string[];
+  };
   customerName: string;
   customerPhone: string;
   startDate: string;
@@ -25,6 +36,16 @@ interface Rental {
   notes?: string;
   vatRate?: number;
   vatAmount?: number;
+  paidAmount?: number;
+  remainingAmount?: number;
+  rateType?: 'Daily' | 'Monthly';
+  payments?: Array<{
+    amount: number;
+    date: string;
+    method: string;
+    reference?: string;
+    note?: string;
+  }>;
   invoiceType?: 'Standard' | 'Simplified';
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   zatcaUUID?: string;
@@ -46,6 +67,47 @@ export default function RentalDetailPage() {
   const [error, setError] = useState('');
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
   const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [recordingPayment, setRecordingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    method: 'Cash',
+    reference: '',
+    note: '',
+    date: new Date().toISOString().split('T')[0],
+  });
+
+  const handleRecordPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rental || !paymentForm.amount) return;
+    setRecordingPayment(true);
+    try {
+      const res = await fetch(`/api/sales/rentals/${rental._id}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentForm),
+      });
+      if (res.ok) {
+        setShowPaymentModal(false);
+        setPaymentForm({
+          amount: '',
+          method: 'Cash',
+          reference: '',
+          note: '',
+          date: new Date().toISOString().split('T')[0],
+        });
+        fetchRental();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to record payment');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setRecordingPayment(false);
+    }
+  };
 
   const handleRegenerateInvoice = async () => {
     if (!rental) return;
@@ -224,6 +286,36 @@ export default function RentalDetailPage() {
         </div>
 
         <div className="card" style={{ padding: '24px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Vehicle Information</h3>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Vehicle</span>
+              <span style={{ color: '#2a3142', fontWeight: 500 }}>{rental.car ? `${rental.car.brand} ${rental.car.model} (${rental.car.year})` : '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Plate Number</span>
+              <span style={{ color: '#2a3142', fontWeight: 500 }}>{rental.car?.plateNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Chassis Number (VIN)</span>
+              <span style={{ color: '#2a3142' }}>{rental.car?.chassisNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Engine Number</span>
+              <span style={{ color: '#2a3142' }}>{rental.car?.engineNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Sequence Number</span>
+              <span style={{ color: '#2a3142' }}>{rental.car?.sequenceNumber || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Color</span>
+              <span style={{ color: '#2a3142' }}>{rental.car?.color || '-'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Customer Information</h3>
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -293,7 +385,7 @@ export default function RentalDetailPage() {
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Payment Details</h3>
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#9ca8b3' }}>Daily Rate</span>
+              <span style={{ color: '#9ca8b3' }}>Rate ({rental.rateType || 'Daily'})</span>
               <span style={{ color: '#2a3142' }}>SAR {(rental.dailyRate || 0).toLocaleString()}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -318,6 +410,103 @@ export default function RentalDetailPage() {
             </div>
           </div>
         </div>
+
+        <div className="card" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', margin: 0 }}>Financial Summary</h3>
+            {rental.status === 'Active' && (rental.remainingAmount || 0) > 0 && (
+              <button 
+                onClick={() => {
+                  setPaymentForm({ ...paymentForm, amount: (rental.remainingAmount || 0).toString() });
+                  setShowPaymentModal(true);
+                }}
+                style={{ padding: '4px 12px', background: '#42ca7f', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 500 }}
+              >
+                Record Payment
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'grid', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Paid Amount</span>
+              <span style={{ color: '#42ca7f', fontWeight: 600 }}>SAR {(rental.paidAmount || 0).toLocaleString()}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Remaining Balance</span>
+              <span style={{ color: (rental.remainingAmount || 0) > 0 ? '#ec4561' : '#28aaa9', fontWeight: 700 }}>SAR {(rental.remainingAmount || 0).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {rental.payments && rental.payments.length > 0 && (
+          <div className="card" style={{ padding: '24px', gridColumn: '1 / -1' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Payment History</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: '14px' }}>
+                <thead style={{ background: '#f8f9fa' }}>
+                  <tr>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Date</th>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Amount</th>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Method</th>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Reference</th>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rental.payments.map((p, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                      <td style={{ padding: '12px' }}>{new Date(p.date).toLocaleDateString()}</td>
+                      <td style={{ padding: '12px', fontWeight: 600, color: '#28aaa9' }}>SAR {p.amount.toLocaleString()}</td>
+                      <td style={{ padding: '12px' }}>{p.method}</td>
+                      <td style={{ padding: '12px' }}>{p.reference || '-'}</td>
+                      <td style={{ padding: '12px' }}>{p.note || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {showPaymentModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: '#fff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
+              <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Record Payment</h3>
+              <form onSubmit={handleRecordPayment}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Amount (SAR)</label>
+                  <input required type="number" step="any" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }} />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Method</label>
+                  <select value={paymentForm.method} onChange={e => setPaymentForm({...paymentForm, method: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }}>
+                    <option value="Cash">Cash</option>
+                    <option value="Bank">Bank Transfer</option>
+                    <option value="Online">Online Payment</option>
+                  </select>
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Reference</label>
+                  <input value={paymentForm.reference} onChange={e => setPaymentForm({...paymentForm, reference: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Ref #" />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Date</label>
+                  <input type="date" value={paymentForm.date} onChange={e => setPaymentForm({...paymentForm, date: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }} />
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Notes</label>
+                  <input value={paymentForm.note} onChange={e => setPaymentForm({...paymentForm, note: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }} />
+                </div>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setShowPaymentModal(false)} style={{ padding: '8px 16px', background: '#fff', border: '1px solid #ced4da', cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={recordingPayment} style={{ padding: '8px 16px', background: '#28aaa9', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: recordingPayment ? 0.7 : 1 }}>
+                    {recordingPayment ? 'Recording...' : 'Record Payment'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {rental.notes && (
           <div className="card" style={{ padding: '24px', gridColumn: '1 / -1' }}>

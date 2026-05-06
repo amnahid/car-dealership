@@ -21,6 +21,7 @@ interface Rental {
   totalAmount: number;
   securityDeposit: number;
   status: 'Active' | 'Completed' | 'Cancelled' | 'Overdue';
+  rateType?: 'Daily' | 'Monthly';
   currentStatus?: string;
   notes?: string;
   returnDate?: string;
@@ -31,6 +32,11 @@ interface Rental {
   invoiceType?: 'Standard' | 'Simplified';
   agentName?: string;
   agentCommission?: number;
+  applyVat?: boolean;
+  vatRate?: number;
+  vatInclusive?: boolean;
+  paidAmount?: number;
+  remainingAmount?: number;
 }
 
 export default function RentalsPage() {
@@ -51,6 +57,7 @@ export default function RentalsPage() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingRental, setEditingRental] = useState<Rental | null>(null);
+  const [paymentRental, setPaymentRental] = useState<Rental | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
@@ -312,6 +319,8 @@ export default function RentalsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('rentalId')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('total')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('paid')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('remaining')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{cashT('zatca')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
@@ -355,6 +364,8 @@ export default function RentalsPage() {
                       </div>
                     </td>
                     <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.totalAmount)}</td>
+                    <td style={{ padding: '12px', color: '#42ca7f', fontWeight: 500, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.paidAmount || 0)}</td>
+                    <td style={{ padding: '12px', color: (rental.remainingAmount || 0) > 0 ? '#ec4561' : '#9ca8b3', fontWeight: 500, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.remainingAmount || 0)}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(rental.currentStatus || rental.status) + '20', color: getStatusColor(rental.currentStatus || rental.status) }}>{getStatusLabel(rental.currentStatus || rental.status)}</span>
                     </td>
@@ -362,8 +373,11 @@ export default function RentalsPage() {
                       <ZatcaStatusBadge status={rental.zatcaStatus} saleId={rental._id} saleType="Rental" t={cashT} />
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center' }}>
                         <a href={`/dashboard/sales/rentals/${rental._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</a>
+                        {rental.status === 'Active' && (rental.remainingAmount || 0) > 0 && (
+                          <button onClick={() => setPaymentRental(rental)} style={{ color: '#42ca7f', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('recordPayment')}</button>
+                        )}
                         <button onClick={() => setEditingRental(rental)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{commonT('edit')}</button>
                         {rental.status !== 'Cancelled' && (
                           <button onClick={() => handleDelete(rental._id)} style={{ color: '#ec4561', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('cancelRental')}</button>
@@ -388,6 +402,118 @@ export default function RentalsPage() {
 
       {showModal && <RentalModal cars={cars} customers={customers} employees={employees} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchRentals(); }} />}
       {editingRental && <EditRentalModal rental={editingRental} employees={employees} onClose={() => setEditingRental(null)} onSave={handleUpdateRental} />}
+      {paymentRental && (
+        <RecordPaymentModal
+          rental={paymentRental}
+          onClose={() => setPaymentRental(null)}
+          onSave={() => {
+            setPaymentRental(null);
+            fetchRentals();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecordPaymentModal({ rental, onClose, onSave }: { rental: any; onClose: () => void; onSave: () => void }) {
+  const t = useTranslations('Rentals');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
+  const [form, setForm] = useState({
+    amount: rental.remainingAmount?.toString() || '',
+    method: 'Cash',
+    reference: '',
+    note: '',
+    date: new Date().toISOString().split('T')[0],
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.amount || parseFloat(form.amount) <= 0) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/sales/rentals/${rental._id}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      if (res.ok) {
+        onSave();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to record payment');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    height: '40px',
+    fontSize: '14px',
+    borderRadius: '0',
+    padding: '0 12px',
+    border: '1px solid #ced4da',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: 500,
+    marginBottom: '4px',
+    textAlign: isRtl ? 'right' : 'left'
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%', textAlign: isRtl ? 'right' : 'left' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('recordPayment')}</h3>
+        <p style={{ fontSize: '14px', color: '#525f80', marginBottom: '20px' }}>
+          {rental.rentalId} - {rental.customerName}<br />
+          <strong>{t('remaining')}: {rental.remainingAmount?.toLocaleString()} SAR</strong>
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>{t('amount')} *</label>
+            <input required type="number" step="any" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>{t('paymentMethod')}</label>
+            <select value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} style={inputStyle}>
+              <option value="Cash">{t('cash')}</option>
+              <option value="Bank">{t('bank')}</option>
+              <option value="Online">{t('online')}</option>
+            </select>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>{t('paymentReference')}</label>
+            <input value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>{t('date')}</label>
+            <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>{t('notes')}</label>
+            <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} style={inputStyle} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <button type="button" onClick={onClose} style={{ background: '#fff', color: '#525f80', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #ced4da', cursor: 'pointer' }}>{commonT('cancel')}</button>
+            <button type="submit" disabled={loading} style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>{loading ? commonT('loading') : t('recordPayment')}</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -400,7 +526,34 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
-  const [form, setForm] = useState({ car: '', carId: '', customer: '', customerName: '', customerPhone: '', startDate: '', endDate: '', dailyRate: '', securityDeposit: '0', notes: '', lateFee: '0', agreementDocument: '', invoiceType: 'Simplified', buyerTrn: '', agentName: '', agentCommission: '', tafweedAuthorizedTo: '', tafweedDriverIqama: '', tafweedExpiryDate: '', tafweedDurationMonths: '12' });
+  const [form, setForm] = useState({
+    car: '',
+    carId: '',
+    customer: '',
+    customerName: '',
+    customerPhone: '',
+    startDate: '',
+    endDate: '',
+    dailyRate: '',
+    securityDeposit: '0',
+    notes: '',
+    lateFee: '0',
+    agreementDocument: '',
+    invoiceType: 'Simplified',
+    buyerTrn: '',
+    agentName: '',
+    agentCommission: '',
+    tafweedAuthorizedTo: '',
+    tafweedDriverIqama: '',
+    tafweedExpiryDate: '',
+    tafweedDurationMonths: '12',
+    calculateVat: true,
+    vatInclusive: false,
+    rateType: 'Daily',
+    advancePayment: '0',
+    paymentMethod: 'Cash',
+    paymentReference: '',
+  });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -452,6 +605,12 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
     const start = new Date(form.startDate);
     const end = new Date(form.endDate);
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (form.rateType === 'Monthly') {
+      const months = Math.ceil(days / 30);
+      return months * parseFloat(form.dailyRate || '0');
+    }
+    
     return days * parseFloat(form.dailyRate || '0');
   };
 
@@ -460,10 +619,17 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
     if (!form.car || !form.customer || !form.startDate || !form.endDate) { alert('Please fill required fields'); return; }
     setLoading(true);
     try {
+      const payload = {
+        ...form,
+        totalAmount: calculateTotal(),
+        applyVat: form.calculateVat,
+        vatRate: form.calculateVat ? 15 : 0,
+        vatInclusive: form.calculateVat ? form.vatInclusive : false,
+      };
       const res = await fetch('/api/sales/rentals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, totalAmount: calculateTotal() }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
       onSave();
@@ -498,7 +664,10 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
               label={`${t('car')} *`}
               value={form.carId}
               onChange={handleCarChange}
-              options={cars.map(c => ({ value: c.carId, label: `${c.carId} - ${c.brand} ${c.model}` }))}
+              options={cars.map(c => ({ 
+                value: c.carId, 
+                label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}`
+              }))}
               placeholder={cashT('searchCar')}
               required
             />
@@ -526,7 +695,14 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
               <input required type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('dailyRate')} *</label>
+              <label style={labelStyle}>{t('rateType')} *</label>
+              <select value={form.rateType} onChange={(e) => setForm({ ...form, rateType: e.target.value as 'Daily' | 'Monthly' })} style={inputStyle}>
+                <option value="Daily">{t('daily')}</option>
+                <option value="Monthly">{t('monthly')}</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>{form.rateType === 'Monthly' ? t('monthlyRate') : t('dailyRate')} *</label>
               <input required type="number" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} style={inputStyle} />
             </div>
             <div>
@@ -536,6 +712,28 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
             <div>
               <label style={labelStyle}>{t('lateFee')}</label>
               <input type="number" value={form.lateFee} onChange={(e) => setForm({ ...form, lateFee: e.target.value })} style={inputStyle} />
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>{t('advancePayment')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
+              <div>
+                <label style={labelStyle}>{t('amount')}</label>
+                <input type="number" value={form.advancePayment} onChange={(e) => setForm({ ...form, advancePayment: e.target.value })} style={inputStyle} placeholder="0" />
+              </div>
+              <div>
+                <label style={labelStyle}>{t('paymentMethod')}</label>
+                <select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} style={inputStyle}>
+                  <option value="Cash">{t('cash')}</option>
+                  <option value="Bank">{t('bank')}</option>
+                  <option value="Online">{t('online')}</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>{t('paymentReference')}</label>
+                <input value={form.paymentReference} onChange={(e) => setForm({ ...form, paymentReference: e.target.value })} style={inputStyle} placeholder="Ref #" />
+              </div>
             </div>
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '12px' }}>
@@ -570,7 +768,20 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>{cashT('taxInvoice')}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, calculateVat: !form.calculateVat })}>
+                <input type="checkbox" checked={form.calculateVat} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'حساب ضريبة القيمة المضافة (15%)' : 'Calculate 15% VAT'}</span>
+              </div>
+              {form.calculateVat && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, vatInclusive: !form.vatInclusive })}>
+                  <input type="checkbox" checked={form.vatInclusive} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                  <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'السعر شامل الضريبة' : 'Price is VAT Inclusive'}</span>
+                </div>
+              )}
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
+
               <div>
                 <label style={labelStyle}>{cashT('invoiceType')}</label>
                 <select value={form.invoiceType} onChange={(e) => setForm({ ...form, invoiceType: e.target.value })} style={inputStyle}>
@@ -671,12 +882,15 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
 
   const [form, setForm] = useState({
     dailyRate: rental.dailyRate.toString(),
+    rateType: rental.rateType || 'Daily',
     securityDeposit: rental.securityDeposit.toString(),
     returnDate: rental.returnDate?.split('T')[0] || '',
     actualReturnDate: rental.actualReturnDate?.split('T')[0] || '',
     notes: rental.notes || '',
     agentName: rental.agentName || '',
     agentCommission: rental.agentCommission?.toString() || '',
+    calculateVat: rental.applyVat ?? ((rental.vatRate || 0) > 0),
+    vatInclusive: !!rental.vatInclusive,
   });
   const [agentId, setAgentId] = useState(() => employees.find(e => e.name === rental.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
@@ -691,7 +905,13 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
     e.preventDefault();
     setLoading(true);
     try {
-      await onSave(rental._id, form);
+      const payload = {
+        ...form,
+        applyVat: form.calculateVat,
+        vatRate: form.calculateVat ? 15 : 0,
+        vatInclusive: form.calculateVat ? form.vatInclusive : false,
+      };
+      await onSave(rental._id, payload);
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -720,7 +940,14 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
-              <label style={labelStyle}>{t('dailyRate')}</label>
+              <label style={labelStyle}>{t('rateType')}</label>
+              <select value={form.rateType} onChange={(e) => setForm({ ...form, rateType: e.target.value as 'Daily' | 'Monthly' })} style={inputStyle}>
+                <option value="Daily">{t('daily')}</option>
+                <option value="Monthly">{t('monthly')}</option>
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>{form.rateType === 'Monthly' ? t('monthlyRate') : t('dailyRate')}</label>
               <input type="number" value={form.dailyRate} onChange={(e) => setForm({ ...form, dailyRate: e.target.value })} style={inputStyle} />
             </div>
             <div>
@@ -739,6 +966,18 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
           <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>{commonT('notes')}</label>
             <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} style={{ ...inputStyle, height: '80px', padding: '12px' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, calculateVat: !form.calculateVat })}>
+              <input type="checkbox" checked={form.calculateVat} onChange={() => {}} style={{ cursor: 'pointer' }} />
+              <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'حساب ضريبة القيمة المضافة (15%)' : 'Calculate 15% VAT'}</span>
+            </div>
+            {form.calculateVat && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setForm({ ...form, vatInclusive: !form.vatInclusive })}>
+                <input type="checkbox" checked={form.vatInclusive} onChange={() => {}} style={{ cursor: 'pointer' }} />
+                <span style={{ fontSize: '13px', color: '#2a3142' }}>{isRtl ? 'السعر شامل الضريبة' : 'Price is VAT Inclusive'}</span>
+              </div>
+            )}
           </div>
           <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', marginBottom: '16px' }}>
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase', marginBottom: '8px' }}>{cashT('salesAgent')}</div>

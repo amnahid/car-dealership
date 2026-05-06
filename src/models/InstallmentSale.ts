@@ -38,8 +38,10 @@ export interface IInstallmentSaleDocument extends Document {
   deliveryThresholdPercent: number;
   monthlyLateFee: number;
   lateFeeCharged: number;
+  applyVat: boolean;
   vatRate: number;
   vatAmount: number;
+  vatInclusive: boolean;
   finalPriceWithVat: number;
   agreementDocument?: string;
   agreementUrl?: string;
@@ -102,8 +104,10 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     deliveryThresholdPercent: { type: Number, default: 30, min: 0, max: 100 },
     monthlyLateFee: { type: Number, default: 200, min: 0 },
     lateFeeCharged: { type: Number, default: 0, min: 0 },
+    applyVat: { type: Boolean, default: true },
     vatRate: { type: Number, default: 15, min: 0 },
     vatAmount: { type: Number, default: 0, min: 0 },
+    vatInclusive: { type: Boolean, default: false },
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
     agreementDocument: { type: String },
     agreementUrl: { type: String },

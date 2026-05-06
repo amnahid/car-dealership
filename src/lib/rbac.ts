@@ -59,7 +59,7 @@ const API_ACCESS_RULES: AccessRule[] = [
   { prefix: '/api/zatca', roles: ['Admin'] },
   { prefix: '/api/seed', roles: ['Admin'] },
   { prefix: '/api/activity-logs', roles: FINANCE_AUDIT_ROLES },
-  { prefix: '/api/notifications/logs', roles: FINANCE_AUDIT_ROLES },
+  { prefix: '/api/notifications/logs', roles: ['Admin', 'Finance Manager', 'Sales Person'] },
 
   { prefix: '/api/cars/gps', methods: ['PUT', 'PATCH', 'DELETE', 'POST'], roles: ['Admin'] },
   { prefix: '/api/cars/gps', methods: ['GET'], roles: ['Admin', 'Car Manager', 'Sales Person'] },
@@ -81,6 +81,7 @@ const API_ACCESS_RULES: AccessRule[] = [
   { prefix: '/api/documents', roles: CAR_ROLES },
 
   { prefix: '/api/customers', roles: SALES_ROLES },
+  { prefix: '/api/guarantors', roles: SALES_ROLES },
   { prefix: '/api/sales', roles: SALES_ROLES },
 
   { prefix: '/api/invoices', roles: ['Admin', 'Sales Person', 'Accountant', 'Finance Manager'] },
