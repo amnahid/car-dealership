@@ -476,6 +476,65 @@ export async function PATCH(
       return NextResponse.json({ agreementUrl, rental });
     }
 
+    if (action === 'generate-report') {
+      const rental = await Rental.findById(id);
+      if (!rental) {
+        return NextResponse.json({ error: 'Rental not found' }, { status: 404 });
+      }
+
+      const carData = await Car.findById(rental.car).lean() as any;
+      const { generateStatusReport } = await import('@/lib/reportGenerator');
+
+      const reportUrl = await generateStatusReport({
+        reportId: rental.rentalId,
+        reportDate: new Date().toISOString(),
+        type: 'Rental',
+        customer: {
+          name: rental.customerName,
+          phone: rental.customerPhone,
+        },
+        car: {
+          carId: rental.carId,
+          brand: carData?.brand || '',
+          model: carData?.model || '',
+          year: carData?.year || 0,
+          plateNumber: carData?.plateNumber,
+          chassisNumber: carData?.chassisNumber,
+        },
+        agreement: {
+          startDate: rental.startDate.toISOString(),
+          endDate: rental.endDate.toISOString(),
+          totalAmount: rental.totalAmountWithVat || rental.totalAmount,
+          paidAmount: rental.paidAmount || 0,
+          remainingAmount: rental.remainingAmount || 0,
+          status: rental.status,
+          rate: rental.dailyRate,
+          rateType: rental.rateType || 'Daily',
+        },
+        payments: rental.payments.map(p => ({
+          date: p.date.toISOString(),
+          amount: p.amount,
+          method: p.method,
+          reference: p.reference,
+          note: p.note,
+        })),
+      });
+
+      rental.reportUrl = reportUrl;
+      await rental.save();
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Generated status report for rental: ${rental.rentalId}`,
+        module: 'Sales',
+        targetId: rental._id.toString(),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ reportUrl, rental });
+    }
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('Patch rental error:', error);

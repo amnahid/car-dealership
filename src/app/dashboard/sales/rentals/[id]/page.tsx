@@ -33,6 +33,7 @@ interface Rental {
   agreementDocument?: string;
   agreementUrl?: string;
   invoiceUrl?: string;
+  reportUrl?: string;
   notes?: string;
   vatRate?: number;
   vatAmount?: number;
@@ -67,6 +68,7 @@ export default function RentalDetailPage() {
   const [error, setError] = useState('');
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
   const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
@@ -179,6 +181,29 @@ export default function RentalDetailPage() {
     }
   };
 
+  const handleGenerateReport = async () => {
+    if (!rental) return;
+    setGeneratingReport(true);
+    try {
+      const res = await fetch(`/api/sales/rentals/${rental._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate-report' }),
+      });
+      if (res.ok) {
+        fetchRental();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to generate report');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>;
   }
@@ -213,6 +238,25 @@ export default function RentalDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <h2 className="page-title">Rental Details</h2>
         <div style={{ display: 'flex', gap: '12px' }}>
+          {rental.reportUrl && (
+            <a
+              href={rental.reportUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#525f80', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+            >
+              Print Status Report
+            </a>
+          )}
+          <button
+            onClick={handleGenerateReport}
+            disabled={generatingReport}
+            className="no-print"
+            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: generatingReport ? 0.7 : 1 }}
+          >
+            {generatingReport ? (rental.reportUrl ? 'Regenerating...' : 'Generating...') : (rental.reportUrl ? 'Regenerate Report' : 'Generate Status Report')}
+          </button>
           {rental.invoiceUrl && (
             <a
               href={rental.invoiceUrl}

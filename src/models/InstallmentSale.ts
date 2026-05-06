@@ -57,6 +57,7 @@ export interface IInstallmentSaleDocument extends Document {
   agentName?: string;
   agentCommission?: number;
   invoiceUrl?: string;
+  reportUrl?: string;
   guarantor?: mongoose.Types.ObjectId;
   guarantorName?: string;
   guarantorPhone?: string;
@@ -122,6 +123,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
     invoiceUrl: { type: String },
+    reportUrl: { type: String },
     guarantor: { type: Schema.Types.ObjectId, ref: 'Guarantor' },
     guarantorName: { type: String, trim: true },
     guarantorPhone: { type: String, trim: true },

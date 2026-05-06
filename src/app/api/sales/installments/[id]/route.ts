@@ -469,6 +469,66 @@ export async function PATCH(
       return NextResponse.json({ agreementUrl, sale });
     }
 
+    if (action === 'generate-report') {
+      const sale = await InstallmentSale.findById(id);
+      if (!sale) {
+        return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
+      }
+
+      const carData = await Car.findById(sale.car).lean() as ICarRaw | null;
+      const { generateStatusReport } = await import('@/lib/reportGenerator');
+
+      const reportUrl = await generateStatusReport({
+        reportId: sale.saleId,
+        reportDate: new Date().toISOString(),
+        type: 'Installment',
+        customer: {
+          name: sale.customerName,
+          phone: sale.customerPhone,
+        },
+        car: {
+          carId: sale.carId,
+          brand: carData?.brand || '',
+          model: carData?.carModel || (carData as any)?.model || '',
+          year: carData?.year || 0,
+          plateNumber: carData?.plateNumber,
+          chassisNumber: carData?.chassisNumber,
+        },
+        agreement: {
+          startDate: sale.startDate.toISOString(),
+          totalAmount: sale.finalPriceWithVat || sale.totalPrice,
+          paidAmount: sale.totalPaid || 0,
+          remainingAmount: sale.remainingAmount || 0,
+          status: sale.status,
+          rate: sale.monthlyPayment,
+          rateType: 'Monthly',
+        },
+        payments: sale.paymentSchedule
+          .filter(p => p.status === 'Paid')
+          .map(p => ({
+            date: p.paidDate?.toISOString() || p.dueDate.toISOString(),
+            amount: p.paidAmount || p.amount,
+            method: 'Unknown',
+            note: p.notes,
+            status: p.status,
+          })),
+      });
+
+      sale.reportUrl = reportUrl;
+      await sale.save();
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Generated status report for installment sale: ${sale.saleId}`,
+        module: 'Sales',
+        targetId: sale._id.toString(),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ reportUrl, sale });
+    }
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
     console.error('Patch installment sale error:', error);

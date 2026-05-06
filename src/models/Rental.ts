@@ -56,6 +56,7 @@ export interface IRentalDocument extends Document {
   agentName?: string;
   agentCommission?: number;
   invoiceUrl?: string;
+  reportUrl?: string;
   notes?: string;
   createdBy: mongoose.Types.ObjectId;
 }
@@ -114,6 +115,7 @@ const RentalSchema = new Schema<IRentalDocument>(
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
     invoiceUrl: { type: String },
+    reportUrl: { type: String },
     notes: { type: String },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
