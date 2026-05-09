@@ -234,7 +234,6 @@
     "reference": "Reference",
     "notes": "Notes",
     "securityDeposit": "Security Deposit",
-    "voucherNumber": "Voucher Number",
     "lateFee": "Late Fee (SAR)",
     "agreementDoc": "Agreement Document (PDF)",
     "createRental": "Create Rental",

@@ -37,7 +37,6 @@ export async function POST(
         date: date ? new Date(date) : new Date(),
         method: method || 'Cash',
         reference: reference || '',
-        voucherNumber: voucherNumber || '',
         note: note || 'Rental Payment',
       });
 

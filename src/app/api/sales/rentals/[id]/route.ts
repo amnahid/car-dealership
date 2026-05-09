@@ -189,7 +189,6 @@ export async function PUT(
     if (dailyRate !== undefined) rental.dailyRate = dailyRate;
     if (rateType !== undefined) rental.rateType = rateType;
     if (securityDeposit !== undefined) rental.securityDeposit = securityDeposit;
-    if (voucherNumber !== undefined) rental.voucherNumber = voucherNumber;
     if (returnDate) rental.returnDate = new Date(returnDate);
     if (actualReturnDate) rental.actualReturnDate = new Date(actualReturnDate);
     if (

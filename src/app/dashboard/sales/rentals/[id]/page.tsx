@@ -503,7 +503,6 @@ export default function RentalDetailPage() {
                     <th style={{ padding: '12px', textAlign: 'left' }}>Amount</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Method</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Reference</th>
-                    <th style={{ padding: '12px', textAlign: 'left' }}>Voucher #</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Notes</th>
                   </tr>
                 </thead>
@@ -514,7 +513,6 @@ export default function RentalDetailPage() {
                       <td style={{ padding: '12px', fontWeight: 600, color: '#28aaa9' }}>SAR {p.amount.toLocaleString()}</td>
                       <td style={{ padding: '12px' }}>{p.method}</td>
                       <td style={{ padding: '12px' }}>{p.reference || '-'}</td>
-                      <td style={{ padding: '12px' }}>{(p as any).voucherNumber || '-'}</td>
                       <td style={{ padding: '12px' }}>{p.note || '-'}</td>
                     </tr>
                   ))}

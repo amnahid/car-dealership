@@ -89,7 +89,6 @@ const RentalSchema = new Schema<IRentalDocument>(
         date: { type: Date, default: Date.now },
         method: { type: String, enum: ['Cash', 'Bank', 'Online'], default: 'Cash' },
         reference: { type: String },
-        voucherNumber: { type: String, trim: true },
         note: { type: String },
       },
     ],

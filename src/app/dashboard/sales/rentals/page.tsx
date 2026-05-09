@@ -38,7 +38,6 @@ interface Rental {
   paidAmount?: number;
   remainingAmount?: number;
   totalAmountWithVat?: number;
-  voucherNumber?: string;
   lateFee?: number;
 }
 
@@ -352,7 +351,6 @@ export default function RentalsPage() {
                       )}
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{rental.rentalId}</td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{rental.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {rental.customer?.profilePhoto ? (
@@ -559,7 +557,6 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
     advancePayment: '0',
     paymentMethod: 'Cash',
     paymentReference: '',
-    voucherNumber: '',
   });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -719,10 +716,6 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
             <div>
               <label style={labelStyle}>{t('lateFee')}</label>
               <input type="number" value={form.lateFee} onChange={(e) => setForm({ ...form, lateFee: e.target.value })} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>{t('voucherNumber')}</label>
-              <input value={form.voucherNumber} onChange={(e) => setForm({ ...form, voucherNumber: e.target.value })} placeholder="V-0000" style={inputStyle} />
             </div>
           </div>
 
@@ -898,7 +891,6 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
     returnDate: rental.returnDate?.split('T')[0] || '',
     actualReturnDate: rental.actualReturnDate?.split('T')[0] || '',
     notes: rental.notes || '',
-    voucherNumber: rental.voucherNumber || '',
     agentName: rental.agentName || '',
     agentCommission: rental.agentCommission?.toString() || '',
     calculateVat: rental.applyVat ?? ((rental.vatRate || 0) > 0),
@@ -973,10 +965,6 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
             <div>
               <label style={labelStyle}>{t('actualReturnDate')}</label>
               <input type="date" value={form.actualReturnDate} onChange={(e) => setForm({ ...form, actualReturnDate: e.target.value })} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>{t('voucherNumber')}</label>
-              <input value={form.voucherNumber} onChange={(e) => setForm({ ...form, voucherNumber: e.target.value })} placeholder="V-0000" style={inputStyle} />
             </div>
           </div>
           <div style={{ marginBottom: '16px' }}>
