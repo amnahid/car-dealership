@@ -115,17 +115,22 @@ describe('Installment Payments API', () => {
       
       expect(res.status).toBe(200);
       
-      // Verify that Transaction.create was called with ordered: true
-      expect(mockTransaction.create).toHaveBeenCalledWith(
-        expect.any(Array),
-        expect.objectContaining({ ordered: true, session: expect.anything() })
-      );
+      // Verify that Transaction.create was called twice (base payment + late fee)
+      expect(mockTransaction.create).toHaveBeenCalledTimes(2);
       
-      // Verify that 2 documents were created (base payment + late fee)
-      const transactions = mockTransaction.create.mock.calls[0][0];
-      expect(transactions).toHaveLength(2);
-      expect(transactions[0].category).toBe('Installment Payment');
-      expect(transactions[1].category).toBe('Fee');
+      // First call: base payment
+      expect(mockTransaction.create).toHaveBeenNthCalledWith(
+        1,
+        expect.arrayContaining([expect.objectContaining({ category: 'Installment Payment' })]),
+        expect.objectContaining({ session: expect.anything() })
+      );
+
+      // Second call: late fee
+      expect(mockTransaction.create).toHaveBeenNthCalledWith(
+        2,
+        expect.arrayContaining([expect.objectContaining({ category: 'Fee' })]),
+        expect.objectContaining({ session: expect.anything() })
+      );
     });
 
     it('returns 403 if user lacks required role', async () => {

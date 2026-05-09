@@ -139,7 +139,11 @@ export async function POST(
         });
       }
 
-      await Transaction.create(transactions, { session, ordered: true });
+      // Create ledger transactions sequentially to ensure the pre-save hook 
+      // generates unique sequential transaction IDs
+      for (const txData of transactions) {
+        await Transaction.create([txData], { session });
+      }
 
       await logActivity({
         userId: user.userId,
