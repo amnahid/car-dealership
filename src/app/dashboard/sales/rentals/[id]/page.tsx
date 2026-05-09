@@ -60,6 +60,7 @@ interface Rental {
   tafweedDurationMonths?: number;
   tafweedExpiryDate?: string;
   driverLicenseExpiryDate?: string;
+  voucherNumber?: string;
 }
 
 export default function RentalDetailPage() {
@@ -323,6 +324,12 @@ export default function RentalDetailPage() {
               <span style={{ color: '#9ca8b3' }}>Car ID</span>
               <span style={{ color: '#2a3142', fontWeight: 500 }}>{rental.carId}</span>
             </div>
+            {rental.voucherNumber && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>Voucher Number</span>
+                <span style={{ color: '#525f80', fontWeight: 600 }}>{rental.voucherNumber}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Duration</span>
               <span style={{ color: '#2a3142' }}>{rentalDays} days</span>

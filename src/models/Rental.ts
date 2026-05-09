@@ -44,6 +44,7 @@ export interface IRentalDocument extends Document {
   lateFee?: number;
   agreementDocument?: string;
   agreementUrl?: string;
+  voucherNumber?: string;
   // ZATCA fields
   invoiceType: ZatcaInvoiceType;
   buyerTrn?: string;

@@ -82,6 +82,7 @@ export async function PUT(
       dailyRate, rateType, securityDeposit, returnDate, actualReturnDate, notes, status, invoiceType, buyerTrn, agentName, agentCommission,
       applyVat, vatRate, vatInclusive,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
+      voucherNumber,
     } = body;
 
     // INTERCEPTION: If not Admin, queue for approval
@@ -188,6 +189,7 @@ export async function PUT(
     if (dailyRate !== undefined) rental.dailyRate = dailyRate;
     if (rateType !== undefined) rental.rateType = rateType;
     if (securityDeposit !== undefined) rental.securityDeposit = securityDeposit;
+    if (voucherNumber !== undefined) rental.voucherNumber = voucherNumber;
     if (returnDate) rental.returnDate = new Date(returnDate);
     if (actualReturnDate) rental.actualReturnDate = new Date(actualReturnDate);
     if (

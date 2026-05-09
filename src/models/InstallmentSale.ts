@@ -43,6 +43,7 @@ export interface IInstallmentSaleDocument extends Document {
   vatAmount: number;
   vatInclusive: boolean;
   finalPriceWithVat: number;
+  voucherNumber?: string;
   agreementDocument?: string;
   agreementUrl?: string;
   // ZATCA fields
@@ -110,6 +111,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     vatAmount: { type: Number, default: 0, min: 0 },
     vatInclusive: { type: Boolean, default: false },
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
+    voucherNumber: { type: String, trim: true },
     agreementDocument: { type: String },
     agreementUrl: { type: String },
     invoiceType: { type: String, enum: ['Standard', 'Simplified'], default: 'Simplified' },

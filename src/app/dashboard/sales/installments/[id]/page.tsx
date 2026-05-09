@@ -66,6 +66,7 @@ interface Sale {
   tafweedDurationMonths?: number;
   tafweedExpiryDate?: string;
   driverLicenseExpiryDate?: string;
+  voucherNumber?: string;
   guarantor?: any;
   guarantorName?: string;
   guarantorPhone?: string;
@@ -292,6 +293,12 @@ export default function InstallmentSaleDetailPage() {
               <span style={{ color: '#9ca8b3' }}>Sale ID</span>
               <span style={{ color: '#28aaa9', fontWeight: 600, fontFamily: 'monospace' }}>{sale.saleId}</span>
             </div>
+            {sale.voucherNumber && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>Voucher Number</span>
+                <span style={{ color: '#525f80', fontWeight: 600 }}>{sale.voucherNumber}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Start Date</span>
               <span style={{ color: '#2a3142' }}>{new Date(sale.startDate).toLocaleDateString()}</span>

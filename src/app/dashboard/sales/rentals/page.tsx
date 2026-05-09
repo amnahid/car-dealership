@@ -38,6 +38,8 @@ interface Rental {
   paidAmount?: number;
   remainingAmount?: number;
   totalAmountWithVat?: number;
+  voucherNumber?: string;
+  lateFee?: number;
 }
 
 export default function RentalsPage() {
@@ -322,6 +324,7 @@ export default function RentalsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('total')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('paid')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('remaining')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('lateFee') || 'Late Fee'}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{cashT('zatca')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
@@ -349,6 +352,7 @@ export default function RentalsPage() {
                       )}
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{rental.rentalId}</td>
+                    <td style={{ padding: '12px', color: '#525f80' }}>{rental.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {rental.customer?.profilePhoto ? (
@@ -367,6 +371,7 @@ export default function RentalsPage() {
                     <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.totalAmountWithVat || rental.totalAmount)}</td>
                     <td style={{ padding: '12px', color: '#42ca7f', fontWeight: 500, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.paidAmount || 0)}</td>
                     <td style={{ padding: '12px', color: (rental.remainingAmount || 0) > 0 ? '#ec4561' : '#9ca8b3', fontWeight: 500, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.remainingAmount || 0)}</td>
+                    <td style={{ padding: '12px', color: (rental.lateFee || 0) > 0 ? '#ec4561' : '#9ca8b3', fontWeight: 500, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.lateFee || 0)}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(rental.currentStatus || rental.status) + '20', color: getStatusColor(rental.currentStatus || rental.status) }}>{getStatusLabel(rental.currentStatus || rental.status)}</span>
                     </td>
@@ -554,6 +559,7 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
     advancePayment: '0',
     paymentMethod: 'Cash',
     paymentReference: '',
+    voucherNumber: '',
   });
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -713,6 +719,10 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
             <div>
               <label style={labelStyle}>{t('lateFee')}</label>
               <input type="number" value={form.lateFee} onChange={(e) => setForm({ ...form, lateFee: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('voucherNumber')}</label>
+              <input value={form.voucherNumber} onChange={(e) => setForm({ ...form, voucherNumber: e.target.value })} placeholder="V-0000" style={inputStyle} />
             </div>
           </div>
 
@@ -888,6 +898,7 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
     returnDate: rental.returnDate?.split('T')[0] || '',
     actualReturnDate: rental.actualReturnDate?.split('T')[0] || '',
     notes: rental.notes || '',
+    voucherNumber: rental.voucherNumber || '',
     agentName: rental.agentName || '',
     agentCommission: rental.agentCommission?.toString() || '',
     calculateVat: rental.applyVat ?? ((rental.vatRate || 0) > 0),
@@ -962,6 +973,10 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
             <div>
               <label style={labelStyle}>{t('actualReturnDate')}</label>
               <input type="date" value={form.actualReturnDate} onChange={(e) => setForm({ ...form, actualReturnDate: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('voucherNumber')}</label>
+              <input value={form.voucherNumber} onChange={(e) => setForm({ ...form, voucherNumber: e.target.value })} placeholder="V-0000" style={inputStyle} />
             </div>
           </div>
           <div style={{ marginBottom: '16px' }}>

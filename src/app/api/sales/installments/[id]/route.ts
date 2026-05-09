@@ -88,6 +88,7 @@ export async function PUT(
       applyVat, vatRate, vatInclusive,
       guarantor, guarantorName, guarantorPhone,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
+      voucherNumber,
     } = body;
 
     // INTERCEPTION: If not Admin, queue for approval
@@ -150,6 +151,7 @@ export async function PUT(
     if (interestRate !== undefined) sale.interestRate = interestRate;
     if (tenureMonths !== undefined) sale.tenureMonths = tenureMonths;
     if (monthlyLateFee !== undefined) sale.monthlyLateFee = monthlyLateFee;
+    if (voucherNumber !== undefined) sale.voucherNumber = voucherNumber;
 
     // Recalculate loan amount and schedule if financial terms changed
     const financialsChanged = downPayment !== undefined || interestRate !== undefined || tenureMonths !== undefined;

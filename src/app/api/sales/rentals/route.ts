@@ -130,6 +130,7 @@ export async function POST(request: NextRequest) {
       advancePayment = 0,
       paymentMethod = 'Cash',
       paymentReference = '',
+      voucherNumber,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !startDate || !endDate || !dailyRate) {
@@ -223,6 +224,7 @@ export async function POST(request: NextRequest) {
         vatInclusive: effectiveVatInclusive,
         totalAmountWithVat: vatInfo.totalWithVat,
         invoiceType: invoiceType || 'Simplified',
+        voucherNumber,
         createdBy: user.userId,
       }], { session, ordered: true });
 

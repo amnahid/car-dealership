@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
       applyVat = true,
       vatInclusive = false,
       vatRate = ZATCA_VAT_RATE,
+      voucherNumber,
     } = body;
 
     if (!carId || !car || !customer || !customerName || !customerPhone || !totalPrice || !downPayment || !tenureMonths || !startDate) {
@@ -251,6 +252,7 @@ export async function POST(request: NextRequest) {
         vatInclusive: effectiveVatInclusive,
         finalPriceWithVat: vatInfo.totalWithVat,
         invoiceType: invoiceType || 'Simplified',
+        voucherNumber,
         createdBy: user.userId,
       }], { session, ordered: true });
       

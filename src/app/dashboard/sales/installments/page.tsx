@@ -78,6 +78,8 @@ interface Sale {
   applyVat?: boolean;
   vatRate?: number;
   vatInclusive?: boolean;
+  voucherNumber?: string;
+  lateFeeCharged?: number;
 }
 
 export default function InstallmentsPage() {
@@ -365,6 +367,7 @@ export default function InstallmentsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('total')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('paid')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('lateFee') || 'Late Fee'}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('installmentStatus')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('zatca')}</th>
@@ -393,6 +396,7 @@ export default function InstallmentsPage() {
                       )}
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{sale.saleId}</td>
+                    <td style={{ padding: '12px', color: '#525f80' }}>{sale.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {sale.customer?.profilePhoto ? (
@@ -410,6 +414,7 @@ export default function InstallmentsPage() {
                     </td>
                     <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.totalPrice)}</td>
                     <td style={{ padding: '12px', color: '#42ca7f', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.totalPaid)}</td>
+                    <td style={{ padding: '12px', color: (sale.lateFeeCharged || 0) > 0 ? '#ec4561' : '#9ca8b3', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.lateFeeCharged || 0)}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ 
                         padding: '4px 8px', 
@@ -481,6 +486,7 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
     startDate: new Date().toISOString().split('T')[0],
     notes: '',
     monthlyLateFee: '200',
+    voucherNumber: '',
     invoiceType: 'Simplified',
     buyerTrn: '',
     agreementDocument: '',
@@ -658,6 +664,10 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
               <label style={labelStyle}>{t('startDate')} *</label>
               <input required type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} style={inputStyle} />
             </div>
+            <div>
+              <label style={labelStyle}>{t('voucherNumber')}</label>
+              <input value={form.voucherNumber} onChange={(e) => setForm({ ...form, voucherNumber: e.target.value })} placeholder="V-0000" style={inputStyle} />
+            </div>
           </div>
 
           <div style={{ marginBottom: '16px', padding: '12px', background: '#f8f9fa', borderRadius: '4px', border: '1px solid #e9ecef' }}>
@@ -829,6 +839,7 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
     interestRate: sale.interestRate?.toString() || '0',
     tenureMonths: sale.tenureMonths.toString(),
     monthlyLateFee: sale.monthlyLateFee?.toString() || '200',
+    voucherNumber: sale.voucherNumber || '',
     notes: sale.notes || '',
     agentName: sale.agentName || '',
     agentCommission: sale.agentCommission?.toString() || '',
@@ -918,6 +929,10 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
             <div>
               <label style={labelStyle}>{t('monthlyLateFee')}</label>
               <input type="number" value={form.monthlyLateFee} onChange={(e) => setForm({ ...form, monthlyLateFee: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('voucherNumber')}</label>
+              <input value={form.voucherNumber} onChange={(e) => setForm({ ...form, voucherNumber: e.target.value })} placeholder="V-0000" style={inputStyle} />
             </div>
           </div>
 
