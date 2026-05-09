@@ -9,6 +9,8 @@ interface Payment {
   dueDate: string;
   amount: number;
   status: string;
+  method?: string;
+  voucherNumber?: string;
   paidDate?: string;
   paidAmount?: number;
   lateFee?: number;
@@ -49,6 +51,8 @@ interface Sale {
   vatRate?: number;
   vatAmount?: number;
   finalPriceWithVat?: number;
+  paymentMethod?: string;
+  paymentReference?: string;
   monthlyLateFee?: number;
   lateFeeCharged?: number;
   agreementDocument?: string;
@@ -433,6 +437,18 @@ export default function InstallmentSaleDetailPage() {
               <span style={{ color: '#9ca8b3' }}>Tenure</span>
               <span style={{ color: '#2a3142' }}>{sale.tenureMonths} months</span>
             </div>
+            {sale.paymentMethod && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>DP Method</span>
+                <span style={{ color: '#2a3142' }}>{sale.paymentMethod}</span>
+              </div>
+            )}
+            {sale.paymentReference && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>DP Reference</span>
+                <span style={{ color: '#2a3142' }}>{sale.paymentReference}</span>
+              </div>
+            )}
             {sale.vatAmount !== undefined && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>VAT ({sale.vatRate ?? 15}%)</span>
@@ -481,17 +497,19 @@ export default function InstallmentSaleDetailPage() {
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Payment Schedule</h3>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', fontSize: '14px', minWidth: '800px' }}>
-            <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
-              <tr>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>#</th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Due Date</th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Amount</th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Status</th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Late Fee</th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Paid Date</th>
-                <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Actions</th>
-              </tr>
-            </thead>
+                <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
+                  <tr>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>#</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Due Date</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Amount</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Status</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Method</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Voucher #</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Late Fee</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Paid Date</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Actions</th>
+                  </tr>
+                </thead>
             <tbody>
               {(sale.paymentSchedule || []).map((payment) => {
                 const statusColor = payment.status === 'Paid' ? '#42ca7f' : payment.status === 'Overdue' ? '#ec4561' : '#f8b425';
@@ -505,6 +523,8 @@ export default function InstallmentSaleDetailPage() {
                         {payment.status}
                       </span>
                     </td>
+                    <td style={{ padding: '12px', color: '#525f80' }}>{payment.method || '-'}</td>
+                    <td style={{ padding: '12px', color: '#525f80' }}>{payment.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px', color: payment.lateFee && payment.lateFee > 0 ? '#ec4561' : '#9ca8b3' }}>
                       {payment.lateFee && payment.lateFee > 0 ? `SAR ${(payment.lateFee || 0).toLocaleString()}` : '-'}
                     </td>
@@ -615,6 +635,8 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
   const [amount, setAmount] = useState('');
   const [lateFeeAmount, setLateFeeAmount] = useState('0');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [method, setMethod] = useState('Cash');
+  const [voucherNumber, setVoucherNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -624,6 +646,8 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
       setAmount(payment.amount.toString());
       setLateFeeAmount((payment.lateFee || 0).toString());
       setPaymentDate(new Date().toISOString().split('T')[0]);
+      setMethod(payment.method || 'Cash');
+      setVoucherNumber(payment.voucherNumber || '');
       setNotes('');
       setError('');
     }
@@ -645,6 +669,8 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
           amount: parseFloat(amount),
           lateFeeAmount: parseFloat(lateFeeAmount),
           paymentDate,
+          method,
+          voucherNumber,
           notes,
         }),
       });
@@ -702,6 +728,29 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
               required
               style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
             />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Method</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              >
+                <option value="Cash">Cash</option>
+                <option value="Bank">Bank Transfer</option>
+                <option value="Online">Online</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Voucher #</label>
+              <input
+                value={voucherNumber}
+                onChange={(e) => setVoucherNumber(e.target.value)}
+                placeholder="V-0000"
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              />
+            </div>
           </div>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes (Optional)</label>

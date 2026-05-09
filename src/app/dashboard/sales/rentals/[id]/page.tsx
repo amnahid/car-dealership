@@ -77,6 +77,7 @@ export default function RentalDetailPage() {
     amount: '',
     method: 'Cash',
     reference: '',
+    voucherNumber: '',
     note: '',
     date: new Date().toISOString().split('T')[0],
   });
@@ -97,6 +98,7 @@ export default function RentalDetailPage() {
           amount: '',
           method: 'Cash',
           reference: '',
+          voucherNumber: '',
           note: '',
           date: new Date().toISOString().split('T')[0],
         });
@@ -501,6 +503,7 @@ export default function RentalDetailPage() {
                     <th style={{ padding: '12px', textAlign: 'left' }}>Amount</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Method</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Reference</th>
+                    <th style={{ padding: '12px', textAlign: 'left' }}>Voucher #</th>
                     <th style={{ padding: '12px', textAlign: 'left' }}>Notes</th>
                   </tr>
                 </thead>
@@ -511,6 +514,7 @@ export default function RentalDetailPage() {
                       <td style={{ padding: '12px', fontWeight: 600, color: '#28aaa9' }}>SAR {p.amount.toLocaleString()}</td>
                       <td style={{ padding: '12px' }}>{p.method}</td>
                       <td style={{ padding: '12px' }}>{p.reference || '-'}</td>
+                      <td style={{ padding: '12px' }}>{(p as any).voucherNumber || '-'}</td>
                       <td style={{ padding: '12px' }}>{p.note || '-'}</td>
                     </tr>
                   ))}
@@ -537,9 +541,15 @@ export default function RentalDetailPage() {
                     <option value="Online">Online Payment</option>
                   </select>
                 </div>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Reference</label>
-                  <input value={paymentForm.reference} onChange={e => setPaymentForm({...paymentForm, reference: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Ref #" />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Reference</label>
+                    <input value={paymentForm.reference} onChange={e => setPaymentForm({...paymentForm, reference: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="Ref #" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Voucher #</label>
+                    <input value={paymentForm.voucherNumber} onChange={e => setPaymentForm({...paymentForm, voucherNumber: e.target.value})} style={{ width: '100%', height: '40px', padding: '0 12px', border: '1px solid #ced4da' }} placeholder="V-0000" />
+                  </div>
                 </div>
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Date</label>

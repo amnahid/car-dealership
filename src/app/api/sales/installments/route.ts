@@ -150,6 +150,8 @@ export async function POST(request: NextRequest) {
       applyVat = true,
       vatInclusive = false,
       vatRate = ZATCA_VAT_RATE,
+      paymentMethod = 'Cash',
+      paymentReference = '',
       voucherNumber,
     } = body;
 
@@ -252,6 +254,8 @@ export async function POST(request: NextRequest) {
         vatInclusive: effectiveVatInclusive,
         finalPriceWithVat: vatInfo.totalWithVat,
         invoiceType: invoiceType || 'Simplified',
+        paymentMethod,
+        paymentReference,
         voucherNumber,
         createdBy: user.userId,
       }], { session, ordered: true });

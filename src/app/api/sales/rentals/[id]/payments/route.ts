@@ -18,7 +18,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { amount, method, reference, note, date } = body;
+    const { amount, method, reference, note, date, voucherNumber } = body;
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
@@ -37,6 +37,7 @@ export async function POST(
         date: date ? new Date(date) : new Date(),
         method: method || 'Cash',
         reference: reference || '',
+        voucherNumber: voucherNumber || '',
         note: note || 'Rental Payment',
       });
 

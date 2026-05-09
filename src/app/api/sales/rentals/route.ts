@@ -204,8 +204,9 @@ export async function POST(request: NextRequest) {
         payments: paid > 0 ? [{
           amount: paid,
           date: new Date(),
-          method: paymentMethod,
+          method: (paymentMethod as 'Cash' | 'Bank' | 'Online') || 'Cash',
           reference: paymentReference,
+          voucherNumber: voucherNumber,
           note: 'Advance Payment'
         }] : [],
         agentName: agentName || '',

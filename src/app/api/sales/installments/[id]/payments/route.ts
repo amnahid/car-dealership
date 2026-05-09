@@ -30,7 +30,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { installmentNumber, amount, lateFeeAmount, paymentDate, notes } = body;
+    const { installmentNumber, amount, lateFeeAmount, paymentDate, notes, method, voucherNumber } = body;
 
     if (!installmentNumber || amount === undefined || !paymentDate) {
       return NextResponse.json({ error: 'Installment number, amount and payment date are required' }, { status: 400 });
@@ -69,6 +69,8 @@ export async function POST(
             'paymentSchedule.$[elem].paidAmount': amount + finalLateFee,
             'paymentSchedule.$[elem].lateFee': finalLateFee,
             'paymentSchedule.$[elem].notes': notes,
+            'paymentSchedule.$[elem].method': method || 'Cash',
+            'paymentSchedule.$[elem].voucherNumber': voucherNumber,
           },
           $inc: {
             totalPaid: amount + finalLateFee,

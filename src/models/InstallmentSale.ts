@@ -10,6 +10,8 @@ export interface IInstallmentPayment {
   dueDate: Date;
   amount: number;
   status: InstallmentPaymentStatus;
+  method?: string;
+  voucherNumber?: string;
   paidDate?: Date;
   paidAmount?: number;
   lateFee?: number;
@@ -43,6 +45,8 @@ export interface IInstallmentSaleDocument extends Document {
   vatAmount: number;
   vatInclusive: boolean;
   finalPriceWithVat: number;
+  paymentMethod?: string;
+  paymentReference?: string;
   voucherNumber?: string;
   agreementDocument?: string;
   agreementUrl?: string;
@@ -94,6 +98,8 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
       dueDate: { type: Date, required: true },
       amount: { type: Number, required: true },
       status: { type: String, enum: ['Pending', 'Paid', 'Overdue', 'Failed'], default: 'Pending' },
+      method: { type: String },
+      voucherNumber: { type: String, trim: true },
       paidDate: { type: Date },
       paidAmount: { type: Number },
       lateFee: { type: Number, default: 0 },
@@ -111,6 +117,8 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     vatAmount: { type: Number, default: 0, min: 0 },
     vatInclusive: { type: Boolean, default: false },
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
+    paymentMethod: { type: String },
+    paymentReference: { type: String },
     voucherNumber: { type: String, trim: true },
     agreementDocument: { type: String },
     agreementUrl: { type: String },

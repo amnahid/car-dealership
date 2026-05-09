@@ -487,6 +487,8 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
     notes: '',
     monthlyLateFee: '200',
     voucherNumber: '',
+    paymentMethod: 'Cash',
+    paymentReference: '',
     invoiceType: 'Simplified',
     buyerTrn: '',
     agreementDocument: '',
@@ -667,6 +669,18 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
             <div>
               <label style={labelStyle}>{t('voucherNumber')}</label>
               <input value={form.voucherNumber} onChange={(e) => setForm({ ...form, voucherNumber: e.target.value })} placeholder="V-0000" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{isRtl ? 'طريقة الدفع (المقدم)' : 'Payment Method (Down Payment)'}</label>
+              <select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} style={inputStyle}>
+                <option value="Cash">{isRtl ? 'نقدي' : 'Cash'}</option>
+                <option value="Bank">{isRtl ? 'تحويل بنكي' : 'Bank Transfer'}</option>
+                <option value="Online">{isRtl ? 'أونلاين' : 'Online'}</option>
+              </select>
+            </div>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={labelStyle}>{isRtl ? 'رقم المرجع' : 'Payment Reference'}</label>
+              <input value={form.paymentReference} onChange={(e) => setForm({ ...form, paymentReference: e.target.value })} placeholder="REF-0000" style={inputStyle} />
             </div>
           </div>
 
