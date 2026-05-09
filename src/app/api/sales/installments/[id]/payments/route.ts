@@ -60,17 +60,15 @@ export async function POST(
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const finalLateFee = lateFeeAmount !== undefined ? Number(lateFeeAmount) : calculateAccruedLateFee(diffDays, sale.monthlyLateFee);
 
-      // Update the specific installment in the schedule
-      sale.paymentSchedule[instIdx] = {
-        ...sale.paymentSchedule[instIdx],
-        status: 'Paid',
-        paidDate: new Date(paymentDate),
-        paidAmount: amount + finalLateFee,
-        lateFee: finalLateFee,
-        notes: notes,
-        method: method || 'Cash',
-        voucherNumber: voucherNumber || '',
-      };
+      // Update the specific installment in the schedule directly
+      const targetInst = sale.paymentSchedule[instIdx];
+      targetInst.status = 'Paid';
+      targetInst.paidDate = new Date(paymentDate);
+      targetInst.paidAmount = amount + finalLateFee;
+      targetInst.lateFee = finalLateFee;
+      targetInst.notes = notes;
+      targetInst.method = method || 'Cash';
+      targetInst.voucherNumber = voucherNumber || '';
 
       // Update parent totals
       sale.totalPaid += (amount + finalLateFee);
