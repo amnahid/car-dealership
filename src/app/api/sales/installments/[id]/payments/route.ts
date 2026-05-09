@@ -43,76 +43,66 @@ export async function POST(
         throw new Error('Sale not found');
       }
 
-      const inst = sale.paymentSchedule.find(p => p.installmentNumber === installmentNumber);
-      if (!inst) {
+      const instIdx = sale.paymentSchedule.findIndex(p => p.installmentNumber === installmentNumber);
+      if (instIdx === -1) {
         throw new Error('Invalid installment number');
       }
+      
+      const inst = sale.paymentSchedule[instIdx];
       if (inst.status === 'Paid') {
         throw new Error('Installment already paid');
       }
 
-      // Calculate late fee: 10 day grace period, then flat fee per month
+      // Calculate late fee
       const dueDate = new Date(inst.dueDate);
       const pDate = new Date(paymentDate);
       const diffTime = pDate.getTime() - dueDate.getTime();
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
       const finalLateFee = lateFeeAmount !== undefined ? Number(lateFeeAmount) : calculateAccruedLateFee(diffDays, sale.monthlyLateFee);
 
-      // Atomic update of the installment and totals
-      const us = await InstallmentSale.findByIdAndUpdate(
-        id,
-        {
-          $set: {
-            'paymentSchedule.$[elem].status': 'Paid',
-            'paymentSchedule.$[elem].paidDate': new Date(paymentDate),
-            'paymentSchedule.$[elem].paidAmount': amount + finalLateFee,
-            'paymentSchedule.$[elem].lateFee': finalLateFee,
-            'paymentSchedule.$[elem].notes': notes,
-            'paymentSchedule.$[elem].method': method || 'Cash',
-            'paymentSchedule.$[elem].voucherNumber': voucherNumber,
-          },
-          $inc: {
-            totalPaid: amount + finalLateFee,
-            remainingAmount: -amount, // Only decrement remaining balance by the base amount
-            lateFeeCharged: finalLateFee
-          }
-        },
-        {
-          session,
-          new: true,
-          arrayFilters: [{ 'elem.installmentNumber': installmentNumber }]
-        }
-      );
+      // Update the specific installment in the schedule
+      sale.paymentSchedule[instIdx] = {
+        ...sale.paymentSchedule[instIdx],
+        status: 'Paid',
+        paidDate: new Date(paymentDate),
+        paidAmount: amount + finalLateFee,
+        lateFee: finalLateFee,
+        notes: notes,
+        method: method || 'Cash',
+        voucherNumber: voucherNumber || '',
+      };
 
-      if (!us) {
-        throw new Error('Failed to update sale');
-      }
+      // Update parent totals
+      sale.totalPaid += (amount + finalLateFee);
+      sale.remainingAmount = Math.max(0, sale.remainingAmount - amount);
+      sale.lateFeeCharged += finalLateFee;
 
       // Recalculate next payment info based on new state
-      const schedule = us.paymentSchedule || [];
-      const nextUnpaid = schedule.find(p => p.status !== 'Paid');
+      const nextUnpaid = sale.paymentSchedule.find(p => p.status !== 'Paid');
 
       if (nextUnpaid) {
-        us.nextPaymentDate = nextUnpaid.dueDate;
-        us.nextPaymentAmount = nextUnpaid.amount;
+        sale.nextPaymentDate = nextUnpaid.dueDate;
+        sale.nextPaymentAmount = nextUnpaid.amount;
 
         // Check if there are any remaining overdue installments
-        const hasOverdue = schedule.some(p => p.status === 'Overdue');
-        if (!hasOverdue && us.status === 'Defaulted') {
-          us.status = 'Active';
-          await Car.findByIdAndUpdate(us.car, { status: 'On Installment' }, { session });
+        const hasOverdue = sale.paymentSchedule.some(p => p.status === 'Overdue');
+        if (!hasOverdue && sale.status === 'Defaulted') {
+          sale.status = 'Active';
+          await Car.findByIdAndUpdate(sale.car, { status: 'On Installment' }, { session });
         } else if (hasOverdue) {
-          us.status = 'Defaulted';
-          await Car.findByIdAndUpdate(us.car, { status: 'Defaulted' }, { session });
+          sale.status = 'Defaulted';
+          await Car.findByIdAndUpdate(sale.car, { status: 'Defaulted' }, { session });
         }
       } else {
-        us.status = 'Completed';
-        us.nextPaymentDate = null as unknown as Date;
-        us.nextPaymentAmount = 0;
-        await Car.findByIdAndUpdate(us.car, { status: 'Sold' }, { session });
+        sale.status = 'Completed';
+        sale.nextPaymentDate = null as unknown as Date;
+        sale.nextPaymentAmount = 0;
+        await Car.findByIdAndUpdate(sale.car, { status: 'Sold' }, { session });
       }
-      await us.save({ session });
+
+      // Explicitly mark paymentSchedule as modified for Mongoose array tracking
+      sale.markModified('paymentSchedule');
+      await sale.save({ session });
 
       // Create ledger transactions
       const transactions: any[] = [{
@@ -120,8 +110,8 @@ export async function POST(
         type: 'Income',
         category: 'Installment Payment',
         amount: amount,
-        description: `Installment #${installmentNumber} base payment for ${us.saleId} - Car ${us.carId}`,
-        referenceId: us._id.toString(),
+        description: `Installment #${installmentNumber} base payment for ${sale.saleId} - Car ${sale.carId}`,
+        referenceId: sale._id.toString(),
         referenceType: 'InstallmentSale',
         isAutoGenerated: true,
         createdBy: user.userId,
@@ -131,18 +121,16 @@ export async function POST(
         transactions.push({
           date: new Date(paymentDate),
           type: 'Income',
-          category: 'Fee', // Or 'Installment Payment'
+          category: 'Fee',
           amount: finalLateFee,
-          description: `Late fee collected for installment #${installmentNumber} - Sale ${us.saleId}`,
-          referenceId: us._id.toString(),
+          description: `Late fee collected for installment #${installmentNumber} - Sale ${sale.saleId}`,
+          referenceId: sale._id.toString(),
           referenceType: 'InstallmentSale',
           isAutoGenerated: true,
           createdBy: user.userId,
         });
       }
 
-      // Create ledger transactions sequentially to ensure the pre-save hook 
-      // generates unique sequential transaction IDs
       for (const txData of transactions) {
         await Transaction.create([txData], { session });
       }
@@ -150,13 +138,13 @@ export async function POST(
       await logActivity({
         userId: user.userId,
         userName: user.name,
-        action: `Recorded payment for installment ${installmentNumber} of sale ${us.saleId} (Base: ${amount}, Fee: ${finalLateFee})`,
+        action: `Recorded payment for installment ${installmentNumber} of sale ${sale.saleId} (Base: ${amount}, Fee: ${finalLateFee})`,
         module: 'Sales',
-        targetId: us._id.toString(),
+        targetId: sale._id.toString(),
         ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
       });
 
-      return us;
+      return sale;
     });
 
     return NextResponse.json({ sale: updatedSale });

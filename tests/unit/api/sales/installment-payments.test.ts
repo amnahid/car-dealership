@@ -73,9 +73,13 @@ describe('Installment Payments API', () => {
         carId: 'CAR-001',
         car: 'car-obj-id',
         paymentSchedule: [
-          { installmentNumber: 1, status: 'Pending', dueDate: new Date() }
+          { installmentNumber: 1, status: 'Pending', dueDate: new Date(), amount: 1000 }
         ],
         monthlyLateFee: 100,
+        totalPaid: 0,
+        remainingAmount: 1000,
+        lateFeeCharged: 0,
+        markModified: jest.fn(),
         save: jest.fn().mockResolvedValue(true),
       };
 
