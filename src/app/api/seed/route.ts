@@ -548,7 +548,7 @@ export async function POST(request: NextRequest) {
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (auth.normalizedRole !== 'Admin') {
+    if (!auth.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -623,7 +623,7 @@ export async function GET(request: NextRequest) {
     if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (auth.normalizedRole !== 'Admin') {
+    if (!auth.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

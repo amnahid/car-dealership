@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Accountant', 'Finance Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

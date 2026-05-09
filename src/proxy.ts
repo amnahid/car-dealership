@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { canAccessApiPath, canAccessDashboardPath, isPublicApiPath, normalizeRole } from '@/lib/rbac';
+import { canAccessApiPath, canAccessDashboardPath, isPublicApiPath, normalizeRoles } from '@/lib/rbac';
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -33,9 +33,12 @@ export async function proxy(request: NextRequest) {
 
   try {
     const { payload } = await jwtVerify(token, getSecret());
-    const normalizedRole = normalizeRole(payload.role as string | undefined);
+    
+    // Extract roles from JWT (could be string or array)
+    const rawRoles = payload.roles || payload.role;
+    const normalizedRoles = normalizeRoles(rawRoles as string[] | string);
 
-    if (!normalizedRole) {
+    if (normalizedRoles.length === 0) {
       if (isDashboardPath) {
         return NextResponse.redirect(new URL('/auth/login', request.url));
       }
@@ -43,11 +46,11 @@ export async function proxy(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if (isDashboardPath && !canAccessDashboardPath(normalizedRole, pathname)) {
+    if (isDashboardPath && !canAccessDashboardPath(normalizedRoles, pathname)) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    if (isProtectedApiPath && !canAccessApiPath(normalizedRole, pathname, request.method)) {
+    if (isProtectedApiPath && !canAccessApiPath(normalizedRoles, pathname, request.method)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

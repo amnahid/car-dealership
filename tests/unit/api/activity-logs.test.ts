@@ -26,7 +26,7 @@ describe('Activity Logs API', () => {
 
   describe('GET /api/activity-logs', () => {
     it('returns logs list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockActivityLog.countDocuments.mockResolvedValue(1);
       
       const queryMock: any = {};

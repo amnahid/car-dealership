@@ -17,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Accountant', 'Finance Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -54,7 +54,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Accountant', 'Finance Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -81,7 +81,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
-    if (user.normalizedRole !== 'Admin') {
+    if (!user.normalizedRoles.includes('Admin')) {
       await EditRequest.create({
         targetModel: 'Transaction',
         targetId: id,
@@ -143,7 +143,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Accountant', 'Finance Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

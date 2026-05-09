@@ -31,7 +31,7 @@ describe('Employees API', () => {
 
   describe('GET /api/employees', () => {
     it('returns employees list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockEmployee.countDocuments.mockResolvedValue(1);
       mockEmployee.aggregate.mockResolvedValue([]);
       
@@ -55,7 +55,7 @@ describe('Employees API', () => {
 
   describe('POST /api/employees', () => {
     it('creates an employee on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const employeeData = { name: 'John Doe', phone: '123456', designation: 'Staff', department: 'Sales', baseSalary: 3000, joiningDate: '2024-01-01' };
       mockEmployee.create.mockResolvedValue({ _id: 'empid', ...employeeData });
 

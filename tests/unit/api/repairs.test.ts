@@ -51,7 +51,7 @@ describe('Repairs API', () => {
     });
 
     it('returns repairs list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockRepair.countDocuments.mockResolvedValue(1);
       mockRepair.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
@@ -78,7 +78,7 @@ describe('Repairs API', () => {
 
   describe('POST /api/repairs', () => {
     it('creates a repair on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const validCarId = new mongoose.Types.ObjectId().toString();
       const repairData = { car: validCarId, carId: 'CAR-001', repairDescription: 'Oil change', repairDate: '2024-01-01', totalCost: 100 };
       

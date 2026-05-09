@@ -19,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person', 'Accountant', 'Finance Manager'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person', 'Accountant', 'Finance Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -139,7 +139,7 @@ export async function POST(
         });
       }
 
-      await Transaction.create(transactions, { session });
+      await Transaction.create(transactions, { session, ordered: true });
 
       await logActivity({
         userId: user.userId,

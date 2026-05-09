@@ -130,7 +130,9 @@ describe('apiAuth.ts', () => {
       userId: '507f1f77bcf86cd799439011',
       email: 'user@example.com',
       role: 'Car Manager',
+      roles: ['Car Manager'],
       normalizedRole: 'Car Manager',
+      normalizedRoles: ['Car Manager'],
       name: 'User',
       passwordVersion: 3,
     });

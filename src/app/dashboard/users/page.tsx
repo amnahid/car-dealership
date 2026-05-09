@@ -10,6 +10,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  roles?: string[];
   isActive: boolean;
   createdAt: string;
 }
@@ -18,7 +19,7 @@ interface UserFormData {
   name: string;
   email: string;
   password: string;
-  role: string;
+  roles: string[];
 }
 
 interface CreateResponse {
@@ -41,7 +42,7 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [generatedPw, setGeneratedPw] = useState('');
-  const [formData, setFormData] = useState<UserFormData>({ name: '', email: '', password: '', role: 'Sales Person' });
+  const [formData, setFormData] = useState<UserFormData>({ name: '', email: '', password: '', roles: ['Sales Person'] });
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -109,6 +110,16 @@ export default function UsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
+  const toggleRole = (role: string) => {
+    setFormData(prev => {
+      const next = prev.roles.includes(role)
+        ? prev.roles.filter(r => r !== role)
+        : [...prev.roles, role];
+      if (next.length === 0) return prev;
+      return { ...prev, roles: next };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -116,7 +127,12 @@ export default function UsersPage() {
     setGeneratedPw('');
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = { ...formData };
+      const payload: Record<string, unknown> = { 
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        roles: formData.roles 
+      };
       if (!payload.password) delete payload.password;
       const res = await fetch('/api/users', {
         method: 'POST',
@@ -135,7 +151,7 @@ export default function UsersPage() {
         setSuccess(t('successCreated'));
       }
       setShowForm(false);
-      setFormData({ name: '', email: '', password: '', role: 'Sales Person' });
+      setFormData({ name: '', email: '', password: '', roles: ['Sales Person'] });
       fetchUsers();
     } catch {
       setError(t('errors.networkError'));
@@ -169,7 +185,7 @@ export default function UsersPage() {
   };
 
   const getRoleLabel = (role: string) => {
-    const key = role.replace(' ', '').charAt(0).toLowerCase() + role.replace(' ', '').slice(1);
+    const key = role.replace(/\s/g, '').charAt(0).toLowerCase() + role.replace(/\s/g, '').slice(1);
     return t(`roles.${key}`);
   };
 
@@ -306,18 +322,19 @@ export default function UsersPage() {
               </p>
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>{t('role')} *</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value }))}
-                style={inputStyle}
-              >
+              <label style={labelStyle}>{t('selectRoles')} *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '12px', border: '1px solid #ced4da', background: '#f9f9f9' }}>
                 {ROLE_OPTIONS.map((r) => (
-                  <option key={r} value={r}>
+                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={formData.roles.includes(r)} 
+                      onChange={() => toggleRole(r)}
+                    />
                     {getRoleLabel(r)}
-                  </option>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
               <button
@@ -422,11 +439,6 @@ export default function UsersPage() {
                   <input
                     type="checkbox"
                     checked={users.length > 0 && selectedIds.size === users.length}
-                    ref={(input) => {
-                      if (input) {
-                        input.indeterminate = selectedIds.size > 0 && selectedIds.size < users.length;
-                      }
-                    }}
                     onChange={toggleSelectAll}
                   />
                 </th>
@@ -453,19 +465,24 @@ export default function UsersPage() {
                   </td>
                   <td style={{ padding: '12px', color: '#525f80' }}>{u.email}</td>
                   <td style={{ padding: '12px' }}>
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        padding: '4px 8px',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        borderRadius: '3px',
-                        background: '#28aaa9',
-                        color: '#ffffff',
-                      }}
-                    >
-                      {getRoleLabel(u.role)}
-                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map(r => (
+                        <span
+                          key={r}
+                          style={{
+                            display: 'inline-flex',
+                            padding: '2px 8px',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            borderRadius: '3px',
+                            background: '#28aaa9',
+                            color: '#ffffff',
+                          }}
+                        >
+                          {getRoleLabel(r)}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td style={{ padding: '12px' }}>
                     <span

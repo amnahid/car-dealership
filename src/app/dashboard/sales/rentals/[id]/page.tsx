@@ -48,6 +48,7 @@ interface Rental {
     note?: string;
   }>;
   invoiceType?: 'Standard' | 'Simplified';
+  totalAmountWithVat?: number;
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   zatcaUUID?: string;
   zatcaErrorMessage?: string;
@@ -450,7 +451,7 @@ export default function RentalDetailPage() {
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', paddingTop: '12px' }}>
               <span style={{ color: '#2a3142', fontWeight: 600 }}>Total Amount</span>
-              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>SAR {(rental.totalAmount || 0).toLocaleString()}</span>
+              <span style={{ color: '#28aaa9', fontWeight: 700, fontSize: '18px' }}>SAR {(rental.totalAmountWithVat || rental.totalAmount || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -458,7 +459,7 @@ export default function RentalDetailPage() {
         <div className="card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', margin: 0 }}>Financial Summary</h3>
-            {rental.status === 'Active' && (rental.remainingAmount || 0) > 0 && (
+            {rental.status !== 'Cancelled' && (
               <button 
                 onClick={() => {
                   setPaymentForm({ ...paymentForm, amount: (rental.remainingAmount || 0).toString() });

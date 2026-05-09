@@ -841,6 +841,7 @@
     "email": "Email",
     "password": "Password",
     "role": "Role",
+    "selectRoles": "Roles (Select one or more)",
     "status": "Status",
     "created": "Created",
     "deactivate": "Deactivate",

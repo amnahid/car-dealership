@@ -150,6 +150,11 @@ InstallmentSaleSchema.index({ 'paymentSchedule.dueDate': 1 });
 InstallmentSaleSchema.index({ 'paymentSchedule.status': 1 });
 
 InstallmentSaleSchema.pre('save', async function (this: IInstallmentSaleDocument) {
+  // Recalculate remaining amount whenever loan or paid amount changes
+  if (this.loanAmount !== undefined || this.totalPaid !== undefined) {
+    this.remainingAmount = Math.max(0, (this.loanAmount || 0) - (this.totalPaid || 0));
+  }
+
   if (!this.isNew || this.saleId) return;
 
   const count = await mongoose.model('InstallmentSale').countDocuments();

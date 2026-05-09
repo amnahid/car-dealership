@@ -8,6 +8,7 @@ export interface IUserDocument extends Document {
   phone?: string;
   avatar?: string;
   role: KnownUserRole;
+  roles: KnownUserRole[];
   isActive: boolean;
   isDeleted: boolean;
   resetToken?: string;
@@ -28,6 +29,10 @@ const UserSchema = new Schema<IUserDocument>(
       enum: [...USER_ROLES, ...LEGACY_USER_ROLES],
       default: 'Sales Person',
     },
+    roles: [{
+      type: String,
+      enum: [...USER_ROLES, ...LEGACY_USER_ROLES],
+    }],
     isActive: { type: Boolean, default: true },
     isDeleted: { type: Boolean, default: false },
     resetToken: { type: String },

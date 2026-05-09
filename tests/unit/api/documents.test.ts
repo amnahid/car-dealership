@@ -38,7 +38,7 @@ describe('Documents API', () => {
     });
 
     it('returns documents list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockDocument.countDocuments.mockResolvedValue(1);
       mockDocument.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
@@ -65,7 +65,7 @@ describe('Documents API', () => {
 
   describe('POST /api/documents', () => {
     it('creates a document on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const docData = { car: 'carid', carId: 'CAR-001', documentType: 'Insurance', issueDate: '2024-01-01', expiryDate: '2025-01-01' };
       mockDocument.create.mockResolvedValue({ _id: 'docid', ...docData });
 

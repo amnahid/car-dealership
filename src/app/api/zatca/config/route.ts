@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     const user = await getAuthPayload(request);
-    if (!user || user.normalizedRole !== 'Admin') {
+    if (!user || !user.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const user = await getAuthPayload(request);
-    if (!user || user.normalizedRole !== 'Admin') {
+    if (!user || !user.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest) {
   try {
     await connectDB();
     const user = await getAuthPayload(request);
-    if (!user || user.normalizedRole !== 'Admin') {
+    if (!user || !user.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

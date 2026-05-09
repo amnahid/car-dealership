@@ -79,7 +79,7 @@ describe('Rentals API', () => {
     });
 
     it('returns rentals list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockRental.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
@@ -108,7 +108,13 @@ describe('Rentals API', () => {
 
   describe('POST /api/sales/rentals', () => {
     it('creates a rental on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ 
+        userId: 'adminid', 
+        name: 'Admin',
+        role: 'Admin',
+        normalizedRole: 'Admin', 
+        normalizedRoles: ['Admin'] 
+      } as any);
       
       const { calculateVat } = require('@/lib/zatca/invoiceService');
       (calculateVat as jest.Mock).mockReturnValue({ subtotal: 500, vatAmount: 75, totalWithVat: 575 });

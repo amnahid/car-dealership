@@ -22,7 +22,7 @@ export async function GET(
     const auth = await getAuthPayload(_request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Car Manager', 'Sales Person', 'Accountant', 'Finance Manager'].includes(auth.normalizedRole || '')) {
+    if (!auth.normalizedRoles.some(r => ['Admin', 'Car Manager', 'Sales Person', 'Accountant', 'Finance Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -60,7 +60,7 @@ export async function PUT(
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+    if (!auth.normalizedRoles.some(r => ['Admin', 'Car Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -70,7 +70,7 @@ export async function PUT(
     const { purchase, ...carData } = body;
 
     // INTERCEPTION: If not Admin, queue for approval
-    if (auth.normalizedRole !== 'Admin') {
+    if (!auth.normalizedRoles.includes('Admin')) {
       await EditRequest.create({
         targetModel: 'Car',
         targetId: id,
@@ -138,7 +138,7 @@ export async function PUT(
                 referenceId: car.carId,
                 referenceType: 'CarPurchase',
                 createdBy: auth.userId,
-              }], { session });
+              }], { session, ordered: true });
               purchase.transactionId = transactions[0]._id;
             }
           }
@@ -154,14 +154,14 @@ export async function PUT(
             referenceId: car.carId,
             referenceType: 'CarPurchase',
             createdBy: auth.userId,
-          }], { session });
+          }], { session, ordered: true });
           
           const carPurchases = await CarPurchase.create([{
             car: car._id,
             ...purchase,
             transactionId: transactions[0]._id,
             createdBy: auth.userId,
-          }], { session });
+          }], { session, ordered: true });
           
           car.purchase = carPurchases[0]._id;
           await car.save({ session });
@@ -199,7 +199,7 @@ export async function DELETE(
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+    if (!auth.normalizedRoles.some(r => ['Admin', 'Car Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

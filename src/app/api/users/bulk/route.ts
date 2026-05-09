@@ -4,14 +4,14 @@ import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';
-import { normalizeRole } from '@/lib/rbac';
+import { normalizeRole, normalizeRoles } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (auth.normalizedRole !== 'Admin') {
+    if (!auth.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -37,28 +37,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot perform bulk actions on your own account' }, { status: 400 });
     }
 
-    const targetUsers = await User.find({ _id: { $in: normalizedIds } }).select('_id role isActive');
+    const targetUsers = await User.find({ _id: { $in: normalizedIds } }).select('_id role roles isActive');
     if (targetUsers.length === 0) {
       return NextResponse.json({ error: 'No matching users found' }, { status: 404 });
     }
 
     const activeAdminIds = targetUsers
-      .filter((user) => user.isActive && normalizeRole(user.role) === 'Admin')
+      .filter((user) => {
+          if (!user.isActive) return false;
+          const userRoles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
+          return normalizeRoles(userRoles).includes('Admin');
+      })
       .map((user) => user._id.toString());
 
     if (action === 'delete') {
       if (activeAdminIds.length > 0) {
-        const remainingActiveAdmins = await User.countDocuments({
-          role: 'Admin',
+        const remainingActiveAdminsCount = await User.countDocuments({
+          roles: 'Admin',
           isActive: true,
           _id: { $nin: activeAdminIds },
+          isDeleted: { $ne: true }
         });
-        if (remainingActiveAdmins === 0) {
+        
+        const remainingLegacyAdminsCount = await User.countDocuments({
+            role: 'Admin',
+            roles: { $size: 0 },
+            isActive: true,
+            _id: { $nin: activeAdminIds },
+            isDeleted: { $ne: true }
+        });
+
+        if (remainingActiveAdminsCount + remainingLegacyAdminsCount === 0) {
           return NextResponse.json({ error: 'Cannot deactivate all active admin accounts' }, { status: 400 });
         }
       }
 
-      const result = await User.updateMany({ _id: { $in: normalizedIds } }, { $set: { isActive: false } });
+      const result = await User.updateMany({ _id: { $in: normalizedIds } }, { $set: { isActive: false, isDeleted: true } });
 
       await logActivity({
         userId: auth.userId,
@@ -78,12 +92,22 @@ export async function POST(request: NextRequest) {
       }
 
       if (!isActive && activeAdminIds.length > 0) {
-        const remainingActiveAdmins = await User.countDocuments({
-          role: 'Admin',
-          isActive: true,
-          _id: { $nin: activeAdminIds },
+        const remainingActiveAdminsCount = await User.countDocuments({
+            roles: 'Admin',
+            isActive: true,
+            _id: { $nin: activeAdminIds },
+            isDeleted: { $ne: true }
         });
-        if (remainingActiveAdmins === 0) {
+        
+        const remainingLegacyAdminsCount = await User.countDocuments({
+            role: 'Admin',
+            roles: { $size: 0 },
+            isActive: true,
+            _id: { $nin: activeAdminIds },
+            isDeleted: { $ne: true }
+        });
+
+        if (remainingActiveAdminsCount + remainingLegacyAdminsCount === 0) {
           return NextResponse.json({ error: 'Cannot deactivate all active admin accounts' }, { status: 400 });
         }
       }

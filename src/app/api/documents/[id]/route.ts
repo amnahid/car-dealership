@@ -15,7 +15,7 @@ export async function GET(
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Car Manager', 'Sales Person'].includes(auth.normalizedRole || '')) {
+    if (!auth.normalizedRoles.some(r => ['Admin', 'Car Manager', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -42,7 +42,7 @@ export async function PUT(
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+    if (!auth.normalizedRoles.some(r => ['Admin', 'Car Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     
@@ -51,7 +51,7 @@ export async function PUT(
     const body = await request.json();
     
     // INTERCEPTION: If not Admin, queue for approval
-    if (auth.normalizedRole !== 'Admin') {
+    if (!auth.normalizedRoles.includes('Admin')) {
       await EditRequest.create({
         targetModel: 'Document',
         targetId: id,
@@ -137,7 +137,7 @@ export async function DELETE(
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Car Manager'].includes(auth.normalizedRole || '')) {
+    if (!auth.normalizedRoles.some(r => ['Admin', 'Car Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     

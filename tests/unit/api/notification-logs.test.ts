@@ -20,7 +20,7 @@ describe('Notification Logs API', () => {
 
   describe('GET /api/notifications/logs', () => {
     it('returns logs list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockGetNotificationLogs.mockResolvedValue({
         logs: [{ subject: 'Test' } as any],
         pagination: { total: 1, page: 1, limit: 20, pages: 1 },

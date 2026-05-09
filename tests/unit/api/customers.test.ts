@@ -32,14 +32,14 @@ describe('Customers API', () => {
     });
 
     it('returns 403 if user role is not allowed', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Car Manager' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Car Manager', normalizedRoles: ['Car Manager'] } as any);
       const req = new NextRequest('http://localhost/api/customers');
       const res = await GET(req);
       expect(res.status).toBe(403);
     });
 
     it('returns customers list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockCustomer.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
@@ -63,7 +63,7 @@ describe('Customers API', () => {
 
   describe('POST /api/customers', () => {
     it('returns 400 if required fields are missing', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const req = new NextRequest('http://localhost/api/customers', {
         method: 'POST',
         body: JSON.stringify({ fullName: 'John Doe' }),
@@ -73,7 +73,7 @@ describe('Customers API', () => {
     });
 
     it('creates a new customer on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const customerData = {
         fullName: 'John Doe',
         phone: '123456789',

@@ -32,14 +32,14 @@ describe('Guarantors API', () => {
     });
 
     it('returns 403 if user role is not allowed', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Car Manager' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Car Manager', normalizedRoles: ['Car Manager'] } as any);
       const req = new NextRequest('http://localhost/api/guarantors');
       const res = await GET(req);
       expect(res.status).toBe(403);
     });
 
     it('returns guarantors list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockGuarantor.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
           skip: jest.fn().mockReturnValue({
@@ -63,7 +63,7 @@ describe('Guarantors API', () => {
 
   describe('POST /api/guarantors', () => {
     it('returns 400 if required fields are missing', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const req = new NextRequest('http://localhost/api/guarantors', {
         method: 'POST',
         body: JSON.stringify({ fullName: 'Jane Doe' }),
@@ -73,7 +73,7 @@ describe('Guarantors API', () => {
     });
 
     it('creates a new guarantor on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const guarantorData = {
         fullName: 'Jane Doe',
         phone: '987654321',

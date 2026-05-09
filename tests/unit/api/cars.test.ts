@@ -50,14 +50,14 @@ describe('Cars API', () => {
     });
 
     it('returns 403 if role not allowed', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Invalid' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Invalid', normalizedRoles: ['Invalid'] } as any);
       const req = new NextRequest('http://localhost/api/cars');
       const res = await GET(req);
       expect(res.status).toBe(403);
     });
 
     it('returns cars list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockCar.countDocuments.mockResolvedValue(1);
       mockCar.find.mockReturnValue({
         sort: jest.fn().mockReturnValue({
@@ -89,7 +89,7 @@ describe('Cars API', () => {
 
   describe('POST /api/cars', () => {
     it('creates a car without purchase', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const carData = { brand: 'Toyota', model: 'Camry', year: 2023, chassisNumber: 'CH123' };
       
       mockRunInTransaction.mockImplementation(async (callback) => {

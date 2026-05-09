@@ -22,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -56,7 +56,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -94,7 +94,7 @@ export async function PUT(
     } = body;
 
     // INTERCEPTION: If not Admin, queue for approval
-    if (user.normalizedRole !== 'Admin') {
+    if (!user.normalizedRoles.includes('Admin')) {
       await EditRequest.create({
         targetModel: 'CashSale',
         targetId: id,
@@ -316,7 +316,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -385,7 +385,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

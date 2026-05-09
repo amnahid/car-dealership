@@ -3,7 +3,7 @@ import { connectDB, DatabaseConnectionError } from '@/lib/db';
 import User from '@/models/User';
 import { comparePassword, signToken } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
-import { normalizeRole } from '@/lib/rbac';
+import { normalizeRoles } from '@/lib/rbac';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,15 +30,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const normalizedRole = normalizeRole(user.role);
-    if (!normalizedRole) {
+    // Combine legacy role and new roles array
+    const userRoles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
+    const normalizedRoles = normalizeRoles(userRoles);
+
+    if (normalizedRoles.length === 0) {
       return NextResponse.json({ error: 'Invalid role configuration' }, { status: 403 });
     }
 
     const token = signToken({
       userId: user._id.toString(),
       email: user.email,
-      role: normalizedRole,
+      role: normalizedRoles[0], // Keep for backward compatibility
+      roles: normalizedRoles,
       name: user.name,
       passwordVersion: user.passwordVersion,
     });
@@ -60,7 +64,8 @@ export async function POST(request: NextRequest) {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: normalizedRole,
+        role: normalizedRoles[0],
+        roles: normalizedRoles,
       },
     });
 

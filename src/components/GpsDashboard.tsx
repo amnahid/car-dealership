@@ -12,7 +12,7 @@ export default function GpsDashboard() {
   const providers = {
     itrack: {
       name: 'iTrack',
-      url: 'https://www.itrack.top/',
+      url: 'https://www.itrack.top/dealer2/#/business',
     },
     whatsgps: {
       name: 'WhatsGPS',

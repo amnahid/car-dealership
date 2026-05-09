@@ -6,7 +6,7 @@ import { getAuthPayload } from '@/lib/apiAuth';
 import { hashPassword } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
 import { sendUserCredentialsEmail, generateStrongPassword } from '@/lib/userCredentialsEmail';
-import { isAssignableRole, normalizeRole } from '@/lib/rbac';
+import { isAssignableRole, normalizeRole, normalizeRoles } from '@/lib/rbac';
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -19,7 +19,7 @@ export async function GET(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!auth.normalizedRoles.includes('Admin')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const { id } = await params;
@@ -42,7 +42,7 @@ export async function PUT(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!auth.normalizedRoles.includes('Admin')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const { id } = await params;
@@ -51,8 +51,23 @@ export async function PUT(
     }
     const body = await request.json();
 
-    if (body.role !== undefined && !isAssignableRole(body.role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    // Support both single role (legacy) and multiple roles in update
+    let rolesInput: string[] | undefined = undefined;
+    if (Array.isArray(body.roles)) {
+      rolesInput = body.roles;
+    } else if (typeof body.role === 'string' && body.role) {
+      rolesInput = [body.role];
+    }
+
+    if (rolesInput !== undefined) {
+      if (rolesInput.length === 0) {
+        return NextResponse.json({ error: 'At least one role is required' }, { status: 400 });
+      }
+      for (const r of rolesInput) {
+        if (!isAssignableRole(r)) {
+          return NextResponse.json({ error: `Invalid role: ${r}` }, { status: 400 });
+        }
+      }
     }
 
     if (body.password !== undefined) {
@@ -62,12 +77,19 @@ export async function PUT(
       );
     }
 
-    const existingUser = await User.findById(id).select('isActive role');
+    const existingUser = await User.findById(id).select('isActive role roles');
     if (!existingUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     if (id === auth.userId) {
-      if (body.role !== undefined && body.role !== existingUser.role) {
-        return NextResponse.json({ error: 'Cannot change your own role' }, { status: 400 });
+      if (rolesInput !== undefined) {
+        const nextNormalizedRoles = normalizeRoles(rolesInput);
+        const currentNormalizedRoles = normalizeRoles(existingUser.roles && existingUser.roles.length > 0 ? existingUser.roles : [existingUser.role]);
+        
+        // Basic check: if they are still an Admin in the new list, it's fine. 
+        // But for safety, we prevent users from changing their own roles entirely via this UI to avoid self-lockout.
+        if (JSON.stringify(nextNormalizedRoles.sort()) !== JSON.stringify(currentNormalizedRoles.sort())) {
+            return NextResponse.json({ error: 'Cannot change your own roles' }, { status: 400 });
+        }
       }
       if (body.isActive === false) {
         return NextResponse.json({ error: 'Cannot deactivate your own account' }, { status: 400 });
@@ -88,7 +110,13 @@ export async function PUT(
       }
       updatePayload.email = normalizedEmail;
     }
-    if (body.role !== undefined) updatePayload.role = body.role;
+    
+    if (rolesInput !== undefined) {
+        const normalized = normalizeRoles(rolesInput);
+        updatePayload.roles = normalized;
+        updatePayload.role = normalized[0]; // sync legacy field
+    }
+
     if (body.phone !== undefined) updatePayload.phone = body.phone;
     if (body.avatar !== undefined) updatePayload.avatar = body.avatar;
     if (body.isActive !== undefined) {
@@ -98,22 +126,36 @@ export async function PUT(
       updatePayload.isActive = body.isActive;
     }
 
-    const currentNormalizedRole = normalizeRole(existingUser.role);
-    const nextRole = body.role ?? existingUser.role;
-    const nextNormalizedRole = normalizeRole(nextRole);
+    // Safety check for last admin
+    const currentRoles = existingUser.roles && existingUser.roles.length > 0 ? existingUser.roles : [existingUser.role];
+    const currentNormalizedRoles = normalizeRoles(currentRoles);
+    
+    const nextRoles = rolesInput ?? currentRoles;
+    const nextNormalizedRoles = normalizeRoles(nextRoles);
+    
     const nextIsActive = body.isActive ?? existingUser.isActive;
-    const removingLastAdmin =
-      currentNormalizedRole === 'Admin' &&
-      existingUser.isActive &&
-      (nextNormalizedRole !== 'Admin' || nextIsActive === false);
+    
+    const wasAdmin = currentNormalizedRoles.includes('Admin');
+    const willBeAdmin = nextNormalizedRoles.includes('Admin');
 
-    if (removingLastAdmin) {
+    if (wasAdmin && existingUser.isActive && (!willBeAdmin || nextIsActive === false)) {
       const remainingActiveAdmins = await User.countDocuments({
         _id: { $ne: id },
-        role: 'Admin',
+        roles: 'Admin', // In multi-role, we check if 'Admin' is in roles array
         isActive: true,
+        isDeleted: { $ne: true }
       });
-      if (remainingActiveAdmins === 0) {
+      
+      // Fallback for legacy data not yet migrated
+      const remainingLegacyAdmins = await User.countDocuments({
+          _id: { $ne: id },
+          role: 'Admin',
+          roles: { $size: 0 },
+          isActive: true,
+          isDeleted: { $ne: true }
+      });
+
+      if (remainingActiveAdmins + remainingLegacyAdmins === 0) {
         return NextResponse.json({ error: 'Cannot modify the last active admin account' }, { status: 400 });
       }
     }
@@ -144,7 +186,7 @@ export async function DELETE(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!auth.normalizedRoles.includes('Admin')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     await connectDB();
     const { id } = await params;
@@ -156,17 +198,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
     }
 
-    const existingUser = await User.findById(id).select('role isActive');
+    const existingUser = await User.findById(id).select('role roles isActive');
     if (!existingUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if (normalizeRole(existingUser.role) === 'Admin' && existingUser.isActive) {
+    const currentRoles = existingUser.roles && existingUser.roles.length > 0 ? existingUser.roles : [existingUser.role];
+    const currentNormalizedRoles = normalizeRoles(currentRoles);
+
+    if (currentNormalizedRoles.includes('Admin') && existingUser.isActive) {
       const remainingActiveAdmins = await User.countDocuments({
         _id: { $ne: id },
-        role: 'Admin',
+        roles: 'Admin',
         isActive: true,
         isDeleted: { $ne: true },
       });
-      if (remainingActiveAdmins === 0) {
+      
+      const remainingLegacyAdmins = await User.countDocuments({
+          _id: { $ne: id },
+          role: 'Admin',
+          roles: { $size: 0 },
+          isActive: true,
+          isDeleted: { $ne: true }
+      });
+
+      if (remainingActiveAdmins + remainingLegacyAdmins === 0) {
         return NextResponse.json({ error: 'Cannot deactivate the last active admin account' }, { status: 400 });
       }
     }
@@ -197,7 +251,7 @@ export async function POST(
   try {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (auth.normalizedRole !== 'Admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!auth.normalizedRoles.includes('Admin')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -229,7 +283,8 @@ export async function POST(
       ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
     });
 
-    sendUserCredentialsEmail({ name: user.name, email: user.email, role: user.role }, newPassword).catch((err) => {
+    const userRoles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
+    sendUserCredentialsEmail({ name: user.name, email: user.email, role: userRoles.join(', ') }, newPassword).catch((err) => {
       console.error('Failed to send reset password email:', err);
     });
 

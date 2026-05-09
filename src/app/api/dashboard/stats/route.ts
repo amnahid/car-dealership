@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const auth = await getAuthPayload(request);
     if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    if (!['Admin', 'Sales Person', 'Car Manager', 'Accountant', 'Finance Manager'].includes(auth.normalizedRole || '')) {
+    if (!auth.normalizedRoles.some(r => ['Admin', 'Sales Person', 'Car Manager', 'Accountant', 'Finance Manager'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

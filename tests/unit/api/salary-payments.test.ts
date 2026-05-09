@@ -41,7 +41,7 @@ describe('Salary Payments API', () => {
 
   describe('GET /api/salary-payments', () => {
     it('returns salary payments list on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
       mockSalaryPayment.countDocuments.mockResolvedValue(1);
       
       const queryMock: any = {};
@@ -64,7 +64,7 @@ describe('Salary Payments API', () => {
 
   describe('POST /api/salary-payments', () => {
     it('creates a salary payment on success', async () => {
-      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', userId: 'adminid', name: 'Admin' } as any);
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
       const paymentData = { employee: new mongoose.Types.ObjectId().toString(), employeeId: 'EMP-001', employeeName: 'John Staff', amount: 3000, paymentDate: '2024-05-01', month: 5, year: 2024 };
       
       mockRunInTransaction.mockImplementation(async (callback: any) => {

@@ -130,6 +130,11 @@ RentalSchema.index({ startDate: -1 });
 RentalSchema.index({ status: 1, createdAt: -1 });
 
 RentalSchema.pre('save', async function (this: IRentalDocument) {
+  // Recalculate remaining amount whenever total or paid amount changes
+  // Fallback to totalAmount if totalAmountWithVat is not set (for older rentals)
+  const total = this.totalAmountWithVat || this.totalAmount || 0;
+  this.remainingAmount = Math.max(0, total - (this.paidAmount || 0));
+
   if (!this.isNew || this.rentalId) return;
 
   const count = await mongoose.model('Rental').countDocuments();

@@ -121,31 +121,46 @@ export function normalizeRole(role: string | null | undefined): UserRole | null 
   return null;
 }
 
+export function normalizeRoles(roles: (string | null | undefined)[] | string | null | undefined): UserRole[] {
+  if (!roles) return [];
+  const rolesArray = Array.isArray(roles) ? roles : [roles];
+  const normalized = rolesArray
+    .map((r) => normalizeRole(r))
+    .filter((r): r is UserRole => r !== null);
+  
+  // Ensure unique roles
+  return Array.from(new Set(normalized));
+}
+
 export function isAssignableRole(role: string): role is UserRole {
   return (USER_ROLES as readonly string[]).includes(role);
 }
 
-export function isRoleAllowed(userRole: string | null | undefined, allowedRoles: string[]): boolean {
-  const normalizedUserRole = normalizeRole(userRole);
-  if (!normalizedUserRole) return false;
+export function isRoleAllowed(userRoles: string[] | string | null | undefined, allowedRoles: string[]): boolean {
+  const normalizedUserRoles = normalizeRoles(userRoles);
+  if (normalizedUserRoles.length === 0) return false;
 
-  return allowedRoles.some((allowedRole) => normalizeRole(allowedRole) === normalizedUserRole);
+  const normalizedAllowedRoles = normalizeRoles(allowedRoles);
+  return normalizedUserRoles.some((role) => normalizedAllowedRoles.includes(role));
 }
 
-export function canAccessDashboardPath(role: UserRole, pathname: string): boolean {
+export function canAccessDashboardPath(roles: UserRole[] | UserRole, pathname: string): boolean {
+  const userRoles = Array.isArray(roles) ? roles : [roles];
+  
   if (pathname === '/dashboard') {
     return true;
   }
 
   const matchingRule = DASHBOARD_ACCESS_RULES.find((rule) => isPathMatch(pathname, rule.prefix));
   if (!matchingRule) {
-    return role === 'Admin';
+    return userRoles.includes('Admin');
   }
 
-  return matchingRule.roles.includes(role);
+  return userRoles.some((role) => matchingRule.roles.includes(role));
 }
 
-export function canAccessApiPath(role: UserRole, pathname: string, method: string): boolean {
+export function canAccessApiPath(roles: UserRole[] | UserRole, pathname: string, method: string): boolean {
+  const userRoles = Array.isArray(roles) ? roles : [roles];
   const requestMethod = method.toUpperCase() as RequestMethod;
 
   const matchingRule = API_ACCESS_RULES.find((rule) => {
@@ -164,7 +179,7 @@ export function canAccessApiPath(role: UserRole, pathname: string, method: strin
     return false;
   }
 
-  return matchingRule.roles.includes(role);
+  return userRoles.some((role) => matchingRule.roles.includes(role));
 }
 
 export function isPublicApiPath(pathname: string): boolean {

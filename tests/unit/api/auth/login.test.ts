@@ -4,7 +4,7 @@ import User from '@/models/User';
 import { connectDB } from '@/lib/db';
 import { comparePassword, signToken } from '@/lib/auth';
 import { logActivity } from '@/lib/activityLogger';
-import { normalizeRole } from '@/lib/rbac';
+import { normalizeRoles } from '@/lib/rbac';
 
 jest.mock('@/lib/db');
 jest.mock('@/models/User');
@@ -17,7 +17,7 @@ const mockConnectDB = connectDB as jest.MockedFunction<typeof connectDB>;
 const mockComparePassword = comparePassword as jest.MockedFunction<typeof comparePassword>;
 const mockSignToken = signToken as jest.MockedFunction<typeof signToken>;
 const mockLogActivity = logActivity as jest.MockedFunction<typeof logActivity>;
-const mockNormalizeRole = normalizeRole as jest.MockedFunction<typeof normalizeRole>;
+const mockNormalizeRoles = normalizeRoles as jest.MockedFunction<typeof normalizeRoles>;
 
 describe('POST /api/auth/login', () => {
   beforeEach(() => {
@@ -78,7 +78,7 @@ describe('POST /api/auth/login', () => {
       isActive: true,
     });
     mockComparePassword.mockResolvedValue(true);
-    mockNormalizeRole.mockReturnValue(null);
+    mockNormalizeRoles.mockReturnValue([]);
 
     const req = new NextRequest('http://localhost/api/auth/login', {
       method: 'POST',
@@ -103,7 +103,7 @@ describe('POST /api/auth/login', () => {
     };
     mockUser.findOne.mockResolvedValue(user);
     mockComparePassword.mockResolvedValue(true);
-    mockNormalizeRole.mockReturnValue('Admin');
+    mockNormalizeRoles.mockReturnValue(['Admin']);
     mockSignToken.mockReturnValue('mocktoken');
 
     const req = new NextRequest('http://localhost/api/auth/login', {
@@ -117,6 +117,7 @@ describe('POST /api/auth/login', () => {
     const data = await res.json();
     expect(data.user.email).toBe('test@example.com');
     expect(data.user.role).toBe('Admin');
+    expect(data.user.roles).toEqual(['Admin']);
     expect(res.cookies.get('auth-token')?.value).toBe('mocktoken');
     expect(mockLogActivity).toHaveBeenCalled();
   });

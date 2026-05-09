@@ -17,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -54,7 +54,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -78,7 +78,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Full name, phone, and full address are required' }, { status: 400 });
     }
 
-    if (user.normalizedRole !== 'Admin') {
+    if (!user.normalizedRoles.includes('Admin')) {
       await EditRequest.create({
         targetModel: 'Customer',
         targetId: id,
@@ -149,7 +149,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

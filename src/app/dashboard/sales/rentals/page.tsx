@@ -37,6 +37,7 @@ interface Rental {
   vatInclusive?: boolean;
   paidAmount?: number;
   remainingAmount?: number;
+  totalAmountWithVat?: number;
 }
 
 export default function RentalsPage() {
@@ -363,7 +364,7 @@ export default function RentalsPage() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.totalAmount)}</td>
+                    <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.totalAmountWithVat || rental.totalAmount)}</td>
                     <td style={{ padding: '12px', color: '#42ca7f', fontWeight: 500, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.paidAmount || 0)}</td>
                     <td style={{ padding: '12px', color: (rental.remainingAmount || 0) > 0 ? '#ec4561' : '#9ca8b3', fontWeight: 500, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(rental.remainingAmount || 0)}</td>
                     <td style={{ padding: '12px' }}>
@@ -375,7 +376,7 @@ export default function RentalsPage() {
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center' }}>
                         <a href={`/dashboard/sales/rentals/${rental._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</a>
-                        {rental.status === 'Active' && (rental.remainingAmount || 0) > 0 && (
+                        {rental.status !== 'Cancelled' && (
                           <button onClick={() => setPaymentRental(rental)} style={{ color: '#42ca7f', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{t('recordPayment')}</button>
                         )}
                         <button onClick={() => setEditingRental(rental)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{commonT('edit')}</button>

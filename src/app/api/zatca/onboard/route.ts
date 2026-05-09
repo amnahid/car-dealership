@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const user = await getAuthPayload(request);
-    if (!user || user.normalizedRole !== 'Admin') {
+    if (!user || !user.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

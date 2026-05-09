@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -58,7 +58,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -85,7 +85,7 @@ export async function PUT(
     } = body;
 
     // INTERCEPTION: If not Admin, queue for approval
-    if (user.normalizedRole !== 'Admin') {
+    if (!user.normalizedRoles.includes('Admin')) {
       await EditRequest.create({
         targetModel: 'Rental',
         targetId: id,
@@ -188,8 +188,8 @@ export async function PUT(
     if (dailyRate !== undefined) rental.dailyRate = dailyRate;
     if (rateType !== undefined) rental.rateType = rateType;
     if (securityDeposit !== undefined) rental.securityDeposit = securityDeposit;
-    if (returnDate !== undefined) rental.returnDate = new Date(returnDate);
-    if (actualReturnDate !== undefined) rental.actualReturnDate = new Date(actualReturnDate);
+    if (returnDate) rental.returnDate = new Date(returnDate);
+    if (actualReturnDate) rental.actualReturnDate = new Date(actualReturnDate);
     if (
       tafweedAuthorizedTo !== undefined ||
       tafweedDriverIqama !== undefined ||
@@ -282,6 +282,7 @@ export async function PUT(
         const rentalDesc = carDoc
           ? `Rental - ${carDoc.brand} ${carDoc.model || (carDoc as any).carModel} (${days} days) - Plate: ${carDoc.plateNumber || '-'} - VIN: ${carDoc.chassisNumber || '-'}`.trim()
           : `Rental - ${rental.carId} (${days} days)`;
+        
         const zatcaResult = await processZatcaInvoice({
           referenceId: rental._id.toString(),
           referenceType: 'Rental',
@@ -317,18 +318,14 @@ export async function PUT(
           notes: rental.notes,
           createdBy: user.userId,
         });
-        await Rental.findByIdAndUpdate(rental._id, {
-          zatcaUUID: zatcaResult.uuid,
-          zatcaQRCode: zatcaResult.qrCode,
-          zatcaHash: zatcaResult.xmlHash,
-          zatcaStatus: zatcaResult.status,
-          zatcaResponse: zatcaResult.zatcaResponse,
-          applyVat: rental.applyVat,
-          vatRate: rental.vatRate,
-          vatInclusive: rental.vatInclusive,
-          vatAmount: rental.vatAmount,
-          totalAmountWithVat: rental.totalAmountWithVat,
-        });
+
+        rental.zatcaUUID = zatcaResult.uuid;
+        rental.zatcaQRCode = zatcaResult.qrCode;
+        rental.zatcaHash = zatcaResult.xmlHash;
+        rental.zatcaStatus = zatcaResult.status as any;
+        rental.zatcaResponse = zatcaResult.zatcaResponse;
+        
+        await rental.save();
       } catch (zatcaError) {
         console.error('ZATCA reprocessing failed:', zatcaError);
       }
@@ -362,7 +359,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const user = await getAuthPayload(request);
-    if (!user || user.normalizedRole !== 'Admin') {
+    if (!user || !user.normalizedRoles.includes('Admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -558,7 +555,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!['Admin', 'Sales Person'].includes(user.normalizedRole || '')) {
+    if (!user.normalizedRoles.some(r => ['Admin', 'Sales Person'].includes(r))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
