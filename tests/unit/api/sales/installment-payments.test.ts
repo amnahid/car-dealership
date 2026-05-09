@@ -80,6 +80,19 @@ describe('Installment Payments API', () => {
         remainingAmount: 1000,
         lateFeeCharged: 0,
         markModified: jest.fn(),
+        set: jest.fn(function(path, value) {
+          // Simple mock for .set() to support the route's usage
+          const parts = path.split('.');
+          if (parts.length === 3 && parts[0] === 'paymentSchedule') {
+            const idx = parseInt(parts[1]);
+            const field = parts[2];
+            if (this.paymentSchedule[idx]) {
+              this.paymentSchedule[idx][field] = value;
+            }
+          } else {
+            this[path] = value;
+          }
+        }),
         save: jest.fn().mockResolvedValue(true),
       };
 

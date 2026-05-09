@@ -24,10 +24,11 @@ async function syncInstallmentBalances() {
 
     let updatedCount = 0;
     for (const sale of sales) {
-      const calculatedRemaining = Math.max(0, (sale.loanAmount || 0) - (sale.totalPaid || 0));
+      const principalPaid = Math.max(0, (sale.totalPaid || 0) - (sale.lateFeeCharged || 0));
+      const calculatedRemaining = Math.max(0, (sale.loanAmount || 0) - principalPaid);
 
       if (sale.remainingAmount !== calculatedRemaining) {
-        console.log(`Syncing ${sale.saleId}: Loan=${sale.loanAmount}, Paid=${sale.totalPaid}, OldRemaining=${sale.remainingAmount}, NewRemaining=${calculatedRemaining}`);
+        console.log(`Syncing ${sale.saleId}: Loan=${sale.loanAmount}, Paid=${sale.totalPaid}, LateFees=${sale.lateFeeCharged}, OldRemaining=${sale.remainingAmount}, NewRemaining=${calculatedRemaining}`);
         
         sale.remainingAmount = calculatedRemaining;
         await sale.save();

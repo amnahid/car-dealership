@@ -60,15 +60,15 @@ export async function POST(
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
       const finalLateFee = lateFeeAmount !== undefined ? Number(lateFeeAmount) : calculateAccruedLateFee(diffDays, sale.monthlyLateFee);
 
-      // Update the specific installment in the schedule directly
-      const targetInst = sale.paymentSchedule[instIdx];
-      targetInst.status = 'Paid';
-      targetInst.paidDate = new Date(paymentDate);
-      targetInst.paidAmount = amount + finalLateFee;
-      targetInst.lateFee = finalLateFee;
-      targetInst.notes = notes;
-      targetInst.method = method || 'Cash';
-      targetInst.voucherNumber = voucherNumber || '';
+      // Update the specific installment in the schedule explicitly using .set()
+      // to ensure Mongoose change tracking picks up the new fields
+      sale.set(`paymentSchedule.${instIdx}.status`, 'Paid');
+      sale.set(`paymentSchedule.${instIdx}.paidDate`, new Date(paymentDate));
+      sale.set(`paymentSchedule.${instIdx}.paidAmount`, amount + finalLateFee);
+      sale.set(`paymentSchedule.${instIdx}.lateFee`, finalLateFee);
+      sale.set(`paymentSchedule.${instIdx}.notes`, notes || '');
+      sale.set(`paymentSchedule.${instIdx}.method`, method || 'Cash');
+      sale.set(`paymentSchedule.${instIdx}.voucherNumber`, voucherNumber || '');
 
       // Update parent totals
       sale.totalPaid += (amount + finalLateFee);

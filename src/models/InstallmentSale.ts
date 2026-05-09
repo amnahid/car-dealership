@@ -162,7 +162,8 @@ InstallmentSaleSchema.index({ 'paymentSchedule.status': 1 });
 InstallmentSaleSchema.pre('save', async function (this: IInstallmentSaleDocument) {
   // Recalculate remaining amount whenever loan or paid amount changes
   if (this.loanAmount !== undefined || this.totalPaid !== undefined) {
-    this.remainingAmount = Math.max(0, (this.loanAmount || 0) - (this.totalPaid || 0));
+    const principalPaid = Math.max(0, (this.totalPaid || 0) - (this.lateFeeCharged || 0));
+    this.remainingAmount = Math.max(0, (this.loanAmount || 0) - principalPaid);
   }
 
   if (!this.isNew || this.saleId) return;
