@@ -261,6 +261,7 @@
     "customer": "Customer",
     "total": "Total",
     "paid": "Paid",
+    "lateFee": "Late Fee (SAR)",
     "status": "Sale Status",
     "installmentStatus": "Installment Status",
     "zatca": "ZATCA",
