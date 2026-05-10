@@ -86,6 +86,34 @@ interface ReportData {
   }>;
 }
 
+export interface CarPLData {
+  carDetails: {
+    carId: string;
+    brand: string;
+    model: string;
+    year: number;
+    plateNumber?: string;
+    chassisNumber?: string;
+  };
+  expenses: Array<{
+    date: string;
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  revenues: Array<{
+    date: string;
+    description: string;
+    amount: number;
+    type: string;
+  }>;
+  summary: {
+    totalExpense: number;
+    totalRevenue: number;
+    netProfit: number;
+  };
+}
+
 export async function generateStatusReport(data: ReportData): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'reports');
 
@@ -305,6 +333,146 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
     doc.text(p.voucherNumber || '-', margin + 115, y);
     doc.text(p.reference || '-', margin + 145, y);
   });
+
+  const pdfBuffer = doc.output('arraybuffer');
+  fs.writeFileSync(filePath, Buffer.from(pdfBuffer));
+
+  return `/uploads/reports/${fileName}`;
+}
+
+export async function generateCarProfitLossReport(data: CarPLData): Promise<string> {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'reports');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const fileName = `car-pl-${data.carDetails.carId}-${Date.now()}.pdf`;
+  const filePath = path.join(uploadsDir, fileName);
+
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  let y = 20;
+
+  const fmt = (val: number) => `SAR ${val.toLocaleString()}`;
+
+  // Header
+  doc.setFontSize(22);
+  doc.setTextColor(40, 170, 169); // Dealership teal
+  doc.setFont('Cairo', 'bold');
+  doc.text(processArabic('AMYAL CAR'), pageWidth / 2, y, { align: 'center' });
+
+  y += 10;
+  doc.setFontSize(16);
+  doc.setTextColor(51, 51, 51);
+  doc.text(processArabic('Lifetime Profit & Loss Statement'), pageWidth / 2, y, { align: 'center' });
+  
+  y += 6;
+  doc.setFontSize(10);
+  doc.text(processArabic('قائمة الأرباح والخسائر للسيارة'), pageWidth / 2, y, { align: 'center' });
+
+  y += 10;
+  doc.setDrawColor(40, 170, 169);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+
+  // Vehicle Info
+  y += 12;
+  doc.setFontSize(12);
+  doc.setFont('Cairo', 'bold');
+  doc.text(processArabic('Vehicle Information / معلومات المركبة'), margin, y);
+
+  y += 8;
+  doc.setFontSize(10);
+  doc.setFont('Cairo', 'normal');
+  doc.text(`${processArabic('Vehicle')}: ${data.carDetails.brand} ${data.carDetails.model} (${data.carDetails.year})`, margin, y);
+  doc.text(`${processArabic('Car ID')}: ${data.carDetails.carId}`, pageWidth / 2 + 5, y);
+
+  y += 6;
+  doc.text(`${processArabic('Plate No')}: ${data.carDetails.plateNumber || '-'}`, margin, y);
+  doc.text(`${processArabic('VIN')}: ${data.carDetails.chassisNumber || '-'}`, pageWidth / 2 + 5, y);
+
+  // Expenses Section
+  y += 15;
+  doc.setFont('Cairo', 'bold');
+  doc.setFontSize(12);
+  doc.text(processArabic('Expenses Ledger / التكاليف والمصاريف'), margin, y);
+
+  y += 6;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y, pageWidth - margin, y);
+
+  y += 6;
+  doc.setFontSize(9);
+  doc.text(processArabic('Date / التاريخ'), margin, y);
+  doc.text(processArabic('Description / الوصف'), margin + 30, y);
+  doc.text(processArabic('Amount / المبلغ'), margin + 140, y);
+
+  y += 4;
+  doc.line(margin, y, pageWidth - margin, y);
+
+  doc.setFont('Cairo', 'normal');
+  data.expenses.forEach(exp => {
+    if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+    y += 7;
+    doc.text(new Date(exp.date).toLocaleDateString('en-SA'), margin, y);
+    doc.text(processArabic(exp.description), margin + 30, y, { maxWidth: 100 });
+    doc.text(fmt(exp.amount), margin + 140, y);
+  });
+
+  // Revenues Section
+  y += 15;
+  doc.setFont('Cairo', 'bold');
+  doc.setFontSize(12);
+  doc.text(processArabic('Revenue Ledger / الإيرادات'), margin, y);
+
+  y += 6;
+  doc.line(margin, y, pageWidth - margin, y);
+
+  y += 6;
+  doc.setFontSize(9);
+  doc.text(processArabic('Date / التاريخ'), margin, y);
+  doc.text(processArabic('Description / الوصف'), margin + 30, y);
+  doc.text(processArabic('Amount / المبلغ'), margin + 140, y);
+
+  y += 4;
+  doc.line(margin, y, pageWidth - margin, y);
+
+  doc.setFont('Cairo', 'normal');
+  data.revenues.forEach(rev => {
+    if (y > pageHeight - 40) { doc.addPage(); y = 20; }
+    y += 7;
+    doc.text(new Date(rev.date).toLocaleDateString('en-SA'), margin, y);
+    doc.text(processArabic(rev.description), margin + 30, y, { maxWidth: 100 });
+    doc.text(fmt(rev.amount), margin + 140, y);
+  });
+
+  // Final Summary
+  y += 20;
+  if (y > pageHeight - 50) { doc.addPage(); y = 20; }
+  
+  doc.setDrawColor(40, 170, 169);
+  doc.setFillColor(240, 248, 248);
+  doc.rect(margin, y, pageWidth - (margin * 2), 35, 'FD');
+
+  y += 10;
+  doc.setFont('Cairo', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(51, 51, 51);
+  doc.text(processArabic('Financial Summary / الملخص المالي'), margin + 5, y);
+
+  y += 8;
+  doc.setFont('Cairo', 'normal');
+  doc.text(`${processArabic('Total Expenses')}: ${fmt(data.summary.totalExpense)}`, margin + 5, y);
+  doc.text(`${processArabic('Total Revenue')}: ${fmt(data.summary.totalRevenue)}`, pageWidth / 2, y);
+
+  y += 10;
+  doc.setFontSize(14);
+  doc.setFont('Cairo', 'bold');
+  const isProfit = data.summary.netProfit >= 0;
+  doc.setTextColor(isProfit ? 46 : 198, isProfit ? 125 : 40, isProfit ? 50 : 40);
+  doc.text(`${processArabic(isProfit ? 'Net Profit / صافي الربح' : 'Net Loss / صافي الخسارة')}: ${fmt(data.summary.netProfit)}`, margin + 5, y);
 
   const pdfBuffer = doc.output('arraybuffer');
   fs.writeFileSync(filePath, Buffer.from(pdfBuffer));

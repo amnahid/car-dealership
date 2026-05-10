@@ -77,6 +77,7 @@ export default function CarDetailPage() {
   const [data, setData] = useState<{ car: Car; repairs: Repair[]; documents: Doc[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [generatingPL, setGeneratingPL] = useState(false);
 
   useEffect(() => {
     fetch(`/api/cars/${id}`)
@@ -107,6 +108,24 @@ export default function CarDetailPage() {
     }
   };
 
+  const handleDownloadPL = async () => {
+    setGeneratingPL(true);
+    try {
+      const res = await fetch(`/api/cars/${id}/profit-loss`);
+      const data = await res.json();
+      if (res.ok && data.reportUrl) {
+        window.open(data.reportUrl, '_blank');
+      } else {
+        alert(data.error || 'Failed to generate P&L report');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    } finally {
+      setGeneratingPL(false);
+    }
+  };
+
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#9ca8b3' }}>{commonT('loading')}</div>;
   if (!data) notFound();
 
@@ -129,6 +148,14 @@ export default function CarDetailPage() {
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
             {isRtl ? 'طباعة الباركود' : 'Print Barcode'}
+          </button>
+          <button
+            onClick={handleDownloadPL}
+            disabled={generatingPL}
+            className="bg-emerald-50 text-emerald-700 text-sm font-semibold px-4 py-2 rounded-md hover:bg-emerald-100 flex items-center gap-2 no-print border border-emerald-200"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            {generatingPL ? commonT('loading') : (isRtl ? 'تقرير الأرباح والخسائر' : 'P&L Statement')}
           </button>
           <StatusBadge status={car.status} />
           <Link href={`/dashboard/cars/${car._id}/edit`} className="bg-indigo-600 text-white text-sm font-semibold px-4 py-2 rounded-md hover:bg-indigo-500 no-print">

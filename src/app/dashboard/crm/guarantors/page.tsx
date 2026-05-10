@@ -293,7 +293,23 @@ function GuarantorModal({ guarantor, onClose, onSave }: { guarantor?: Guarantor 
           </div>
 
           <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '15px' }}>{t('documents')}</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('nationalId')}</label>
+              <DocumentUpload value={form.nationalIdDocument} onChange={(url) => setForm({ ...form, nationalIdDocument: url })} label={commonT('nationalId')} />
+            </div>
+            <div>
+              <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('drivingLicense')}</label>
+              <DocumentUpload value={form.drivingLicenseDocument} onChange={(url) => setForm({ ...form, drivingLicenseDocument: url })} label={commonT('drivingLicense')} />
+            </div>
+            <div>
+              <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('iqama')}</label>
+              <DocumentUpload value={form.iqamaDocument} onChange={(url) => setForm({ ...form, iqamaDocument: url })} label={commonT('iqama')} />
+            </div>
+          </div>
+
           <div style={{ marginBottom: '16px' }}>
+            <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{isRtl ? 'وثائق أخرى' : 'Other Documents'}</label>
              <MultiDocumentUpload 
                 values={form.documents} 
                 onChange={(urls) => setForm({...form, documents: urls})} 

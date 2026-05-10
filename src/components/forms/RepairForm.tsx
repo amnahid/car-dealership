@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { RepairStatus } from '@/types';
 import { MultiImageUpload } from '@/components/ImageUpload';
+import SearchableSelect from '@/components/SearchableSelect';
 import { uploadImage, deleteFile } from '@/lib/uploadClient';
 import { useTranslations, useLocale } from 'next-intl';
 
@@ -161,21 +162,17 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
         <div>
-          <label style={labelStyle}>{t('car')} *</label>
-          <select
-            name="car"
-            required
+          <SearchableSelect
+            label={`${t('car')} *`}
             value={form.car}
-            onChange={handleChange}
-            style={inputStyle}
-          >
-            <option value="">{t('selectCar')}</option>
-            {cars.map((car) => (
-              <option key={car._id} value={car._id}>
-                {car.brand} {car.model} ({car.year}){car.plateNumber ? ` - ${car.plateNumber}` : ` - ${car.carId}`}{car.color ? ` - ${car.color}` : ''}
-              </option>
-            ))}
-          </select>
+            onChange={handleCarChange}
+            options={cars.map(c => ({ 
+              value: c._id, 
+              label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}`
+            }))}
+            placeholder={t('selectCar')}
+            required
+          />
         </div>
         <div>
           <label style={labelStyle}>{t('repairDate')} *</label>
