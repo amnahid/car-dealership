@@ -74,7 +74,8 @@ export async function PUT(
     const { 
       fullName, phone, email, nationalId, employer, salary,
       buildingNumber, streetName, district, city, postalCode, countryCode,
-      documents, profilePhoto, notes
+      documents, nationalIdDocument, drivingLicenseDocument, iqamaDocument,
+      profilePhoto, notes
     } = body;
 
     if (!fullName || !phone || !nationalId || !buildingNumber || !streetName || !district || !city || !postalCode) {
@@ -86,7 +87,8 @@ export async function PUT(
       { 
         fullName, phone, email, nationalId, employer, salary,
         buildingNumber, streetName, district, city, postalCode, countryCode: countryCode || 'SA',
-        documents, profilePhoto, notes
+        documents, nationalIdDocument, drivingLicenseDocument, iqamaDocument,
+        profilePhoto, notes
       },
       { new: true }
     );

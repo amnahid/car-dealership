@@ -14,6 +14,7 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
+  nationalId?: string;
   buildingNumber: string;
   streetName: string;
   district: string;
@@ -281,6 +282,7 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
     fullName: '',
     phone: '',
     email: '',
+    nationalId: '',
     buildingNumber: '',
     streetName: '',
     district: '',
@@ -352,6 +354,10 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
             <div>
               <label style={labelStyle}>{t('email')}</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('nationalId')} *</label>
+              <input required value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} style={inputStyle} placeholder="1xxxxxxxxx0" />
             </div>
             <div>
               <label style={labelStyle}>{t('customerType')}</label>

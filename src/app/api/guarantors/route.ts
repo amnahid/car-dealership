@@ -78,7 +78,8 @@ export async function POST(request: NextRequest) {
     const { 
       fullName, phone, email, nationalId, employer, salary,
       buildingNumber, streetName, district, city, postalCode, countryCode,
-      documents, profilePhoto, notes
+      documents, nationalIdDocument, drivingLicenseDocument, iqamaDocument,
+      profilePhoto, notes
     } = body;
 
     if (!fullName || !phone || !nationalId || !buildingNumber || !streetName || !district || !city || !postalCode) {
@@ -99,6 +100,9 @@ export async function POST(request: NextRequest) {
       postalCode,
       countryCode: countryCode || 'SA',
       documents: documents || [],
+      nationalIdDocument,
+      drivingLicenseDocument,
+      iqamaDocument,
       profilePhoto,
       notes,
       createdBy: user.userId,

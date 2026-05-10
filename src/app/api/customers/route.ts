@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { 
-      fullName, phone, email, 
+      fullName, phone, email, nationalId,
       buildingNumber, streetName, district, city, postalCode, countryCode,
       nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
       emergencyContactName, emergencyContactPhone, 
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
       fullName,
       phone,
       email,
+      nationalId,
       buildingNumber,
       streetName,
       district,

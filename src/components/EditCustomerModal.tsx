@@ -46,6 +46,7 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     fullName: customer.fullName,
     phone: customer.phone,
     email: customer.email || '',
+    nationalId: (customer as any).nationalId || '',
     buildingNumber: customer.buildingNumber || '',
     streetName: customer.streetName || '',
     district: customer.district || '',

@@ -47,6 +47,7 @@ interface ReportData {
     name: string;
     phone: string;
     id?: string;
+    nationalId?: string;
   };
   car: {
     carId: string;
@@ -55,6 +56,8 @@ interface ReportData {
     year: number;
     plateNumber?: string;
     chassisNumber?: string;
+    engineNumber?: string;
+    color?: string;
   };
   agreement: {
     startDate: string;
@@ -65,6 +68,11 @@ interface ReportData {
     status: string;
     rate?: number;
     rateType?: string;
+    downPayment?: number;
+    tenureMonths?: number;
+    interestRate?: number;
+    voucherNumber?: string;
+    totalLateFee?: number;
   };
   payments: Array<{
     date: string;
@@ -73,6 +81,8 @@ interface ReportData {
     reference?: string;
     note?: string;
     status?: string;
+    lateFee?: number;
+    voucherNumber?: string;
   }>;
 }
 
@@ -175,6 +185,24 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
   doc.text(`${processArabic('Phone / الهاتف')}: ${data.customer.phone}`, margin, y);
   doc.text(`${processArabic('Plate No / رقم اللوحة')}: ${data.car.plateNumber || '-'}`, pageWidth / 2 + 5, y);
 
+  y += 5;
+  if (data.customer.nationalId) {
+    doc.text(`${processArabic('National ID / الهوية الوطنية')}: ${data.customer.nationalId}`, margin, y);
+  }
+  if (data.car.chassisNumber) {
+    doc.text(`${processArabic('VIN / رقم الشاصي')}: ${data.car.chassisNumber}`, pageWidth / 2 + 5, y);
+  }
+
+  if (data.car.engineNumber || data.car.color) {
+    y += 5;
+    if (data.car.engineNumber) {
+      doc.text(`${processArabic('Engine No / رقم المحرك')}: ${data.car.engineNumber}`, margin, y);
+    }
+    if (data.car.color) {
+      doc.text(`${processArabic('Color / اللون')}: ${processArabic(data.car.color)}`, pageWidth / 2 + 5, y);
+    }
+  }
+
   // Agreement Details
   y += 12;
   doc.setFont('Cairo', 'bold');
@@ -185,12 +213,29 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
   doc.text(`${processArabic('Start Date / تاريخ البدء')}: ${new Date(data.agreement.startDate).toLocaleDateString('en-SA')}`, margin, y);
   if (data.agreement.endDate) {
     doc.text(`${processArabic('End Date / تاريخ الانتهاء')}: ${new Date(data.agreement.endDate).toLocaleDateString('en-SA')}`, pageWidth / 2 + 5, y);
+  } else if (data.agreement.tenureMonths) {
+    doc.text(`${processArabic('Tenure / المدة')}: ${data.agreement.tenureMonths} ${processArabic('Months / أشهر')}`, pageWidth / 2 + 5, y);
   }
 
   y += 5;
   doc.text(`${processArabic('Status / الحالة')}: ${data.agreement.status}`, margin, y);
   if (data.agreement.rate) {
     doc.text(`${processArabic('Rate / السعر')}: ${fmt(data.agreement.rate)} (${data.agreement.rateType})`, pageWidth / 2 + 5, y);
+  }
+
+  if (data.agreement.downPayment !== undefined || data.agreement.voucherNumber) {
+    y += 5;
+    if (data.agreement.downPayment !== undefined) {
+      doc.text(`${processArabic('Down Payment / دفعة مقدمة')}: ${fmt(data.agreement.downPayment)}`, margin, y);
+    }
+    if (data.agreement.voucherNumber) {
+      doc.text(`${processArabic('Voucher No / رقم القسيمة')}: ${data.agreement.voucherNumber}`, pageWidth / 2 + 5, y);
+    }
+  }
+
+  if (data.agreement.interestRate !== undefined) {
+    y += 5;
+    doc.text(`${processArabic('Interest Rate / نسبة الفائدة')}: ${data.agreement.interestRate}%`, margin, y);
   }
 
   // Financial Summary
@@ -201,20 +246,28 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
   y += 6;
   doc.setFont('Cairo', 'normal');
   doc.text(`${processArabic('Total Amount / الإجمالي')}:`, margin, y);
-  doc.text(fmt(data.agreement.totalAmount), margin + 40, y);
+  doc.text(fmt(data.agreement.totalAmount), margin + 45, y);
 
   y += 5;
   doc.text(`${processArabic('Paid Amount / المبلغ المدفوع')}:`, margin, y);
   doc.setTextColor(46, 125, 50);
-  doc.text(fmt(data.agreement.paidAmount), margin + 40, y);
+  doc.text(fmt(data.agreement.paidAmount), margin + 45, y);
   doc.setTextColor(51, 51, 51);
 
   y += 5;
   doc.setFont('Cairo', 'bold');
   doc.text(`${processArabic('Remaining / المبلغ المتبقي')}:`, margin, y);
   doc.setTextColor(198, 40, 40);
-  doc.text(fmt(data.agreement.remainingAmount), margin + 40, y);
+  doc.text(fmt(data.agreement.remainingAmount), margin + 45, y);
   doc.setTextColor(51, 51, 51);
+
+  if (data.agreement.totalLateFee) {
+    y += 5;
+    doc.text(`${processArabic('Total Late Fees / إجمالي غرامات التأخير')}:`, margin, y);
+    doc.setTextColor(198, 40, 40);
+    doc.text(fmt(data.agreement.totalLateFee), margin + 45, y);
+    doc.setTextColor(51, 51, 51);
+  }
 
   // Payment History Table
   y += 15;
@@ -227,12 +280,13 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
   doc.line(margin, y, pageWidth - margin, y);
 
   y += 6;
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.text(processArabic('Date / التاريخ'), margin, y);
-  doc.text(processArabic('Amount / المبلغ'), margin + 30, y);
-  doc.text(processArabic('Method / الطريقة'), margin + 60, y);
-  doc.text(processArabic('Ref / المرجع'), margin + 90, y);
-  doc.text(processArabic('Notes / ملاحظات'), margin + 120, y);
+  doc.text(processArabic('Amount / المبلغ'), margin + 25, y);
+  doc.text(processArabic('Late Fee / غرامة'), margin + 55, y);
+  doc.text(processArabic('Method / الطريقة'), margin + 85, y);
+  doc.text(processArabic('Voucher / قسيمة'), margin + 115, y);
+  doc.text(processArabic('Ref / مرجع'), margin + 145, y);
 
   y += 4;
   doc.line(margin, y, pageWidth - margin, y);
@@ -245,10 +299,11 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
     }
     y += 7;
     doc.text(new Date(p.date).toLocaleDateString('en-SA'), margin, y);
-    doc.text(fmt(p.amount), margin + 30, y);
-    doc.text(processArabic(p.method), margin + 60, y);
-    doc.text(p.reference || '-', margin + 90, y);
-    doc.text(processArabic(p.note || '-'), margin + 120, y, { maxWidth: 50 });
+    doc.text(fmt(p.amount), margin + 25, y);
+    doc.text(fmt(p.lateFee || 0), margin + 55, y);
+    doc.text(processArabic(p.method), margin + 85, y);
+    doc.text(p.voucherNumber || '-', margin + 115, y);
+    doc.text(p.reference || '-', margin + 145, y);
   });
 
   const pdfBuffer = doc.output('arraybuffer');

@@ -83,16 +83,16 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
       .catch(console.error);
   }, [defaultCarId, initialData?._id]);
 
+  const handleCarChange = (val: string) => {
+    const selectedCar = cars.find((c) => c._id === val);
+    setForm((prev) => ({ ...prev, car: val, carId: selectedCar?.carId || '' }));
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    if (name === 'car') {
-      const selectedCar = cars.find((c) => c._id === value);
-      setForm((prev) => ({ ...prev, car: value, carId: selectedCar?.carId || '' }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

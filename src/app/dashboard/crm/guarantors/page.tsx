@@ -22,6 +22,9 @@ interface Guarantor {
   postalCode: string;
   countryCode: string;
   documents: string[];
+  nationalIdDocument?: string;
+  drivingLicenseDocument?: string;
+  iqamaDocument?: string;
   profilePhoto?: string;
   notes?: string;
   createdAt: string;
@@ -199,6 +202,9 @@ function GuarantorModal({ guarantor, onClose, onSave }: { guarantor?: Guarantor 
     postalCode: guarantor?.postalCode || '',
     countryCode: guarantor?.countryCode || 'SA',
     documents: guarantor?.documents || [],
+    nationalIdDocument: guarantor?.nationalIdDocument || '',
+    drivingLicenseDocument: guarantor?.drivingLicenseDocument || '',
+    iqamaDocument: guarantor?.iqamaDocument || '',
     profilePhoto: guarantor?.profilePhoto || '',
     notes: guarantor?.notes || '',
   });

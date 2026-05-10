@@ -478,12 +478,13 @@ export async function PATCH(
     }
 
     if (action === 'generate-report') {
-      const sale = await InstallmentSale.findById(id);
+      const sale = await InstallmentSale.findById(id).populate('customer');
       if (!sale) {
         return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
       }
 
       const carData = await Car.findById(sale.car).lean() as ICarRaw | null;
+      const customerDoc = sale.customer as unknown as ICustomerDocument;
       const { generateStatusReport } = await import('@/lib/reportGenerator');
 
       const reportUrl = await generateStatusReport({
@@ -493,6 +494,7 @@ export async function PATCH(
         customer: {
           name: sale.customerName,
           phone: sale.customerPhone,
+          nationalId: customerDoc?.nationalId || '',
         },
         car: {
           carId: sale.carId,
@@ -501,6 +503,8 @@ export async function PATCH(
           year: carData?.year || 0,
           plateNumber: carData?.plateNumber,
           chassisNumber: carData?.chassisNumber,
+          engineNumber: carData?.engineNumber,
+          color: carData?.color,
         },
         agreement: {
           startDate: sale.startDate.toISOString(),
@@ -510,14 +514,20 @@ export async function PATCH(
           status: sale.status,
           rate: sale.monthlyPayment,
           rateType: 'Monthly',
+          downPayment: sale.downPayment,
+          tenureMonths: sale.tenureMonths,
+          interestRate: sale.interestRate,
+          voucherNumber: sale.voucherNumber,
+          totalLateFee: sale.lateFeeCharged || 0,
         },
-        payments: sale.paymentSchedule
+        payments: (sale.paymentSchedule || [])
           .filter(p => p.status === 'Paid')
           .map(p => ({
             date: p.paidDate?.toISOString() || p.dueDate.toISOString(),
-            amount: p.paidAmount || p.amount,
-            method: 'Unknown',
-            note: p.notes,
+            amount: p.amount,
+            lateFee: p.lateFee || 0,
+            method: p.method || 'Cash',
+            voucherNumber: p.voucherNumber || '-',
             status: p.status,
           })),
       });

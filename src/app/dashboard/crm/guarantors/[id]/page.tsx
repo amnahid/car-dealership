@@ -22,6 +22,9 @@ interface Guarantor {
   postalCode: string;
   countryCode: string;
   documents: string[];
+  nationalIdDocument?: string;
+  drivingLicenseDocument?: string;
+  iqamaDocument?: string;
   profilePhoto?: string;
   notes?: string;
   createdAt: string;
@@ -151,12 +154,40 @@ export default function GuarantorDetailPage() {
           </p>
 
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginTop: '24px', marginBottom: '16px' }}>{t('documents')}</h3>
-          <div style={{ display: 'grid', gap: '8px' }}>
-            {guarantor.documents && guarantor.documents.length > 0 ? guarantor.documents.map((doc, i) => (
-              <a key={i} href={doc} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px', display: 'block', padding: '8px', border: '1px solid #eee', borderRadius: '4px' }}>
-                {isRtl ? 'مستند' : 'Document'} {i + 1}
-              </a>
-            )) : <p style={{ color: '#9ca8b3', fontSize: '14px' }}>{isRtl ? 'لا يوجد مستندات' : 'No documents uploaded'}</p>}
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {guarantor.nationalIdDocument && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: '#f8f9fa', borderRadius: '4px' }}>
+                <span style={{ fontSize: '14px', color: '#2a3142' }}>{commonT('nationalId')}</span>
+                <a href={guarantor.nationalIdDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '13px', fontWeight: 500 }}>{isRtl ? 'عرض' : 'View'}</a>
+              </div>
+            )}
+            {guarantor.drivingLicenseDocument && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: '#f8f9fa', borderRadius: '4px' }}>
+                <span style={{ fontSize: '14px', color: '#2a3142' }}>{commonT('drivingLicense')}</span>
+                <a href={guarantor.drivingLicenseDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '13px', fontWeight: 500 }}>{isRtl ? 'عرض' : 'View'}</a>
+              </div>
+            )}
+            {guarantor.iqamaDocument && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: '#f8f9fa', borderRadius: '4px' }}>
+                <span style={{ fontSize: '14px', color: '#2a3142' }}>{commonT('iqama')}</span>
+                <a href={guarantor.iqamaDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '13px', fontWeight: 500 }}>{isRtl ? 'عرض' : 'View'}</a>
+              </div>
+            )}
+            {guarantor.documents && guarantor.documents.length > 0 && (
+              <div style={{ marginTop: '8px' }}>
+                <p style={{ fontSize: '12px', color: '#9ca8b3', marginBottom: '8px' }}>{isRtl ? 'وثائق إضافية' : 'Other Documents'}</p>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {guarantor.documents.map((doc, i) => (
+                    <a key={i} href={doc} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px', display: 'block', padding: '8px', border: '1px solid #eee', borderRadius: '4px' }}>
+                      {isRtl ? 'مستند إضافي' : 'Additional Document'} {i + 1}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!guarantor.nationalIdDocument && !guarantor.drivingLicenseDocument && !guarantor.iqamaDocument && (!guarantor.documents || guarantor.documents.length === 0) && (
+              <p style={{ color: '#9ca8b3', fontSize: '14px' }}>{isRtl ? 'لا يوجد مستندات' : 'No documents uploaded'}</p>
+            )}
           </div>
         </div>
       </div>

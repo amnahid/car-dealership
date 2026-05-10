@@ -15,6 +15,9 @@ export interface IGuarantorDocument extends Document {
   postalCode: string;
   countryCode: string;
   documents: string[]; // URLs for ID copy, salary cert, etc.
+  nationalIdDocument?: string;
+  drivingLicenseDocument?: string;
+  iqamaDocument?: string;
   profilePhoto?: string;
   notes?: string;
   isDeleted: boolean;
@@ -37,6 +40,9 @@ const GuarantorSchema = new Schema<IGuarantorDocument>(
     postalCode: { type: String, required: true, trim: true },
     countryCode: { type: String, default: 'SA' },
     documents: [{ type: String }],
+    nationalIdDocument: { type: String },
+    drivingLicenseDocument: { type: String },
+    iqamaDocument: { type: String },
     profilePhoto: { type: String },
     notes: { type: String },
     isDeleted: { type: Boolean, default: false },

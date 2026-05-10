@@ -475,12 +475,13 @@ export async function PATCH(
     }
 
     if (action === 'generate-report') {
-      const rental = await Rental.findById(id);
+      const rental = await Rental.findById(id).populate('customer');
       if (!rental) {
         return NextResponse.json({ error: 'Rental not found' }, { status: 404 });
       }
 
       const carData = await Car.findById(rental.car).lean() as any;
+      const customerDoc = rental.customer as any;
       const { generateStatusReport } = await import('@/lib/reportGenerator');
 
       const reportUrl = await generateStatusReport({
@@ -490,6 +491,7 @@ export async function PATCH(
         customer: {
           name: rental.customerName,
           phone: rental.customerPhone,
+          nationalId: customerDoc?.nationalId || '',
         },
         car: {
           carId: rental.carId,
@@ -498,6 +500,8 @@ export async function PATCH(
           year: carData?.year || 0,
           plateNumber: carData?.plateNumber,
           chassisNumber: carData?.chassisNumber,
+          engineNumber: carData?.engineNumber,
+          color: carData?.color,
         },
         agreement: {
           startDate: rental.startDate.toISOString(),
@@ -515,6 +519,8 @@ export async function PATCH(
           method: p.method,
           reference: p.reference,
           note: p.note,
+          lateFee: 0,
+          voucherNumber: '-',
         })),
       });
 
