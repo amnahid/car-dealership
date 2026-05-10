@@ -114,23 +114,7 @@ export interface CarPLData {
   };
 }
 
-export async function generateStatusReport(data: ReportData): Promise<string> {
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'reports');
-
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-  }
-
-  const fileName = `report-${data.reportId}.pdf`;
-  const filePath = path.join(uploadsDir, fileName);
-
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
-
-  // Load fonts
+function loadFonts(doc: jsPDF) {
   const regularFontPath = path.join(process.cwd(), 'public', 'fonts', 'Cairo-Regular.ttf');
   const boldFontPath = path.join(process.cwd(), 'public', 'fonts', 'Cairo-Bold.ttf');
   
@@ -147,6 +131,25 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
   }
 
   doc.setFont('Cairo');
+}
+
+export async function generateStatusReport(data: ReportData): Promise<string> {
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'reports');
+
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const fileName = `report-${data.reportId}.pdf`;
+  const filePath = path.join(uploadsDir, fileName);
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  loadFonts(doc);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -349,7 +352,14 @@ export async function generateCarProfitLossReport(data: CarPLData): Promise<stri
   const fileName = `car-pl-${data.carDetails.carId}-${Date.now()}.pdf`;
   const filePath = path.join(uploadsDir, fileName);
 
-  const doc = new jsPDF();
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  loadFonts(doc);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
