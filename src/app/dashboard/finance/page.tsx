@@ -163,6 +163,48 @@ export default function FinancePage() {
     setEditingTransaction(transaction);
   };
 
+  const handlePrint = () => window.print();
+
+  const handleExportCSV = async () => {
+    try {
+      let exportData = [];
+      if (selectedIds.size > 0) {
+        exportData = transactions.filter(t => selectedIds.has(t._id));
+      } else {
+        const params = new URLSearchParams({ limit: '999999' });
+        if (typeFilter) params.set('type', typeFilter);
+        if (categoryFilter) params.set('category', categoryFilter);
+        if (dateRange.startDate && dateRange.startDate !== 'undefined') params.set('startDate', dateRange.startDate);
+        if (dateRange.endDate && dateRange.endDate !== 'undefined') params.set('endDate', dateRange.endDate);
+        
+        const res = await fetch(`/api/transactions?${params}`);
+        const data = await res.json();
+        exportData = data.transactions || [];
+      }
+
+      const csvHeader = ['Date,Type,Category,Description,Amount'];
+      const csvRows = exportData.map((txn: any) => {
+        const typeStr = txn.type === 'Income' ? t('income') : t('expense');
+        const categoryStr = getCategoryLabel(txn.category);
+        const dateStr = new Date(txn.date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US');
+        const amountStr = `${txn.type === 'Income' ? '+' : '-'}${txn.amount}`;
+        return `${dateStr},${typeStr},"${categoryStr}","${txn.description.replace(/"/g, '""')}",${amountStr}`;
+      });
+      
+      const csvContent = '\uFEFF' + [csvHeader, ...csvRows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Export failed');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm(t('deleteConfirm'))) return;
     try {
@@ -196,7 +238,9 @@ export default function FinancePage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('transactions')}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-          <DataTransferButtons entityType="transactions" onImportSuccess={fetchTransactions} />
+          <button onClick={handlePrint} style={{ background: '#5b6be7', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('export.print') || 'Print'}</button>
+          <button onClick={handleExportCSV} style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('export.csv') || 'Export CSV'}</button>
+          <DataTransferButtons entityType="transactions" onImportSuccess={fetchTransactions} showExport={false} />
           <Link href="/dashboard/finance/reports" style={{ background: '#f5a623', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('reports')}</Link>
           <Link href="/dashboard/finance/expenses" style={{ background: '#ec4561', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('expenses')}</Link>
           <Link href="/dashboard/finance/incomes" style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('incomes')}</Link>
@@ -222,7 +266,7 @@ export default function FinancePage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+      <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
             <option value="">{t('allTypes')}</option>
@@ -241,7 +285,7 @@ export default function FinancePage() {
       </div>
 
       {selectedIds.size > 0 && (
-        <div
+        <div className="no-print"
           style={{
             position: 'sticky',
             top: '0',
@@ -302,7 +346,7 @@ export default function FinancePage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '800px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  <th style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
+                  <th className="no-print" style={{ padding: '12px', width: '40px', textAlign: 'center' }}>
                     <input
                       type="checkbox"
                       checked={transactions.length > 0 && transactions.every(t => t.isAutoGenerated || selectedIds.has(t._id))}
@@ -320,13 +364,13 @@ export default function FinancePage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('category')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('description')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('amount')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
+                  <th className="no-print" style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                 </tr>
               </thead>
               <tbody style={{ borderBottom: '1px solid #eee' }}>
                 {transactions.map((txn) => (
                   <tr key={txn._id} style={{ borderBottom: '1px solid #f5f5f5', background: selectedIds.has(txn._id) ? '#28aaa905' : 'transparent' }}>
-                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <td className="no-print" style={{ padding: '12px', textAlign: 'center' }}>
                       {!txn.isAutoGenerated && (
                         <input
                           type="checkbox"
@@ -342,7 +386,7 @@ export default function FinancePage() {
                     <td style={{ padding: '12px' }}>{getCategoryLabel(txn.category)}</td>
                     <td style={{ padding: '12px' }}>{txn.description}</td>
                     <td style={{ padding: '12px', fontWeight: 600, color: txn.type === 'Income' ? '#42ca7f' : '#ec4561', textAlign: isRtl ? 'left' : 'right' }}>{txn.type === 'Income' ? '+' : '-'}{formatCurrency(txn.amount)}</td>
-                    <td style={{ padding: '12px' }}>
+                    <td className="no-print" style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         {!txn.isAutoGenerated && (
                           <>
@@ -362,7 +406,7 @@ export default function FinancePage() {
       </div>
 
       {totalPages > 1 && (
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+        <div className="no-print" style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>{commonT('prev')}</button>
           <span style={{ padding: '8px 12px', fontSize: '12px', color: '#525f80' }}>{commonT('page', { page, total: totalPages })}</span>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} style={{ padding: '8px 12px', fontSize: '12px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>{commonT('next')}</button>

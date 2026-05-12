@@ -7,9 +7,9 @@ export interface ICashSaleDocument extends Document {
   saleId: string;
   car: mongoose.Types.ObjectId;
   carId: string;
-  customer: mongoose.Types.ObjectId;
-  customerName: string;
-  customerPhone: string;
+  customer?: mongoose.Types.ObjectId;
+  customerName?: string;
+  customerPhone?: string;
   salePrice: number;
   discountType: 'flat' | 'percentage';
   discountValue: number;
@@ -47,9 +47,9 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     saleId: { type: String, unique: true },
     car: { type: Schema.Types.ObjectId, ref: 'Car', required: true },
     carId: { type: String, required: true },
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
-    customerName: { type: String, required: true },
-    customerPhone: { type: String, required: true },
+    customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: false },
+    customerName: { type: String, required: false },
+    customerPhone: { type: String, required: false },
     salePrice: { type: Number, required: true, min: 0 },
     discountType: { type: String, enum: ['flat', 'percentage'], default: 'flat' },
     discountValue: { type: Number, default: 0, min: 0 },
@@ -97,7 +97,11 @@ CashSaleSchema.pre('save', async function (this: ICashSaleDocument) {
   this.saleId = `CSH-${String(count + 1).padStart(4, '0')}`;
 });
 
-const CashSale: Model<ICashSaleDocument> =
-  mongoose.models.CashSale || mongoose.model<ICashSaleDocument>('CashSale', CashSaleSchema);
+// Force re-compilation of the model to handle schema changes in development
+if (mongoose.models.CashSale) {
+  delete mongoose.models.CashSale;
+}
+
+const CashSale: Model<ICashSaleDocument> = mongoose.model<ICashSaleDocument>('CashSale', CashSaleSchema);
 
 export default CashSale;

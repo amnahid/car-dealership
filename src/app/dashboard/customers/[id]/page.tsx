@@ -12,6 +12,8 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
+  nationalId?: string;
+  passportNumber?: string;
   buildingNumber: string;
   streetName: string;
   district: string;
@@ -205,6 +207,18 @@ export default function CustomerDetailPage() {
                 {customer.customerType || 'Individual'}
               </span>
             </div>
+            {customer.nationalId && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>National ID</span>
+                <span style={{ color: '#2a3142', fontFamily: 'monospace' }}>{customer.nationalId}</span>
+              </div>
+            )}
+            {customer.passportNumber && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>Passport Number</span>
+                <span style={{ color: '#2a3142', fontFamily: 'monospace' }}>{customer.passportNumber}</span>
+              </div>
+            )}
             {customer.vatRegistrationNumber && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#9ca8b3' }}>VAT / TRN</span>

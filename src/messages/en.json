@@ -36,11 +36,6 @@
     "byCategory": "Expenses by Category",
     "monthly": "Monthly Expenses",
     "noExpenses": "No expenses found.",
-    "export": {
-      "csv": "CSV",
-      "excel": "Excel",
-      "print": "Print"
-    },
     "presets": {
       "today": "Today",
       "thisWeek": "This Week",
@@ -348,7 +343,8 @@
     "createSale": "Create Sale",
     "none": "None",
     "addCustomer": "Add Customer",
-    "vatPlaceholder": "15-digit VAT number"
+    "vatPlaceholder": "15-digit VAT number",
+    "cashSale": "Cash Sale"
   },
   "Suppliers": {
     "title": "Suppliers",
@@ -598,6 +594,7 @@
     "editCustomer": "Edit Customer",
     "addCustomer": "Add Customer",
     "nationalId": "National ID",
+    "passportNumber": "Passport Number",
     "drivingLicense": "Driving License",
     "iqama": "Iqama",
     "emergencyContact": "Emergency Contact",
@@ -824,7 +821,8 @@
     "type": "Type",
     "channels": {
       "whatsapp": "WhatsApp",
-      "email": "Email"
+      "email": "Email",
+      "sms": "SMS"
     },
     "statuses": {
       "sent": "Sent",
@@ -1036,11 +1034,16 @@
     "repairs": "Repairs",
     "salaries": "Salaries",
     "other": "Other",
+    "exportLabel": "Export",
+    "export": {
+      "csv": "CSV",
+      "excel": "Excel",
+      "print": "Print"
+    },
     "selected": "selected",
     "deleteSelected": "Delete Selected",
     "deleteConfirm": "Are you sure you want to delete these items?",
     "deleteActionUndone": "This action cannot be undone.",
-    "export": "Export CSV",
     "import": "Import CSV",
     "automatic": "Automatic Only",
     "statusManagedAutomatically": "This status is managed automatically by sales and repair workflows.",

@@ -99,6 +99,8 @@ const API_ACCESS_RULES: AccessRule[] = [
 
   { prefix: '/api/dashboard/stats', roles: ALL_ROLES },
   { prefix: '/api/upload', roles: ALL_ROLES },
+  { prefix: '/api/export', roles: ['Admin', 'Finance Manager'] },
+  { prefix: '/api/import', roles: ['Admin', 'Finance Manager'] },
 ];
 
 const PUBLIC_API_PREFIXES = ['/api/auth', '/api/cron'] as const;

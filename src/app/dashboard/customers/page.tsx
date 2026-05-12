@@ -283,6 +283,7 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
     phone: '',
     email: '',
     nationalId: '',
+    passportNumber: '',
     buildingNumber: '',
     streetName: '',
     district: '',
@@ -358,6 +359,10 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
             <div>
               <label style={labelStyle}>{t('nationalId')} *</label>
               <input required value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} style={inputStyle} placeholder="1xxxxxxxxx0" />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('passportNumber')}</label>
+              <input value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>{t('customerType')}</label>

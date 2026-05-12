@@ -30,10 +30,25 @@ export async function GET(request: NextRequest) {
 
     if (type) query.type = type;
     if (category) query.category = category;
-    if (startDate || endDate) {
+    if ((startDate && startDate !== 'undefined' && startDate !== 'null') || (endDate && endDate !== 'undefined' && endDate !== 'null')) {
       query.date = {};
-      if (startDate) (query.date as Record<string, Date>).$gte = new Date(startDate);
-      if (endDate) (query.date as Record<string, Date>).$lte = new Date(endDate);
+      if (startDate && startDate !== 'undefined' && startDate !== 'null') {
+        const start = new Date(startDate);
+        if (!isNaN(start.getTime())) {
+          (query.date as Record<string, Date>).$gte = start;
+        }
+      }
+      if (endDate && endDate !== 'undefined' && endDate !== 'null') {
+        const end = new Date(endDate);
+        if (!isNaN(end.getTime())) {
+          end.setHours(23, 59, 59, 999);
+          (query.date as Record<string, Date>).$lte = end;
+        }
+      }
+      // If query.date was added but both were invalid, remove it
+      if (Object.keys(query.date as object).length === 0) {
+        delete query.date;
+      }
     }
 
     const skip = (page - 1) * limit;

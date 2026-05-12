@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       vatRate = ZATCA_VAT_RATE,
     } = body;
 
-    if (!carId || !car || !customer || !customerName || !customerPhone || !salePrice || !saleDate) {
+    if (!carId || !car || !salePrice || !saleDate) {
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
@@ -134,15 +134,16 @@ export async function POST(request: NextRequest) {
       if (!carCheck) throw new Error('Car not found');
       if (carCheck.status !== 'In Stock') throw new Error('Car is not available for sale');
 
-      const customerDocInTx = await Customer.findById(customer).session(session).lean() as unknown as ICustomerDocument;
-      if (!customerDocInTx) throw new Error('Customer not found');
+      const customerDocInTx = customer 
+        ? await Customer.findById(customer).session(session).lean() as unknown as ICustomerDocument
+        : null;
 
       const sales = await CashSale.create([{
         car: car,
         carId,
-        customer,
-        customerName,
-        customerPhone,
+        customer: customer || undefined,
+        customerName: customerName || 'Cash Customer',
+        customerPhone: customerPhone || '',
         salePrice,
         discountType,
         discountValue: discountValue || 0,
@@ -159,9 +160,9 @@ export async function POST(request: NextRequest) {
         notes,
         invoiceType,
         zatcaStatus: 'Pending',
-        registrationDriverName: registrationDriverName || customerName,
+        registrationDriverName: registrationDriverName || customerName || agentName || '',
         registrationDriverIqama: registrationDriverIqama || '',
-        registrationDriverLicenseExpiryDate: customerDocInTx.licenseExpiryDate
+        registrationDriverLicenseExpiryDate: customerDocInTx?.licenseExpiryDate
           ? new Date(customerDocInTx.licenseExpiryDate)
           : undefined,
         createdBy: user.userId,
@@ -172,11 +173,11 @@ export async function POST(request: NextRequest) {
       await Car.findByIdAndUpdate(car, {
         status: 'Sold',
         tafweedStatus: 'None',
-        tafweedAuthorizedTo: registrationDriverName || customerName,
+        tafweedAuthorizedTo: registrationDriverName || customerName || agentName || '',
         tafweedDriverIqama: registrationDriverIqama || '',
         tafweedDurationMonths: undefined,
         tafweedExpiryDate: undefined,
-        driverLicenseExpiryDate: customerDocInTx.licenseExpiryDate
+        driverLicenseExpiryDate: customerDocInTx?.licenseExpiryDate
           ? new Date(customerDocInTx.licenseExpiryDate)
           : undefined,
       }, { session });
@@ -229,7 +230,7 @@ export async function POST(request: NextRequest) {
         issueDate: new Date(saleDate),
         supplyDate: new Date(saleDate),
         buyer: {
-          name: customerName,
+          name: customerName || 'Cash Customer',
           trn: buyerTrn,
           buildingNumber: customerData?.buildingNumber,
           streetName: customerData?.streetName,
@@ -305,9 +306,9 @@ export async function POST(request: NextRequest) {
         carEngineNumber: carData?.engineNumber,
         carSequenceNumber: carData?.sequenceNumber,
         carColor: carData?.color,
-        customerName: s.customerName,
-        customerPhone: s.customerPhone,
-        customerId: (customerData as any)?.otherId || (customerData as any)?.customerId,
+        customerName: s.customerName || 'Cash Customer',
+        customerPhone: s.customerPhone || '',
+        customerId: (customerData as any)?.otherId || (customerData as any)?.customerId || '',
         customerAddress: customerData ? `${customerData.buildingNumber || ''} ${customerData.streetName || ''}, ${customerData.district || ''}, ${customerData.city || ''} ${customerData.postalCode || ''}`.trim() : '',
         salePrice: s.salePrice,
         discountType: s.discountType,
@@ -340,8 +341,8 @@ export async function POST(request: NextRequest) {
       const s = sale as ICashSaleDocument;
       await sendSaleThankYouNotifications(
         {
-          name: customerName,
-          phone: customerPhone,
+          name: customerName || 'Customer',
+          phone: customerPhone || '',
           email: customerData?.email,
         },
         {

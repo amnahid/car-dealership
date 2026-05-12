@@ -370,8 +370,8 @@ export default function CashSalesPage() {
                           </div>
                         )}
                         <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
-                          <div>{sale.customerName}</div>
-                          <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{sale.customerPhone}</div>
+                          <div>{sale.customerName || sale.agentName || t('cashSale')}</div>
+                          <div style={{ fontSize: '12px', color: '#9ca8b3' }}>{sale.customerPhone || ''}</div>
                         </div>
                       </div>
                     </td>
@@ -488,7 +488,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.car || !form.customer) { alert('Please select a car and customer'); return; }
+    if (!form.car) { alert('Please select a car'); return; }
     setLoading(true);
     try {
       const payload = {
@@ -544,7 +544,7 @@ function CashSaleModal({ cars, customers, employees, onClose, onSave }: { cars: 
           </div>
           <div style={{ marginBottom: '16px' }}>
             <SearchableSelect
-              label={`${t('selectCustomer')} *`}
+              label={t('selectCustomer')}
               value={form.customer}
               onChange={handleCustomerChange}
               options={[
@@ -876,3 +876,4 @@ function ZatcaStatusBadge({ status, saleId, saleType, t }: { status?: string; sa
     </div>
   );
 }
+

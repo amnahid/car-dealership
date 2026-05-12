@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         { phone: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { customerId: { $regex: search, $options: 'i' } },
+        { passportNumber: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { 
-      fullName, phone, email, nationalId,
+      fullName, phone, email, nationalId, passportNumber,
       buildingNumber, streetName, district, city, postalCode, countryCode,
       nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
       emergencyContactName, emergencyContactPhone, 
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
       phone,
       email,
       nationalId,
+      passportNumber,
       buildingNumber,
       streetName,
       district,

@@ -81,7 +81,7 @@ export default function DataTransferButtons({
             gap: '6px'
           }}
         >
-          <span style={{ fontSize: '16px' }}>↓</span> {t('export')}
+          <span style={{ fontSize: '16px' }}>↓</span> {t('exportLabel') || 'Export'}
         </button>
       )}
       

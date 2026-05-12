@@ -174,13 +174,15 @@ function ReportsContent() {
 
   const handleExportCSV = () => {
     const csv = ['Car ID,Brand,Model,Year,Status,Purchase Price,Repair Cost,Total Cost,Revenue,Profit'];
-    cars.forEach(c => csv.push(`${c.carId},${c.brand},${c.model},${c.year},${c.status},${c.purchasePrice},${c.repairCost},${c.totalCost},${c.revenue},${c.profit}`));
-    const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+    cars.forEach((c: any) => csv.push(`${c.carId},${c.brand},${c.model},${c.year},${c.status},${c.purchasePrice},${c.repairCost},${c.totalCost},${c.revenue},${c.profit}`));
+    const csvContent = '\uFEFF' + csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'car-profit-report.csv';
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
@@ -190,8 +192,8 @@ function ReportsContent() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('title')}</h2>
         <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-          <button onClick={handlePrint} style={{ background: '#5b6be7', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{expensesT('export.print')}</button>
-          <button onClick={handleExportCSV} style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{expensesT('export.csv')}</button>
+          <button onClick={handlePrint} style={{ background: '#5b6be7', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('export.print')}</button>
+          <button onClick={handleExportCSV} style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('export.csv')}</button>
         </div>
       </div>
 
@@ -214,7 +216,7 @@ function ReportsContent() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+      <div className="no-print" style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         {['day', 'week', 'month', 'year'].map(p => (
           <button
             key={p}
@@ -234,7 +236,7 @@ function ReportsContent() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+      <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '20px' }}>
           <h4 style={{ marginTop: 0, marginBottom: '16px', color: '#525f80' }}>{t('incomeVsExpense')}</h4>
           <ResponsiveContainer width="100%" height={300}>

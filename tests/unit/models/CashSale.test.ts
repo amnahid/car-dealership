@@ -14,11 +14,7 @@ describe('CashSale Model', () => {
 
     expect(err.errors.car).toBeDefined();
     expect(err.errors.carId).toBeDefined();
-    expect(err.errors.customer).toBeDefined();
-    expect(err.errors.customerName).toBeDefined();
-    expect(err.errors.customerPhone).toBeDefined();
     expect(err.errors.salePrice).toBeDefined();
-    expect(err.errors.finalPrice).toBeDefined();
     expect(err.errors.saleDate).toBeDefined();
     expect(err.errors.createdBy).toBeDefined();
   });

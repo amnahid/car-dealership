@@ -11,8 +11,16 @@
 export function jsonToCsv(data: Record<string, unknown>[]): string {
   if (!data || data.length === 0) return '';
 
-  // Get headers from the first object, excluding MongoDB internal fields
-  const headers = Object.keys(data[0]).filter(key => !key.startsWith('_') && key !== '__v');
+  // Get headers from all objects to ensure no optional fields are missed
+  const headerSet = new Set<string>();
+  data.forEach(row => {
+    Object.keys(row).forEach(key => {
+      if (!key.startsWith('_') && key !== '__v') {
+        headerSet.add(key);
+      }
+    });
+  });
+  const headers = Array.from(headerSet);
   
   const csvRows = [];
   

@@ -80,6 +80,7 @@ export default function NotificationLogsPage() {
     switch (channel) {
       case 'whatsapp': return '#25D366';
       case 'email': return '#0284c7';
+      case 'sms': return '#7c3aed';
       default: return '#6b7280';
     }
   };
@@ -188,7 +189,7 @@ export default function NotificationLogsPage() {
                         textTransform: 'uppercase',
                       }}
                     >
-                      {t(`channels.${log.channel}`)}
+                      {['whatsapp', 'email', 'sms'].includes(log.channel) ? t(`channels.${log.channel}`) : log.channel}
                     </span>
                   </td>
                   <td style={{ padding: '12px', fontWeight: 500, fontSize: '13px' }}>

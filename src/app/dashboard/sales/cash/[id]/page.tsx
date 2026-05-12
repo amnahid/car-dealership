@@ -206,15 +206,15 @@ export default function CashSaleDetailPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Name</span>
-              <span style={{ color: '#2a3142', fontWeight: 500 }}>{sale.customerName}</span>
+              <span style={{ color: '#2a3142', fontWeight: 500 }}>{sale.customerName || 'Cash Customer'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Phone</span>
-              <span style={{ color: '#2a3142' }}>{sale.customerPhone}</span>
+              <span style={{ color: '#2a3142' }}>{sale.customerPhone || '-'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Registered Driver</span>
-              <span style={{ color: '#2a3142' }}>{sale.registrationDriverName || sale.customerName}</span>
+              <span style={{ color: '#2a3142' }}>{sale.registrationDriverName || sale.customerName || sale.agentName || 'Cash Customer'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Driver Iqama</span>

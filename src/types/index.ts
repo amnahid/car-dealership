@@ -105,6 +105,7 @@ export interface ICustomer {
   fullName: string;
   phone: string;
   email?: string;
+  passportNumber?: string;
   buildingNumber: string;
   streetName: string;
   district: string;

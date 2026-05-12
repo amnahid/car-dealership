@@ -10,6 +10,8 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
+  nationalId?: string;
+  passportNumber?: string;
   buildingNumber: string;
   streetName: string;
   district: string;
@@ -47,6 +49,7 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     phone: customer.phone,
     email: customer.email || '',
     nationalId: (customer as any).nationalId || '',
+    passportNumber: customer.passportNumber || '',
     buildingNumber: customer.buildingNumber || '',
     streetName: customer.streetName || '',
     district: customer.district || '',
@@ -140,6 +143,14 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
             <div>
               <label style={labelStyle}>{t('vatTrn')}</label>
               <input value={form.vatRegistrationNumber} onChange={(e) => setForm({ ...form, vatRegistrationNumber: e.target.value })} placeholder="3xxxxxxxxxxxxxx3" style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('nationalId')}</label>
+              <input value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('passportNumber')}</label>
+              <input value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
               <div>

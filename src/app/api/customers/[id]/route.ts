@@ -66,7 +66,7 @@ export async function PUT(
 
     const body = await request.json();
     const { 
-      fullName, phone, email, nationalId,
+      fullName, phone, email, nationalId, passportNumber,
       buildingNumber, streetName, district, city, postalCode, countryCode,
       nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
       emergencyContactName, emergencyContactPhone, licenseExpiryDate,
@@ -103,7 +103,7 @@ export async function PUT(
     }
 
     const customer = await Customer.findByIdAndUpdate(id, {
-      fullName, phone, email, nationalId,
+      fullName, phone, email, nationalId, passportNumber,
       buildingNumber, streetName, district, city, postalCode, countryCode: countryCode || 'SA',
         nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
         emergencyContactName, emergencyContactPhone, licenseExpiryDate,

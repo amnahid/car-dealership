@@ -62,8 +62,8 @@ interface InvoiceData {
   carEngineNumber?: string;
   carSequenceNumber?: string;
   carColor?: string;
-  customerName: string;
-  customerPhone: string;
+  customerName?: string;
+  customerPhone?: string;
   customerAddress?: string;
   customerId?: string;
   salePrice: number;
@@ -238,19 +238,28 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
   doc.setFont('Cairo', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(60, 60, 60);
-  doc.text(`${processArabic('Name / الاسم')}: ${processArabic(data.customerName)}`, margin, y);
+  doc.text(`${processArabic('Name / الاسم')}: ${processArabic(data.customerName || 'Cash Customer')}`, margin, y);
 
   if (data.customerId) {
     y += 5;
     doc.text(`${processArabic('ID/Iqama / الهوية/الإقامة')}: ${data.customerId}`, margin, y);
   }
 
-  y += 5;
-  doc.text(`${processArabic('Phone / الهاتف')}: ${data.customerPhone}`, margin, y);
+  if (data.customerPhone) {
+    y += 5;
+    doc.text(`${processArabic('Phone / الهاتف')}: ${data.customerPhone}`, margin, y);
+  }
 
   if (data.customerAddress) {
     y += 5;
     doc.text(`${processArabic('Address / العنوان')}: ${processArabic(data.customerAddress)}`, margin, y);
+  }
+
+  if (data.agentName) {
+    y += 5;
+    doc.setFont('Cairo', 'bold');
+    doc.text(`${processArabic('Agent / المندوب')}: ${processArabic(data.agentName)}`, margin, y);
+    doc.setFont('Cairo', 'normal');
   }
 
   // Vehicle details

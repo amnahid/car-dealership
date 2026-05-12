@@ -229,7 +229,9 @@ export async function PUT(
     // Re-run ZATCA when invoice data changes
     if (shouldRerunZatca) {
       try {
-        const customerDoc = await Customer.findById(sale.customer).lean() as unknown as ICustomerDocument;
+        const customerDoc = sale.customer 
+          ? await Customer.findById(sale.customer).lean() as unknown as ICustomerDocument 
+          : null;
         const carDoc = await Car.findById(sale.car).lean() as unknown as ICarRaw;
         const zatcaResult = await processZatcaInvoice({
           referenceId: sale._id.toString(),
@@ -239,7 +241,7 @@ export async function PUT(
           issueDate: new Date(sale.saleDate),
           supplyDate: new Date(sale.saleDate),
           buyer: {
-            name: sale.customerName,
+            name: sale.customerName || 'Cash Customer',
             trn: sale.buyerTrn || '',
             buildingNumber: customerDoc?.buildingNumber,
             streetName: customerDoc?.streetName,
@@ -406,7 +408,7 @@ export async function PATCH(
 
       const [carData, customerData] = await Promise.all([
         Car.findById(sale.car).lean() as unknown as ICarRaw,
-        Customer.findById(sale.customer).lean() as unknown as ICustomerDocument,
+        sale.customer ? Customer.findById(sale.customer).lean() as unknown as ICustomerDocument : null,
       ]);
 
       const invoiceUrl = await generateInvoice({
@@ -421,9 +423,9 @@ export async function PATCH(
         carEngineNumber: carData?.engineNumber,
         carSequenceNumber: carData?.sequenceNumber,
         carColor: carData?.color,
-        customerName: sale.customerName,
-        customerPhone: sale.customerPhone,
-        customerId: (customerData as any)?.otherId || (customerData as any)?.customerId,
+        customerName: sale.customerName || 'Cash Customer',
+        customerPhone: sale.customerPhone || '',
+        customerId: (customerData as any)?.otherId || (customerData as any)?.customerId || '',
         customerAddress: customerData ? `${customerData.buildingNumber || ''} ${customerData.streetName || ''}, ${customerData.district || ''}, ${customerData.city || ''} ${customerData.postalCode || ''}`.trim() : '',
         salePrice: sale.salePrice,
         discountType: sale.discountType,

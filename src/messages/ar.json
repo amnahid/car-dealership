@@ -36,11 +36,6 @@
     "byCategory": "المصاريف حسب الفئة",
     "monthly": "المصاريف الشهرية",
     "noExpenses": "لم يتم العثور على مصاريف.",
-    "export": {
-      "csv": "CSV",
-      "excel": "إكسل",
-      "print": "طباعة"
-    },
     "presets": {
       "today": "اليوم",
       "thisWeek": "هذا الأسبوع",
@@ -348,7 +343,8 @@
     "createSale": "إنشاء عملية بيع",
     "none": "بدون",
     "addCustomer": "إضافة عميل",
-    "vatPlaceholder": "رقم ضريبي من 15 خانة"
+    "vatPlaceholder": "رقم ضريبي من 15 خانة",
+    "cashSale": "بيع نقدي"
   },
   "Suppliers": {
     "title": "الموردين",
@@ -598,6 +594,7 @@
     "editCustomer": "تعديل العميل",
     "addCustomer": "إضافة عميل",
     "nationalId": "الهوية الوطنية",
+    "passportNumber": "رقم جواز السفر",
     "drivingLicense": "رخصة القيادة",
     "iqama": "الإقامة",
     "emergencyContact": "جهة اتصال الطوارئ",
@@ -823,7 +820,8 @@
     "type": "النوع",
     "channels": {
       "whatsapp": "واتساب",
-      "email": "بريد إلكتروني"
+      "email": "بريد إلكتروني",
+      "sms": "رسالة نصية"
     },
     "statuses": {
       "sent": "تم الإرسال",
@@ -1030,11 +1028,16 @@
     "repairs": "الإصلاحات",
     "salaries": "الرواتب",
     "other": "أخرى",
+    "exportLabel": "تصدير",
+    "export": {
+      "csv": "CSV",
+      "excel": "إكسل",
+      "print": "طباعة"
+    },
     "selected": "تم اختياره",
     "deleteSelected": "حذف المختارة",
     "deleteConfirm": "هل أنت متأكد من حذف هذه العناصر؟",
     "deleteActionUndone": "هذا الإجراء لا يمكن التراجع عنه.",
-    "export": "تصدير CSV",
     "import": "استيراد CSV",
     "automatic": "تلقائي فقط",
     "statusManagedAutomatically": "يتم إدارة هذه الحالة تلقائياً من خلال عمليات البيع والإصلاح.",
