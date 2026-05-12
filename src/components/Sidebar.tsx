@@ -91,6 +91,7 @@ const navItems: MenuItem[] = [
       { href: '/dashboard/users', labelKey: 'users', icon: '', roles: ['Admin'] },
       { href: '/dashboard/activity-logs', labelKey: 'activityLogs', icon: '', roles: ['Admin', 'Finance Manager'] },
       { href: '/dashboard/notifications', labelKey: 'notificationLogs', icon: '', roles: ['Admin', 'Finance Manager'] },
+      { href: '/dashboard/admin/whatsapp', labelKey: 'whatsappSettings', icon: '', roles: ['Admin'] },
     ]
   },
 ];

@@ -494,6 +494,7 @@
     "approvals": "الموافقات",
     "activityLogs": "سجلات النشاط",
     "notificationLogs": "سجلات التنبيهات",
+    "whatsappSettings": "إعدادات واتساب",
     "customerNotifications": "تنبيهات العملاء",
     "logout": "تسجيل الخروج",
     "managementSystem": "نظام الإدارة"
@@ -792,6 +793,21 @@
       "step5": "طلب Production CSID الفعلي"
     }
   },
+  "WhatsAppSettings": {
+    "title": "إعدادات واتساب",
+    "subtitle": "تهيئة بيانات الاعتماد لـ Meta Cloud API لإرسال رسائل واتساب",
+    "accessToken": "رمز الوصول (Access Token)",
+    "phoneNumberId": "معرف رقم الهاتف",
+    "adminPhone": "رقم هاتف تنبيهات المسؤول",
+    "saveConfig": "حفظ الإعدادات",
+    "successSave": "تم حفظ إعدادات واتساب بنجاح.",
+    "errorSave": "فشل حفظ إعدادات واتساب",
+    "placeholders": {
+      "accessToken": "EAA...",
+      "phoneNumberId": "معرف من 10 خانات",
+      "adminPhone": "+966..."
+    }
+  },
   "NotificationLogs": {
     "title": "سجلات التنبيهات",
     "customerNotifications": "تنبيهات العملاء",
@@ -806,7 +822,7 @@
     "channel": "القناة",
     "type": "النوع",
     "channels": {
-      "sms": "رسالة نصية",
+      "whatsapp": "واتساب",
       "email": "بريد إلكتروني"
     },
     "statuses": {

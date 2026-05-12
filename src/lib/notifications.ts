@@ -1,14 +1,14 @@
 import { connectDB } from '@/lib/db';
 import VehicleDocument from '@/models/Document';
 import { sendExpiryAlertEmail, sendBatchExpiryAlertEmails, isEmailServiceConfigured, DocumentAlertInfo } from '@/lib/email';
-import { sendExpiryAlertSms, sendBatchExpiryAlertSms, isSmsServiceConfigured } from '@/lib/sms';
+import { sendExpiryAlertWhatsApp, sendBatchExpiryAlertWhatsApp, isWhatsAppServiceConfigured } from '@/lib/whatsapp';
 import { logNotification } from './notificationLogger';
 
 export interface AlertResult {
   emailsSent: number;
   emailsFailed: number;
-  smsSent: number;
-  smsFailed: number;
+  whatsappSent: number;
+  whatsappFailed: number;
   totalDocuments: number;
   errors: string[];
 }
@@ -79,8 +79,8 @@ export async function checkAndSendExpiryAlerts(): Promise<AlertResult> {
   const result: AlertResult = {
     emailsSent: 0,
     emailsFailed: 0,
-    smsSent: 0,
-    smsFailed: 0,
+    whatsappSent: 0,
+    whatsappFailed: 0,
     totalDocuments: 0,
     errors: [],
   };
@@ -89,10 +89,10 @@ export async function checkAndSendExpiryAlerts(): Promise<AlertResult> {
 
   // Check if services are configured
   const emailConfigured = isEmailServiceConfigured();
-  const smsConfigured = isSmsServiceConfigured();
+  const whatsappConfigured = await isWhatsAppServiceConfigured();
 
-  if (!emailConfigured && !smsConfigured) {
-    const error = 'Neither email nor SMS service is configured. Please configure MailerLite and/or Twilio.';
+  if (!emailConfigured && !whatsappConfigured) {
+    const error = 'Neither email nor WhatsApp service is configured. Please configure MailerLite and/or Meta WhatsApp API.';
     console.warn(error);
     result.errors.push(error);
     return result;
@@ -159,16 +159,16 @@ export async function checkAndSendExpiryAlerts(): Promise<AlertResult> {
       }
     }
 
-    // Send SMS alerts if configured
-    if (smsConfigured && allDocsNeedingAlert.length > 0) {
-      const smsResult = await sendBatchExpiryAlertSms(allDocsNeedingAlert);
-      result.smsSent = smsResult.sent;
-      result.smsFailed = smsResult.failed;
-      console.log(`SMS alerts: ${smsResult.sent} sent, ${smsResult.failed} failed`);
+    // Send WhatsApp alerts if configured
+    if (whatsappConfigured && allDocsNeedingAlert.length > 0) {
+      const whatsappResult = await sendBatchExpiryAlertWhatsApp(allDocsNeedingAlert);
+      result.whatsappSent = whatsappResult.sent;
+      result.whatsappFailed = whatsappResult.failed;
+      console.log(`WhatsApp alerts: ${whatsappResult.sent} sent, ${whatsappResult.failed} failed`);
 
       for (const doc of allDocsNeedingAlert) {
         await logNotification({
-          channel: 'sms',
+          channel: 'whatsapp',
           type: 'document_expiry',
           recipientName: 'Admin',
           subject: `Document Expiry Alert`,

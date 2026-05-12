@@ -1,4 +1,3 @@
-jest.mock('twilio');
 import { NotificationResult } from '../../../src/lib/saleNotifications';
 jest.mock('../../../src/lib/notificationLogger', () => ({
   logNotification: jest.fn().mockResolvedValue(undefined),
@@ -10,11 +9,11 @@ jest.mock('../../../src/lib/email', () => {
     sendEmail: jest.fn().mockResolvedValue({ success: true }),
   };
 });
-jest.mock('../../../src/lib/sms', () => {
-  const actual = jest.requireActual('../../../src/lib/sms');
+jest.mock('../../../src/lib/whatsapp', () => {
+  const actual = jest.requireActual('../../../src/lib/whatsapp');
   return {
     ...actual,
-    sendExpirySms: jest.fn().mockResolvedValue({ success: true, messageId: 'SM_TEST' }),
+    sendExpiryWhatsApp: jest.fn().mockResolvedValue({ success: true, messageId: 'WA_TEST' }),
   };
 });
 
@@ -25,29 +24,27 @@ describe('saleNotifications.ts', () => {
     process.env.RESEND_API_KEY = 're_test_api_key';
     process.env.RESEND_FROM_EMAIL = 'noreply@test.com';
     process.env.RESEND_FROM_NAME = 'Test App';
-    process.env.TWILIO_ACCOUNT_SID = 'test';
-    process.env.TWILIO_AUTH_TOKEN = 'test';
-    process.env.TWILIO_PHONE_NUMBER = '+1234567890';
+    process.env.META_WA_ACCESS_TOKEN = 'test';
+    process.env.META_WA_PHONE_NUMBER_ID = 'test';
   });
 
   afterEach(() => {
     delete process.env.RESEND_API_KEY;
     delete process.env.RESEND_FROM_EMAIL;
     delete process.env.RESEND_FROM_NAME;
-    delete process.env.TWILIO_ACCOUNT_SID;
-    delete process.env.TWILIO_AUTH_TOKEN;
-    delete process.env.TWILIO_PHONE_NUMBER;
+    delete process.env.META_WA_ACCESS_TOKEN;
+    delete process.env.META_WA_PHONE_NUMBER_ID;
   });
 
   describe('NotificationResult interface', () => {
     it('should define NotificationResult interface', async () => {
       const result: NotificationResult = {
-        smsSent: true,
-        emailSent: true,
-        smsError: undefined,
-        emailError: undefined,
-      };
-      expect(result.smsSent).toBe(true);
+        whatsappSent: true,
+                emailSent: true,
+                whatsappError: undefined,
+                emailError: undefined,
+              };
+              expect(result.whatsappSent).toBe(true);
       expect(result.emailSent).toBe(true);
     });
   });
@@ -134,7 +131,7 @@ describe('saleNotifications.ts', () => {
         }
       );
 
-      expect(result).toHaveProperty('smsSent');
+      expect(result).toHaveProperty('whatsappSent');
       expect(result).toHaveProperty('emailSent');
     });
 
@@ -191,7 +188,7 @@ describe('saleNotifications.ts', () => {
         }
       );
 
-      expect(result).toHaveProperty('smsSent');
+      expect(result).toHaveProperty('whatsappSent');
       expect(result).toHaveProperty('emailSent');
     });
   });
@@ -217,7 +214,7 @@ describe('saleNotifications.ts', () => {
         }
       );
 
-      expect(result.smsSent).toBe(true);
+      expect(result.whatsappSent).toBe(true);
       expect(result.emailSent).toBe(true);
     });
   });
@@ -244,7 +241,7 @@ describe('saleNotifications.ts', () => {
         }
       );
 
-      expect(result.smsSent).toBe(true);
+      expect(result.whatsappSent).toBe(true);
       expect(result.emailSent).toBe(true);
     });
   });

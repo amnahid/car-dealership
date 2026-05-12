@@ -494,6 +494,7 @@
     "approvals": "Approvals",
     "activityLogs": "Activity Logs",
     "notificationLogs": "Notification Logs",
+    "whatsappSettings": "WhatsApp Settings",
     "customerNotifications": "Customer Notifications",
     "logout": "Logout",
     "managementSystem": "Management System"
@@ -793,6 +794,21 @@
       "step5": "Request Production CSID"
     }
   },
+  "WhatsAppSettings": {
+    "title": "WhatsApp API Settings",
+    "subtitle": "Configure Meta Cloud API credentials for WhatsApp messaging",
+    "accessToken": "Access Token",
+    "phoneNumberId": "Phone Number ID",
+    "adminPhone": "Admin Alert Phone",
+    "saveConfig": "Save Configuration",
+    "successSave": "WhatsApp configuration saved successfully.",
+    "errorSave": "Failed to save WhatsApp configuration",
+    "placeholders": {
+      "accessToken": "EAA...",
+      "phoneNumberId": "10 digit ID",
+      "adminPhone": "+966..."
+    }
+  },
   "NotificationLogs": {
     "title": "Notification Logs",
     "customerNotifications": "Customer Notifications",
@@ -807,7 +823,7 @@
     "channel": "Channel",
     "type": "Type",
     "channels": {
-      "sms": "SMS",
+      "whatsapp": "WhatsApp",
       "email": "Email"
     },
     "statuses": {

@@ -2,7 +2,7 @@ import { connectDB } from '@/lib/db';
 import NotificationLog from '@/models/NotificationLog';
 
 export interface LogNotificationParams {
-  channel: 'sms' | 'email';
+  channel: 'whatsapp' | 'email';
   type: string;
   recipientName: string;
   recipientPhone?: string;

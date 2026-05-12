@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface INotificationLogDocument extends Document {
   notificationId: string;
-  channel: 'sms' | 'email';
+  channel: 'whatsapp' | 'email';
   type: string;
   recipientName: string;
   recipientPhone?: string;
@@ -20,7 +20,7 @@ export interface INotificationLogDocument extends Document {
 const NotificationLogSchema = new Schema<INotificationLogDocument>(
   {
     notificationId: { type: String, unique: true },
-    channel: { type: String, enum: ['sms', 'email'], required: true },
+    channel: { type: String, enum: ['whatsapp', 'email'], required: true },
     type: { type: String, required: true },
     recipientName: { type: String, required: true },
     recipientPhone: { type: String },

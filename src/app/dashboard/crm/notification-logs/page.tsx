@@ -7,7 +7,7 @@ import { DateRangeFilter } from '@/components/DateRangeFilter';
 interface NotificationLog {
   _id: string;
   notificationId: string;
-  channel: 'sms' | 'email';
+  channel: 'whatsapp' | 'email';
   type: string;
   recipientName: string;
   recipientPhone?: string;
@@ -78,7 +78,7 @@ export default function NotificationLogsPage() {
 
   const getChannelColor = (channel: string) => {
     switch (channel) {
-      case 'sms': return '#7c3aed';
+      case 'whatsapp': return '#25D366';
       case 'email': return '#0284c7';
       default: return '#6b7280';
     }
@@ -104,7 +104,7 @@ export default function NotificationLogsPage() {
           }}
         >
           <option value="">{t('allChannels')}</option>
-          <option value="sms">{t('channels.sms')}</option>
+          <option value="whatsapp">{t('channels.whatsapp')}</option>
           <option value="email">{t('channels.email')}</option>
         </select>
 

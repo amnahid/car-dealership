@@ -25,9 +25,8 @@ const task = cron.schedule('0 9 * * *', async () => {
       console.log(`  - Documents checked: ${result.totalDocuments}`);
       console.log(`  - Emails sent: ${result.emailsSent}`);
       console.log(`  - Emails failed: ${result.emailsFailed}`);
-      console.log(`  - SMS sent: ${result.smsSent}`);
-      console.log(`  - SMS failed: ${result.smsFailed}`);
-
+      console.log(`  - WhatsApp sent: ${result.whatsappSent}`);
+      console.log(`  - WhatsApp failed: ${result.whatsappFailed}`);
       if (result.errors && result.errors.length > 0) {
         console.log('  - Errors:', result.errors);
       }

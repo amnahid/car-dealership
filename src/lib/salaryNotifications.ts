@@ -1,4 +1,4 @@
-import { sendExpirySms, isSmsServiceConfigured } from './sms';
+import { sendExpiryWhatsApp, isWhatsAppServiceConfigured } from './whatsapp';
 import { sendExpiryAlertEmail, isEmailServiceConfigured, sendEmail } from './email';
 import { logNotification } from './notificationLogger';
 
@@ -21,11 +21,11 @@ interface EmployeeInfo {
   email?: string;
 }
 
-function formatSalaryPaymentSms(employee: EmployeeInfo, payment: SalaryPaymentInfo): string {
+function formatSalaryPaymentWhatsApp(employee: EmployeeInfo, payment: SalaryPaymentInfo): string {
   const monthName = new Date(payment.year, payment.month - 1).toLocaleString('en-US', { month: 'long' });
   const amount = payment.amount.toLocaleString();
   const typeLabel = payment.paymentType === 'Monthly' ? '' : ` (${payment.paymentType})`;
-  return `Hi ${employee.name}, your salary${typeLabel} of $${amount} for ${monthName} ${payment.year} has been paid. Payment ID: ${payment.paymentId}. - AMYAL CAR`;
+  return `*SALARY PAYMENT RECEIVED*\n\nHi ${employee.name},\n\nYour salary${typeLabel} of *$${amount}* for ${monthName} ${payment.year} has been paid.\n\nPayment ID: ${payment.paymentId}\n\n- AMYAL CAR`;
 }
 
 function formatSalaryPaymentEmail(employee: EmployeeInfo, payment: SalaryPaymentInfo): string {
@@ -107,23 +107,23 @@ function formatSalaryPaymentEmail(employee: EmployeeInfo, payment: SalaryPayment
 }
 
 export interface SalaryNotificationResult {
-  smsSent: boolean;
-  smsError?: string;
+  whatsappSent: boolean;
+  whatsappError?: string;
   emailSent: boolean;
   emailError?: string;
 }
 
-async function sendEmployeeSms(employee: EmployeeInfo, message: string): Promise<{ success: boolean; error?: string }> {
+async function sendEmployeeWhatsApp(employee: EmployeeInfo, message: string): Promise<{ success: boolean; error?: string }> {
   if (!employee.phone) {
     return { success: false, error: 'No phone number provided' };
   }
 
-  if (!isSmsServiceConfigured()) {
-    return { success: false, error: 'SMS service not configured' };
+  if (!(await isWhatsAppServiceConfigured())) {
+    return { success: false, error: 'WhatsApp service not configured' };
   }
 
   try {
-    const result = await sendExpirySms(employee.phone, message);
+    const result = await sendExpiryWhatsApp(employee.phone, message);
     return { success: result.success, error: result.error };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -155,15 +155,15 @@ export async function sendSalaryPaymentNotifications(
   employee: EmployeeInfo,
   payment: SalaryPaymentInfo
 ): Promise<SalaryNotificationResult> {
-  const result: SalaryNotificationResult = { smsSent: false, emailSent: false };
+  const result: SalaryNotificationResult = { whatsappSent: false, emailSent: false };
 
-  const message = formatSalaryPaymentSms(employee, payment);
-  const smsResult = await sendEmployeeSms(employee, message);
-  result.smsSent = smsResult.success;
-  result.smsError = smsResult.error;
+  const message = formatSalaryPaymentWhatsApp(employee, payment);
+  const whatsappResult = await sendEmployeeWhatsApp(employee, message);
+  result.whatsappSent = whatsappResult.success;
+  result.whatsappError = whatsappResult.error;
 
   await logNotification({
-    channel: 'sms',
+    channel: 'whatsapp',
     type: 'salary_payment',
     recipientName: employee.name,
     recipientPhone: employee.phone,
@@ -171,8 +171,8 @@ export async function sendSalaryPaymentNotifications(
     content: message,
     referenceId: payment.paymentId,
     referenceType: 'SalaryPayment',
-    status: smsResult.success ? 'sent' : 'failed',
-    errorMessage: smsResult.error,
+    status: whatsappResult.success ? 'sent' : 'failed',
+    errorMessage: whatsappResult.error,
     metadata: { amount: payment.amount, month: payment.month, year: payment.year, paymentType: payment.paymentType },
   });
 
@@ -197,6 +197,6 @@ export async function sendSalaryPaymentNotifications(
     });
   }
 
-  console.log(`Salary payment notifications for ${payment.paymentId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
+  console.log(`Salary payment notifications for ${payment.paymentId}: WhatsApp=${result.whatsappSent}, Email=${result.emailSent}`);
   return result;
 }

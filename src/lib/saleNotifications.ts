@@ -1,4 +1,4 @@
-import { sendExpirySms, SmsResult, isSmsServiceConfigured } from './sms';
+import { sendExpiryWhatsApp, WhatsAppResult } from './whatsapp';
 import { sendExpiryAlertEmail, isEmailServiceConfigured, sendEmail } from './email';
 import { logNotification } from './notificationLogger';
 
@@ -217,19 +217,19 @@ function buildRentalConfirmationEmailHtml(customer: CustomerInfo, rental: Rental
 }
 
 export interface NotificationResult {
-  smsSent: boolean;
-  smsError?: string;
+  whatsappSent: boolean;
+  whatsappError?: string;
   emailSent: boolean;
   emailError?: string;
 }
 
-async function sendCustomerSms(customer: CustomerInfo, message: string): Promise<{ success: boolean; error?: string }> {
+async function sendCustomerWhatsApp(customer: CustomerInfo, message: string): Promise<{ success: boolean; error?: string }> {
   if (!customer.phone) {
     return { success: false, error: 'No phone number provided' };
   }
 
   try {
-    const result = await sendExpirySms(customer.phone, message);
+    const result = await sendExpiryWhatsApp(customer.phone, message);
     return { success: result.success, error: result.error };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -266,15 +266,15 @@ export async function sendSaleThankYouNotifications(
   customer: CustomerInfo,
   sale: SaleInfo
 ): Promise<NotificationResult> {
-  const result: NotificationResult = { smsSent: false, emailSent: false };
+  const result: NotificationResult = { whatsappSent: false, emailSent: false };
 
   const message = formatSaleThankYouMessage(customer, sale);
-  const smsResult = await sendCustomerSms(customer, message);
-  result.smsSent = smsResult.success;
-  result.smsError = smsResult.error;
+  const whatsappResult = await sendCustomerWhatsApp(customer, message);
+  result.whatsappSent = whatsappResult.success;
+  result.whatsappError = whatsappResult.error;
 
   await logNotification({
-    channel: 'sms',
+    channel: 'whatsapp',
     type: 'sale_thank_you',
     recipientName: customer.name,
     recipientPhone: customer.phone,
@@ -282,8 +282,8 @@ export async function sendSaleThankYouNotifications(
     content: message,
     referenceId: sale.saleId,
     referenceType: 'CashSale',
-    status: smsResult.success ? 'sent' : 'failed',
-    errorMessage: smsResult.error,
+    status: whatsappResult.success ? 'sent' : 'failed',
+    errorMessage: whatsappResult.error,
   });
 
   if (customer.email) {
@@ -310,7 +310,7 @@ export async function sendSaleThankYouNotifications(
     });
   }
 
-  console.log(`Sale notifications for ${sale.saleId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
+  console.log(`Sale notifications for ${sale.saleId}: WhatsApp=${result.whatsappSent}, Email=${result.emailSent}`);
   return result;
 }
 
@@ -318,15 +318,15 @@ export async function sendRentalConfirmationNotifications(
   customer: CustomerInfo,
   rental: RentalInfo
 ): Promise<NotificationResult> {
-  const result: NotificationResult = { smsSent: false, emailSent: false };
+  const result: NotificationResult = { whatsappSent: false, emailSent: false };
 
   const message = formatRentalConfirmationMessage(customer, rental);
-  const smsResult = await sendCustomerSms(customer, message);
-  result.smsSent = smsResult.success;
-  result.smsError = smsResult.error;
+  const whatsappResult = await sendCustomerWhatsApp(customer, message);
+  result.whatsappSent = whatsappResult.success;
+  result.whatsappError = whatsappResult.error;
 
   await logNotification({
-    channel: 'sms',
+    channel: 'whatsapp',
     type: 'rental_confirmation',
     recipientName: customer.name,
     recipientPhone: customer.phone,
@@ -334,10 +334,11 @@ export async function sendRentalConfirmationNotifications(
     content: message,
     referenceId: rental.rentalId,
     referenceType: 'Rental',
-    status: smsResult.success ? 'sent' : 'failed',
-    errorMessage: smsResult.error,
+    status: whatsappResult.success ? 'sent' : 'failed',
+    errorMessage: whatsappResult.error,
   });
 
+  // ... (rest of function)
   if (customer.email) {
     const html = buildRentalConfirmationEmailHtml(customer, rental);
     const emailResult = await sendCustomerEmail(
@@ -362,7 +363,7 @@ export async function sendRentalConfirmationNotifications(
     });
   }
 
-  console.log(`Rental notifications for ${rental.rentalId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
+  console.log(`Rental notifications for ${rental.rentalId}: WhatsApp=${result.whatsappSent}, Email=${result.emailSent}`);
   return result;
 }
 
@@ -636,15 +637,15 @@ export async function sendInstallmentConfirmationNotifications(
   customer: CustomerInfo,
   installment: InstallmentInfo
 ): Promise<NotificationResult> {
-  const result: NotificationResult = { smsSent: false, emailSent: false };
+  const result: NotificationResult = { whatsappSent: false, emailSent: false };
 
   const message = formatInstallmentConfirmationMessage(customer, installment);
-  const smsResult = await sendCustomerSms(customer, message);
-  result.smsSent = smsResult.success;
-  result.smsError = smsResult.error;
+  const whatsappResult = await sendCustomerWhatsApp(customer, message);
+  result.whatsappSent = whatsappResult.success;
+  result.whatsappError = whatsappResult.error;
 
   await logNotification({
-    channel: 'sms',
+    channel: 'whatsapp',
     type: 'installment_confirmation',
     recipientName: customer.name,
     recipientPhone: customer.phone,
@@ -652,8 +653,8 @@ export async function sendInstallmentConfirmationNotifications(
     content: message,
     referenceId: installment.saleId,
     referenceType: 'InstallmentSale',
-    status: smsResult.success ? 'sent' : 'failed',
-    errorMessage: smsResult.error,
+    status: whatsappResult.success ? 'sent' : 'failed',
+    errorMessage: whatsappResult.error,
   });
 
   if (customer.email) {
@@ -680,7 +681,7 @@ export async function sendInstallmentConfirmationNotifications(
     });
   }
 
-  console.log(`Installment confirmation for ${installment.saleId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
+  console.log(`Installment confirmation for ${installment.saleId}: WhatsApp=${result.whatsappSent}, Email=${result.emailSent}`);
   return result;
 }
 
@@ -688,15 +689,15 @@ export async function sendPaymentReminderNotifications(
   customer: CustomerInfo,
   reminder: PaymentReminderInfo
 ): Promise<NotificationResult> {
-  const result: NotificationResult = { smsSent: false, emailSent: false };
+  const result: NotificationResult = { whatsappSent: false, emailSent: false };
 
   const message = formatPaymentReminderMessage(customer, reminder);
-  const smsResult = await sendCustomerSms(customer, message);
-  result.smsSent = smsResult.success;
-  result.smsError = smsResult.error;
+  const whatsappResult = await sendCustomerWhatsApp(customer, message);
+  result.whatsappSent = whatsappResult.success;
+  result.whatsappError = whatsappResult.error;
 
   await logNotification({
-    channel: 'sms',
+    channel: 'whatsapp',
     type: 'payment_reminder',
     recipientName: customer.name,
     recipientPhone: customer.phone,
@@ -704,8 +705,8 @@ export async function sendPaymentReminderNotifications(
     content: message,
     referenceId: reminder.saleId,
     referenceType: 'InstallmentSale',
-    status: smsResult.success ? 'sent' : 'failed',
-    errorMessage: smsResult.error,
+    status: whatsappResult.success ? 'sent' : 'failed',
+    errorMessage: whatsappResult.error,
     metadata: { installmentNumber: reminder.installmentNumber },
   });
 
@@ -734,7 +735,7 @@ export async function sendPaymentReminderNotifications(
     });
   }
 
-  console.log(`Payment reminder for ${reminder.saleId}#${reminder.installmentNumber}: SMS=${result.smsSent}, Email=${result.emailSent}`);
+  console.log(`Payment reminder for ${reminder.saleId}#${reminder.installmentNumber}: WhatsApp=${result.whatsappSent}, Email=${result.emailSent}`);
   return result;
 }
 
@@ -742,15 +743,15 @@ export async function sendOverdueNoticeNotifications(
   customer: CustomerInfo,
   reminder: PaymentReminderInfo
 ): Promise<NotificationResult> {
-  const result: NotificationResult = { smsSent: false, emailSent: false };
+  const result: NotificationResult = { whatsappSent: false, emailSent: false };
 
   const message = formatOverdueNoticeMessage(customer, reminder);
-  const smsResult = await sendCustomerSms(customer, message);
-  result.smsSent = smsResult.success;
-  result.smsError = smsResult.error;
+  const whatsappResult = await sendCustomerWhatsApp(customer, message);
+  result.whatsappSent = whatsappResult.success;
+  result.whatsappError = whatsappResult.error;
 
   await logNotification({
-    channel: 'sms',
+    channel: 'whatsapp',
     type: 'payment_overdue',
     recipientName: customer.name,
     recipientPhone: customer.phone,
@@ -758,8 +759,8 @@ export async function sendOverdueNoticeNotifications(
     content: message,
     referenceId: reminder.saleId,
     referenceType: 'InstallmentSale',
-    status: smsResult.success ? 'sent' : 'failed',
-    errorMessage: smsResult.error,
+    status: whatsappResult.success ? 'sent' : 'failed',
+    errorMessage: whatsappResult.error,
     metadata: { installmentNumber: reminder.installmentNumber, daysOverdue: reminder.daysOverdue },
   });
 
@@ -788,6 +789,6 @@ export async function sendOverdueNoticeNotifications(
     });
   }
 
-  console.log(`Overdue notice for ${reminder.saleId}#${reminder.installmentNumber}: SMS=${result.smsSent}, Email=${result.emailSent}`);
+  console.log(`Overdue notice for ${reminder.saleId}#${reminder.installmentNumber}: WhatsApp=${result.whatsappSent}, Email=${result.emailSent}`);
   return result;
 }

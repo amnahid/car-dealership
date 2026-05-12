@@ -1,4 +1,4 @@
-import { sendExpirySms, isSmsServiceConfigured } from './sms';
+import { sendExpiryWhatsApp, isWhatsAppServiceConfigured } from './whatsapp';
 import { sendExpiryAlertEmail, isEmailServiceConfigured, sendEmail } from './email';
 import { logNotification } from './notificationLogger';
 
@@ -21,10 +21,10 @@ interface AdminInfo {
   email?: string;
 }
 
-function formatDocumentRenewalSms(admin: AdminInfo, doc: DocumentRenewalInfo): string {
+function formatDocumentRenewalWhatsApp(admin: AdminInfo, doc: DocumentRenewalInfo): string {
   const oldDate = new Date(doc.oldExpiryDate).toLocaleDateString();
   const newDate = new Date(doc.newExpiryDate).toLocaleDateString();
-  return `Document renewed: ${doc.carBrand || ''} ${doc.carModel || doc.carId} - ${doc.documentType}. Old: ${oldDate}, New: ${newDate}. - AMYAL CAR`;
+  return `*Document renewed*\n\n🚗 Vehicle: ${doc.carBrand || ''} ${doc.carModel || doc.carId}\n📄 Doc: ${doc.documentType}\n📅 Old: ${oldDate}\n📅 New: ${newDate}\n\n- AMYAL CAR`;
 }
 
 function formatDocumentRenewalEmail(admin: AdminInfo, doc: DocumentRenewalInfo): string {
@@ -97,8 +97,8 @@ function formatDocumentRenewalEmail(admin: AdminInfo, doc: DocumentRenewalInfo):
 }
 
 export interface RenewalNotificationResult {
-  smsSent: boolean;
-  smsError?: string;
+  whatsappSent: boolean;
+  whatsappError?: string;
   emailSent: boolean;
   emailError?: string;
 }
@@ -106,21 +106,21 @@ export interface RenewalNotificationResult {
 const defaultAdmin = {
   name: 'Admin',
   email: process.env.RESEND_ADMIN_EMAIL || 'admin@dealership.com',
-  phone: process.env.TWILIO_ADMIN_PHONE,
+  phone: process.env.META_WA_ADMIN_PHONE,
 };
 
-async function sendAdminSms(message: string): Promise<{ success: boolean; error?: string }> {
+async function sendAdminWhatsApp(message: string): Promise<{ success: boolean; error?: string }> {
   const adminPhone = defaultAdmin.phone;
   if (!adminPhone) {
-    return { success: false, error: 'Admin phone not configured' };
+    return { success: false, error: 'Admin WhatsApp phone not configured' };
   }
 
-  if (!isSmsServiceConfigured()) {
-    return { success: false, error: 'SMS service not configured' };
+  if (!(await isWhatsAppServiceConfigured())) {
+    return { success: false, error: 'WhatsApp service not configured' };
   }
 
   try {
-    const result = await sendExpirySms(adminPhone, message);
+    const result = await sendExpiryWhatsApp(adminPhone, message);
     return { success: result.success, error: result.error };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -153,15 +153,15 @@ export async function sendDocumentRenewalNotifications(
   doc: DocumentRenewalInfo,
   admin: AdminInfo = defaultAdmin
 ): Promise<RenewalNotificationResult> {
-  const result: RenewalNotificationResult = { smsSent: false, emailSent: false };
+  const result: RenewalNotificationResult = { whatsappSent: false, emailSent: false };
 
-  const message = formatDocumentRenewalSms(admin, doc);
-  const smsResult = await sendAdminSms(message);
-  result.smsSent = smsResult.success;
-  result.smsError = smsResult.error;
+  const message = formatDocumentRenewalWhatsApp(admin, doc);
+  const whatsappResult = await sendAdminWhatsApp(message);
+  result.whatsappSent = whatsappResult.success;
+  result.whatsappError = whatsappResult.error;
 
   await logNotification({
-    channel: 'sms',
+    channel: 'whatsapp',
     type: 'document_renewed',
     recipientName: admin.name || 'Admin',
     recipientPhone: admin.phone,
@@ -169,8 +169,8 @@ export async function sendDocumentRenewalNotifications(
     content: message,
     referenceId: doc.documentId,
     referenceType: 'Document',
-    status: smsResult.success ? 'sent' : 'failed',
-    errorMessage: smsResult.error,
+    status: whatsappResult.success ? 'sent' : 'failed',
+    errorMessage: whatsappResult.error,
   });
 
   const html = formatDocumentRenewalEmail(admin, doc);
@@ -191,6 +191,6 @@ export async function sendDocumentRenewalNotifications(
     errorMessage: emailResult.error,
   });
 
-  console.log(`Document renewal notifications for ${doc.documentId}: SMS=${result.smsSent}, Email=${result.emailSent}`);
+  console.log(`Document renewal notifications for ${doc.documentId}: WhatsApp=${result.whatsappSent}, Email=${result.emailSent}`);
   return result;
 }
