@@ -72,6 +72,7 @@ export default function RentalDetailPage() {
   const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showRevertModal, setShowRevertModal] = useState(false);
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
@@ -299,18 +300,15 @@ export default function RentalDetailPage() {
           >
             {regeneratingAgreement ? (rental.agreementUrl ? 'Regenerating...' : 'Generating...') : (rental.agreementUrl ? 'Regenerate Agreement' : 'Generate Agreement')}
           </button>
-          <span
-            style={{
-              padding: '6px 12px',
-              borderRadius: '4px',
-              background: statusColors[rental.status] || '#28aaa9',
-              color: '#ffffff',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}
-          >
-            {rental.status}
-          </span>
+          {rental.status === 'Cancelled' && (
+            <button
+              onClick={() => setShowRevertModal(true)}
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#f8b425', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
+            >
+              Revert Cancellation
+            </button>
+          )}
         </div>
       </div>
 
@@ -318,6 +316,21 @@ export default function RentalDetailPage() {
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Rental Information</h3>
           <div style={{ display: 'grid', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Status</span>
+              <span
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  background: (statusColors[rental.status] || '#28aaa9') + '20',
+                  color: statusColors[rental.status] || '#28aaa9',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                {rental.status}
+              </span>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Rental ID</span>
               <span style={{ color: '#28aaa9', fontWeight: 600, fontFamily: 'monospace' }}>{rental.rentalId}</span>
@@ -619,6 +632,94 @@ export default function RentalDetailPage() {
             )}
           </div>
         </div>
+      </div>
+
+      <RevertCancellationModal
+        isOpen={showRevertModal}
+        onClose={() => setShowRevertModal(false)}
+        onSave={() => {
+          setShowRevertModal(false);
+          fetchRental();
+        }}
+        rentalId={rental._id}
+      />
+    </div>
+  );
+}
+
+interface RevertCancellationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  rentalId: string;
+}
+
+function RevertCancellationModal({ isOpen, onClose, onSave, rentalId }: RevertCancellationModalProps) {
+  const [reason, setReason] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reason.trim()) {
+      setError('Reason is required');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/sales/rentals/${rentalId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'revert-cancellation',
+          reason: reason.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to revert cancellation');
+      }
+
+      onSave();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '400px', maxWidth: '90%' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>Revert Cancellation</h3>
+        <p style={{ fontSize: '14px', color: '#525f80', marginBottom: '16px' }}>
+          This will restore the rental to Active status and update the vehicle status to Rented. Please provide a reason for this action.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Reason for Revert</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              required
+              placeholder="e.g., Cancelled by mistake"
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px', height: '100px', resize: 'none' }}
+            />
+          </div>
+          {error && <div style={{ color: '#ec4561', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: '#f8b425', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Processing...' : 'Revert Cancellation'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
