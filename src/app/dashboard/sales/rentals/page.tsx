@@ -640,7 +640,7 @@ function RentalModal({ cars, customers, employees, fetchCustomers, fetchEmployee
   };
 
   const handleAddCustomer = async () => {
-    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.passportNumber || !newCustomer.passportExpiryDate || !newCustomer.buildingNumber || !newCustomer.streetName || !newCustomer.city || !newCustomer.postalCode) {
+    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.passportNumber || !newCustomer.passportExpiryDate) {
       alert(commonT('fillRequired'));
       return;
     }
@@ -940,23 +940,24 @@ function RentalModal({ cars, customers, employees, fetchCustomers, fetchEmployee
                   <input required type="date" value={newCustomer.passportExpiryDate} onChange={(e) => setNewCustomer({ ...newCustomer, passportExpiryDate: e.target.value })} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>{customersT('buildingNumber')} *</label>                  <input required value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
+                  <label style={labelStyle}>{customersT('buildingNumber')}</label>
+                  <input value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>{customersT('streetName')} *</label>
-                  <input required value={newCustomer.streetName} onChange={(e) => setNewCustomer({ ...newCustomer, streetName: e.target.value })} style={inputStyle} placeholder={customersT('streetName')} />
+                  <label style={labelStyle}>{customersT('streetName')}</label>
+                  <input value={newCustomer.streetName} onChange={(e) => setNewCustomer({ ...newCustomer, streetName: e.target.value })} style={inputStyle} placeholder={customersT('streetName')} />
                 </div>
                 <div>
                   <label style={labelStyle}>{customersT('district')}</label>
                   <input value={newCustomer.district} onChange={(e) => setNewCustomer({ ...newCustomer, district: e.target.value })} style={inputStyle} placeholder={customersT('district')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>{customersT('city')} *</label>
-                  <input required value={newCustomer.city} onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })} style={inputStyle} placeholder={customersT('city')} />
+                  <label style={labelStyle}>{customersT('city')}</label>
+                  <input value={newCustomer.city} onChange={(e) => setNewCustomer({ ...newCustomer, city: e.target.value })} style={inputStyle} placeholder={customersT('city')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>{customersT('postalCode')} *</label>
-                  <input required value={newCustomer.postalCode} onChange={(e) => setNewCustomer({ ...newCustomer, postalCode: e.target.value })} style={inputStyle} placeholder={customersT('postalCode')} />
+                  <label style={labelStyle}>{customersT('postalCode')}</label>
+                  <input value={newCustomer.postalCode} onChange={(e) => setNewCustomer({ ...newCustomer, postalCode: e.target.value })} style={inputStyle} placeholder={customersT('postalCode')} />
                 </div>
                 </div>              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                 <button type="button" onClick={() => setShowCustomerModal(false)} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('cancel')}</button>

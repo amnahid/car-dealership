@@ -47,6 +47,9 @@ const DASHBOARD_ACCESS_RULES: AccessRule[] = [
   { prefix: '/dashboard/documents', roles: CAR_ROLES },
   { prefix: '/dashboard/sales', roles: SALES_ROLES },
   { prefix: '/dashboard/customers', roles: SALES_ROLES },
+  { prefix: '/dashboard/crm/guarantors', roles: SALES_ROLES },
+  { prefix: '/dashboard/crm/sales-agents', roles: SALES_ROLES },
+  { prefix: '/dashboard/crm/notification-logs', roles: SALES_ROLES },
   { prefix: '/dashboard/finance/reports', roles: FINANCE_REPORT_ROLES },
   { prefix: '/dashboard/finance', roles: FINANCE_ROLES },
   { prefix: '/dashboard/salary-payments', roles: FINANCE_ROLES },
@@ -82,6 +85,7 @@ const API_ACCESS_RULES: AccessRule[] = [
 
   { prefix: '/api/customers', roles: SALES_ROLES },
   { prefix: '/api/guarantors', roles: SALES_ROLES },
+  { prefix: '/api/crm/sales-agents', roles: SALES_ROLES },
   { prefix: '/api/sales', roles: SALES_ROLES },
 
   { prefix: '/api/invoices', roles: ['Admin', 'Sales Person', 'Accountant', 'Finance Manager'] },

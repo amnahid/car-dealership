@@ -332,7 +332,7 @@ export default function CustomerDetailPage() {
                           <td style={{ padding: '12px' }}>{new Date(sale.saleDate as string).toLocaleDateString()}</td>
                           <td style={{ padding: '12px' }}>{String(carData?.brand || '')} {String(carData?.model || '')}</td>
                           <td style={{ padding: '12px', fontWeight: 600, color: '#42ca7f' }}>SAR {(Number(sale.finalPrice) || 0).toLocaleString()}</td>
-                          <td style={{ padding: '12px' }}><span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', background: sale.status === 'Cancelled' ? '#ec456120' : '#42ca7f20', color: sale.status === 'Cancelled' ? '#ec4561' : '#42ca7f' }}>{sale.status === 'Cancelled' ? 'Cancelled' : 'Completed'}</span></td>
+                          <td style={{ padding: '12px' }}><span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', background: sale.status === 'Cancelled' ? '#ec456120' : '#42ca7f20', color: sale.status === 'Cancelled' ? '#ec4561' : '#42ca7f' }}>{sale.status === 'Cancelled' ? commonT('cancelled') : commonT('completed')}</span></td>
                         </tr>);
                       })}
                     </tbody>
@@ -358,7 +358,7 @@ export default function CustomerDetailPage() {
                           <td style={{ padding: '12px' }}>{new Date(rental.startDate as string).toLocaleDateString()}</td>
                           <td style={{ padding: '12px' }}>{String(carData?.brand || '')} {String(carData?.model || '')}</td>
                           <td style={{ padding: '12px', fontWeight: 600, color: '#42ca7f' }}>SAR {(Number(rental.totalAmount) || 0).toLocaleString()}</td>
-                          <td style={{ padding: '12px' }}><span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', background: rental.status === 'Cancelled' ? '#ec456120' : '#42ca7f20', color: rental.status === 'Cancelled' ? '#ec4561' : '#42ca7f' }}>{String(rental.status) || 'Active'}</span></td>
+                          <td style={{ padding: '12px' }}><span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', background: rental.status === 'Cancelled' ? '#ec456120' : '#42ca7f20', color: rental.status === 'Cancelled' ? '#ec4561' : '#42ca7f' }}>{rental.status === 'Cancelled' ? commonT('cancelled') : (rental.status === 'Completed' ? commonT('completed') : commonT('active'))}</span></td>
                         </tr>);
                       })}
                     </tbody>

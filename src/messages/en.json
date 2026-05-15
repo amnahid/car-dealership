@@ -200,8 +200,8 @@
     "total": "Total",
     "status": "Status",
     "zatca": "ZATCA",
-    "cancelRental": "Cancel Rental",
-    "cancelConfirm": "Are you sure you want to cancel this rental?",
+    "cancelRental": "Delete",
+    "cancelConfirm": "Are you sure you want to delete this rental?",
     "returnCar": "Return Car",
     "returnConfirm": "Complete this rental and return car?",
     "editRental": "Edit Rental - {id}",
@@ -238,7 +238,7 @@
       "active": "Active",
       "overdue": "Overdue",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Deleted"
     }
   },
   "InstallmentSales": {
@@ -259,8 +259,8 @@
     "status": "Sale Status",
     "installmentStatus": "Installment Status",
     "zatca": "ZATCA",
-    "cancelSale": "Cancel Sale",
-    "cancelConfirm": "Are you sure you want to cancel this installment sale?",
+    "cancelSale": "Delete",
+    "cancelConfirm": "Are you sure you want to delete this installment sale?",
     "editSale": "Edit Installment Sale - {id}",
     "newSale": "New Installment Sale",
     "selectCar": "Select Car",
@@ -283,7 +283,7 @@
       "active": "Active",
       "completed": "Completed",
       "defaulted": "Defaulted",
-      "cancelled": "Cancelled"
+      "cancelled": "Deleted"
     }
   },
   "Guarantors": {
@@ -306,6 +306,23 @@
     "guaranteeing": "Guaranteeing",
     "deleteConfirm": "Are you sure you want to delete this guarantor?"
   },
+  "SalesAgents": {
+    "title": "Sales Agents",
+    "addNew": "Add Sales Agent",
+    "editAgent": "Edit Sales Agent",
+    "searchPlaceholder": "Search by name, phone, ID...",
+    "noAgentsFound": "No sales agents found.",
+    "agentId": "Agent ID",
+    "fullName": "Full Name",
+    "phone": "Phone",
+    "email": "Email",
+    "passportNumber": "Passport Number",
+    "address": "Address",
+    "documents": "Documents",
+    "notes": "Notes",
+    "created": "Created",
+    "deleteConfirm": "Are you sure you want to delete this sales agent?"
+  },
   "CashSales": {
     "title": "Cash Sales",
     "addNew": "New Cash Sale",
@@ -320,8 +337,8 @@
     "amount": "Amount",
     "date": "Date",
     "zatca": "ZATCA",
-    "cancelSale": "Cancel Sale",
-    "cancelConfirm": "Are you sure you want to cancel this sale?",
+    "cancelSale": "Delete",
+    "cancelConfirm": "Are you sure you want to delete this sale?",
     "editSale": "Edit Cash Sale - {id}",
     "newSale": "New Cash Sale",
     "selectCar": "Select Car",
@@ -349,7 +366,7 @@
     "cashSale": "Cash Sale",
     "statuses": {
       "active": "Active",
-      "cancelled": "Cancelled"
+      "cancelled": "Deleted"
     }
   },
   "Suppliers": {
@@ -490,6 +507,7 @@
     "crm": "CRM",
     "customers": "Customers",
     "guarantors": "Guarantors",
+    "salesAgents": "Sales Agents",
     "hrm": "HRM",
     "employees": "Employees",
     "salaryPayments": "Salary Payments",
@@ -1014,7 +1032,7 @@
     "iqama": "Iqama",
     "pending": "Pending",
     "overdue": "Overdue",
-    "cancelled": "Cancelled",
+    "cancelled": "Deleted",
     "next": "Next",
     "prev": "Prev",
     "page": "Page {page} of {total}",

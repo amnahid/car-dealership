@@ -177,24 +177,24 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
           <h4 style={{ margin: '20px 0 10px', color: '#2a3142', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>{t('address')}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
-              <label style={labelStyle}>{t('buildingNumber')} *</label>
-              <input required value={form.buildingNumber} onChange={(e) => setForm({ ...form, buildingNumber: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('buildingNumber')}</label>
+              <input value={form.buildingNumber} onChange={(e) => setForm({ ...form, buildingNumber: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('streetName')} *</label>
-              <input required value={form.streetName} onChange={(e) => setForm({ ...form, streetName: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('streetName')}</label>
+              <input value={form.streetName} onChange={(e) => setForm({ ...form, streetName: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('district')} *</label>
-              <input required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('district')}</label>
+              <input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('city')} *</label>
-              <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('city')}</label>
+              <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('postalCode')} *</label>
-              <input required value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('postalCode')}</label>
+              <input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} style={inputStyle} />
             </div>
           </div>
 

@@ -70,6 +70,7 @@ const navItems: MenuItem[] = [
     children: [
       { href: '/dashboard/customers', labelKey: 'customers', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/crm/guarantors', labelKey: 'guarantors', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/crm/sales-agents', labelKey: 'salesAgents', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/crm/notification-logs', labelKey: 'customerNotifications', icon: '', roles: ['Admin', 'Sales Person'] },
     ]
   },

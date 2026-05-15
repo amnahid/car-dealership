@@ -14,11 +14,6 @@ describe('Guarantor Model', () => {
 
     expect(err.errors.fullName).toBeDefined();
     expect(err.errors.phone).toBeDefined();
-    expect(err.errors.buildingNumber).toBeDefined();
-    expect(err.errors.streetName).toBeDefined();
-    expect(err.errors.district).toBeDefined();
-    expect(err.errors.city).toBeDefined();
-    expect(err.errors.postalCode).toBeDefined();
     expect(err.errors.createdBy).toBeDefined();
   });
 

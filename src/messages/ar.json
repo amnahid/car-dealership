@@ -200,8 +200,8 @@
     "total": "الإجمالي",
     "status": "الحالة",
     "zatca": "فاتورة (هيئة الزكاة)",
-    "cancelRental": "إلغاء الإيجار",
-    "cancelConfirm": "هل أنت متأكد أنك تريد إلغاء هذا الإيجار؟",
+    "cancelRental": "حذف",
+    "cancelConfirm": "هل أنت متأكد أنك تريد حذف هذا الإيجار؟",
     "returnCar": "إرجاع السيارة",
     "returnConfirm": "إكمال هذا الإيجار وإرجاع السيارة؟",
     "editRental": "تعديل الإيجار - {id}",
@@ -238,7 +238,7 @@
       "active": "نشط",
       "overdue": "متأخر",
       "completed": "مكتمل",
-      "cancelled": "ملغي"
+      "cancelled": "محذوف"
     }
   },
   "InstallmentSales": {
@@ -259,8 +259,8 @@
     "status": "حالة البيع",
     "installmentStatus": "حالة القسط",
     "zatca": "فاتورة (هيئة الزكاة)",
-    "cancelSale": "إلغاء البيع",
-    "cancelConfirm": "هل أنت متأكد أنك تريد إلغاء عملية بيع الأقساط هذه؟",
+    "cancelSale": "حذف",
+    "cancelConfirm": "هل أنت متأكد أنك تريد حذف عملية بيع الأقساط هذه؟",
     "editSale": "تعديل بيع الأقساط - {id}",
     "newSale": "بيع أقساط جديد",
     "selectCar": "اختر السيارة",
@@ -283,7 +283,7 @@
       "active": "نشط",
       "completed": "مكتمل",
       "defaulted": "متعثر",
-      "cancelled": "ملغي"
+      "cancelled": "محذوف"
     }
   },
   "Guarantors": {
@@ -306,6 +306,23 @@
     "guaranteeing": "يكفل",
     "deleteConfirm": "هل أنت متأكد أنك تريد حذف هذا الكفيل؟"
   },
+  "SalesAgents": {
+    "title": "مناديب المبيعات",
+    "addNew": "إضافة مندوب مبيعات",
+    "editAgent": "تعديل مندوب المبيعات",
+    "searchPlaceholder": "بحث بالاسم، الهاتف، المعرف...",
+    "noAgentsFound": "لم يتم العثور على مناديب مبيعات.",
+    "agentId": "معرف المندوب",
+    "fullName": "الاسم الكامل",
+    "phone": "الهاتف",
+    "email": "البريد الإلكتروني",
+    "passportNumber": "رقم جواز السفر",
+    "address": "العنوان",
+    "documents": "المستندات",
+    "notes": "ملاحظات",
+    "created": "تاريخ الإنشاء",
+    "deleteConfirm": "هل أنت متأكد أنك تريد حذف مندوب المبيعات هذا؟"
+  },
   "CashSales": {
     "title": "المبيعات النقدية",
     "addNew": "بيع نقدي جديد",
@@ -320,8 +337,8 @@
     "amount": "المبلغ",
     "date": "التاريخ",
     "zatca": "فاتورة (هيئة الزكاة)",
-    "cancelSale": "إلغاء البيع",
-    "cancelConfirm": "هل أنت متأكد أنك تريد إلغاء هذا البيع؟",
+    "cancelSale": "حذف",
+    "cancelConfirm": "هل أنت متأكد أنك تريد حذف هذا البيع؟",
     "editSale": "تعديل البيع النقدي - {id}",
     "newSale": "بيع نقدي جديد",
     "selectCar": "اختر السيارة",
@@ -349,7 +366,7 @@
     "cashSale": "بيع نقدي",
     "statuses": {
       "active": "نشط",
-      "cancelled": "ملغي"
+      "cancelled": "محذوف"
     }
   },
   "Suppliers": {
@@ -490,6 +507,7 @@
     "crm": "إدارة علاقات العملاء",
     "customers": "العملاء",
     "guarantors": "الكفلاء",
+    "salesAgents": "مناديب المبيعات",
     "hrm": "الموارد البشرية",
     "employees": "الموظفين",
     "salaryPayments": "مدفوعات الرواتب",
@@ -1013,7 +1031,7 @@
     "iqama": "الإقامة",
     "pending": "قيد الانتظار",
     "overdue": "متأخر",
-    "cancelled": "ملغي",
+    "cancelled": "محذوف",
     "next": "التالي",
     "prev": "السابق",
     "page": "صفحة {page} من {total}",

@@ -7,7 +7,7 @@ interface ImageUploadProps {
   value?: string;
   onChange: (url: string) => void;
   onDelete?: () => void;
-  folder?: 'avatars' | 'employees' | 'customers' | 'suppliers' | 'suppliers/agents' | 'cars' | 'cars/condition' | 'repairs/before' | 'repairs/after' | 'documents' | 'guarantors';
+  folder?: 'avatars' | 'employees' | 'customers' | 'suppliers' | 'suppliers/agents' | 'cars' | 'cars/condition' | 'repairs/before' | 'repairs/after' | 'documents' | 'guarantors' | 'sales-agents';
   label?: string;
   size?: number;
 }

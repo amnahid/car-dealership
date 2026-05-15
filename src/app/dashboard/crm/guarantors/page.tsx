@@ -277,24 +277,24 @@ function GuarantorModal({ guarantor, onClose, onSave }: { guarantor?: Guarantor 
           <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '15px' }}>{t('address')}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <label style={labelStyle}>{commonT('buildingNumber')} *</label>
-              <input required value={form.buildingNumber} onChange={(e) => setForm({ ...form, buildingNumber: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{commonT('buildingNumber')}</label>
+              <input value={form.buildingNumber} onChange={(e) => setForm({ ...form, buildingNumber: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{commonT('streetName')} *</label>
-              <input required value={form.streetName} onChange={(e) => setForm({ ...form, streetName: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{commonT('streetName')}</label>
+              <input value={form.streetName} onChange={(e) => setForm({ ...form, streetName: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{commonT('district')} *</label>
-              <input required value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{commonT('district')}</label>
+              <input value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{commonT('city')} *</label>
-              <input required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{commonT('city')}</label>
+              <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{commonT('postalCode')} *</label>
-              <input required value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{commonT('postalCode')}</label>
+              <input value={form.postalCode} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} style={inputStyle} />
             </div>
           </div>
 
