@@ -27,11 +27,17 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '15');
     const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || '';
     const customerId = searchParams.get('customer');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
     const query: any = { isDeleted: { $ne: true } };
+
+    // Default: Hide cancelled sales unless specifically requested or searching
+    if (!status && !search) {
+      query.status = { $ne: 'Cancelled' };
+    }
 
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
@@ -58,6 +64,10 @@ export async function GET(request: NextRequest) {
         { saleId: { $regex: search, $options: 'i' } },
         { car: { $in: matchingCarIds } },
       ];
+    }
+
+    if (status) {
+      query.status = status;
     }
 
     const skip = (page - 1) * limit;

@@ -116,6 +116,32 @@ export default function RentalDetailPage() {
     }
   };
 
+  const handleCancelRental = async () => {
+    if (!rental || !confirm('Are you sure you want to cancel this rental?')) return;
+    try {
+      const res = await fetch(`/api/sales/rentals/${rental._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Cancelled' }),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        alert(resData.error || 'Failed to cancel rental');
+        return;
+      }
+      
+      if (resData.isPending) {
+        alert(resData.message || 'Cancellation request submitted for admin approval');
+      } else {
+        alert('Rental cancelled successfully');
+      }
+      fetchRental();
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    }
+  };
+
   const handleRegenerateInvoice = async () => {
     if (!rental) return;
     setRegeneratingInvoice(true);
@@ -262,6 +288,14 @@ export default function RentalDetailPage() {
           >
             {generatingReport ? (rental.reportUrl ? 'Regenerating...' : 'Generating...') : (rental.reportUrl ? 'Regenerate Report' : 'Generate Status Report')}
           </button>
+          {rental.status !== 'Cancelled' && rental.status !== 'Completed' && (
+            <button
+              onClick={handleCancelRental}
+              style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}
+            >
+              Cancel Rental
+            </button>
+          )}
           {rental.invoiceUrl && (
             <a
               href={rental.invoiceUrl}

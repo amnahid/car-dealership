@@ -330,6 +330,7 @@
     "allStatus": "كل الحالات",
     "searchCustomer": "بحث عن عميل...",
     "addNewCustomer": "+ إضافة عميل جديد",
+    "addNewAgent": "+ إضافة وكيل مبيعات جديد",
     "salePrice": "سعر البيع",
     "discount": "الخصم",
     "saleDate": "تاريخ البيع",
@@ -345,7 +346,11 @@
     "none": "بدون",
     "addCustomer": "إضافة عميل",
     "vatPlaceholder": "رقم ضريبي من 15 خانة",
-    "cashSale": "بيع نقدي"
+    "cashSale": "بيع نقدي",
+    "statuses": {
+      "active": "نشط",
+      "cancelled": "ملغي"
+    }
   },
   "Suppliers": {
     "title": "الموردين",

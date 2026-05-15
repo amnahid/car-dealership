@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
+import EmployeeModal from '@/components/forms/EmployeeModal';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -232,7 +233,11 @@ export default function InstallmentsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm(t('cancelConfirm'))) return;
     try {
-      const res = await fetch(`/api/sales/installments/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/sales/installments/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Cancelled' }),
+      });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
       fetchSales();
     } catch (err) { console.error(err); }
@@ -267,6 +272,7 @@ export default function InstallmentsPage() {
       case 'Active': return '#28aaa9';
       case 'Completed': return '#42ca7f';
       case 'Defaulted': return '#ec4561';
+      case 'Cancelled': return '#9ca8b3';
       default: return '#9ca8b3';
     }
   };
@@ -311,6 +317,7 @@ export default function InstallmentsPage() {
           <option value="Active">{t('statuses.active')}</option>
           <option value="Completed">{t('statuses.completed')}</option>
           <option value="Defaulted">{t('statuses.defaulted')}</option>
+          <option value="Cancelled">{t('statuses.cancelled')}</option>
         </select>
         <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
@@ -490,13 +497,33 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {showModal && <InstallmentModal cars={cars} customers={customers} employees={employees} guarantors={guarantors} fetchCustomers={fetchCustomers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
-      {editingSale && <EditInstallmentModal sale={editingSale} employees={employees} guarantors={guarantors} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
+      {showModal && (
+        <InstallmentModal 
+          cars={cars} 
+          customers={customers} 
+          employees={employees} 
+          guarantors={guarantors} 
+          fetchCustomers={fetchCustomers} 
+          fetchEmployees={fetchEmployees}
+          onClose={() => setShowModal(false)} 
+          onSave={() => { setShowModal(false); fetchSales(); }} 
+        />
+      )}
+      {editingSale && (
+        <EditInstallmentModal 
+          sale={editingSale} 
+          employees={employees} 
+          guarantors={guarantors}
+          fetchEmployees={fetchEmployees}
+          onClose={() => setEditingSale(null)} 
+          onSave={handleUpdateSale} 
+        />
+      )}
     </div>
   );
 }
 
-function InstallmentModal({ cars, customers, employees, guarantors, fetchCustomers, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; guarantors: Guarantor[]; fetchCustomers: () => void; onClose: () => void; onSave: () => void }) {
+function InstallmentModal({ cars, customers, employees, guarantors, fetchCustomers, fetchEmployees, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; guarantors: Guarantor[]; fetchCustomers: () => void; fetchEmployees: () => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -541,6 +568,7 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
@@ -558,6 +586,10 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
   };
 
   const handleAgentChange = (empId: string) => {
+    if (empId === '__new_agent__') {
+      setShowAgentModal(true);
+      return;
+    }
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
     setForm(prev => ({ 
@@ -767,6 +799,7 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
                   onChange={handleAgentChange}
                   options={[
                     { value: '', label: cashT('none') },
+                    { value: '__new_agent__', label: cashT('addNewAgent') },
                     ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                   ]}
                   placeholder={cashT('selectAgent')}
@@ -913,12 +946,32 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
             </div>
           </div>
         )}
+
+        {showAgentModal && (
+          <EmployeeModal 
+            employee={null} 
+            onClose={() => setShowAgentModal(false)} 
+            onSave={(newEmp) => {
+              fetchEmployees();
+              setShowAgentModal(false);
+              if (newEmp) {
+                setAgentId(newEmp._id);
+                setForm(prev => ({
+                  ...prev,
+                  agentName: newEmp.name,
+                  agentCommissionType: 'percentage',
+                  agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+                }));
+              }
+            }} 
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: { sale: Sale; employees: Employee[]; guarantors: Guarantor[]; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
+function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onClose, onSave }: { sale: Sale; employees: Employee[]; guarantors: Guarantor[]; fetchEmployees: () => void; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -946,6 +999,7 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
   });
   const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
 
   const handleAgentChange = (empId: string) => {
     setAgentId(empId);
@@ -1100,6 +1154,7 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
                   onChange={handleAgentChange}
                   options={[
                     { value: '', label: cashT('none') },
+                    { value: '__new_agent__', label: cashT('addNewAgent') },
                     ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                   ]}
                   placeholder={cashT('selectAgent')}
@@ -1156,6 +1211,26 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
           </div>
         </form>
       </div>
+
+      {showAgentModal && (
+        <EmployeeModal 
+          employee={null} 
+          onClose={() => setShowAgentModal(false)} 
+          onSave={(newEmp) => {
+            fetchEmployees();
+            setShowAgentModal(false);
+            if (newEmp) {
+              setAgentId(newEmp._id);
+              setForm(prev => ({
+                ...prev,
+                agentName: newEmp.name,
+                agentCommissionType: 'percentage',
+                agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+              }));
+            }
+          }} 
+        />
+      )}
     </div>
   );
 }

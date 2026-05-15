@@ -81,6 +81,32 @@ export default function CashSaleDetailPage() {
       .finally(() => setLoading(false));
   };
 
+  const handleCancelSale = async () => {
+    if (!sale || !confirm('Are you sure you want to cancel this sale?')) return;
+    try {
+      const res = await fetch(`/api/sales/cash/${sale._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Cancelled' }),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        alert(resData.error || 'Failed to cancel sale');
+        return;
+      }
+      
+      if (resData.isPending) {
+        alert(resData.message || 'Cancellation request submitted for admin approval');
+      } else {
+        alert('Sale cancelled successfully');
+      }
+      loadSale();
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    }
+  };
+
   const handleGenerateInvoice = async () => {
     setGenerating(true);
     try {
@@ -341,6 +367,14 @@ export default function CashSaleDetailPage() {
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+        {sale.status !== 'Cancelled' && (
+          <button
+            onClick={handleCancelSale}
+            style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}
+          >
+            Cancel Sale
+          </button>
+        )}
         <button
           onClick={() => router.push(`/dashboard/sales/cash?edit=${sale._id}`)}
           style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #f8b425', borderRadius: '3px', background: '#ffffff', color: '#f8b425', cursor: 'pointer' }}

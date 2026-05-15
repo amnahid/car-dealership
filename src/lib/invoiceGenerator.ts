@@ -329,9 +329,11 @@ export async function generateInvoice(data: InvoiceData): Promise<string> {
 
     if (data.downPayment !== undefined) {
       y += 5;
-      doc.text(`${processArabic('Down Payment / الدفعة الأولى')}: ${fmt(data.downPayment)}`, margin, y);
+      doc.text(processArabic('Down Payment / الدفعة الأولى'), margin, y);
+      doc.text(fmt(data.downPayment), pageWidth / 2 - 5, y, { align: 'right' });
       if (data.monthlyPayment) {
-        doc.text(`${processArabic('Monthly Payment / القسط الشهري')}: ${fmt(data.monthlyPayment)}`, pageWidth / 2 + 5, y);
+        doc.text(processArabic('Monthly Payment / القسط الشهري'), pageWidth / 2 + 5, y);
+        doc.text(fmt(data.monthlyPayment), pageWidth - margin, y, { align: 'right' });
       }
     }
   }

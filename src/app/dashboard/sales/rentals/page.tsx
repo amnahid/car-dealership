@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
+import EmployeeModal from '@/components/forms/EmployeeModal';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -182,7 +182,11 @@ export default function RentalsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm(t('cancelConfirm'))) return;
     try {
-      const res = await fetch(`/api/sales/rentals/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/sales/rentals/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Cancelled' }),
+      });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
       fetchRentals();
     } catch (err) { console.error(err); }
@@ -217,7 +221,7 @@ export default function RentalsPage() {
       case 'Active': return '#28aaa9';
       case 'Overdue': return '#ec4561';
       case 'Completed': return '#42ca7f';
-      case 'Cancelled': return '#ec4561';
+      case 'Cancelled': return '#9ca8b3';
       default: return '#9ca8b3';
     }
   };
@@ -427,8 +431,26 @@ export default function RentalsPage() {
         </div>
       )}
 
-      {showModal && <RentalModal cars={cars} customers={customers} employees={employees} fetchCustomers={fetchCustomers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchRentals(); }} />}
-      {editingRental && <EditRentalModal rental={editingRental} employees={employees} onClose={() => setEditingRental(null)} onSave={handleUpdateRental} />}
+      {showModal && (
+        <RentalModal 
+          cars={cars} 
+          customers={customers} 
+          employees={employees} 
+          fetchCustomers={fetchCustomers} 
+          fetchEmployees={fetchEmployees}
+          onClose={() => setShowModal(false)} 
+          onSave={() => { setShowModal(false); fetchRentals(); }} 
+        />
+      )}
+      {editingRental && (
+        <EditRentalModal 
+          rental={editingRental} 
+          employees={employees} 
+          fetchEmployees={fetchEmployees}
+          onClose={() => setEditingRental(null)} 
+          onSave={handleUpdateRental} 
+        />
+      )}
       {paymentRental && (
         <RecordPaymentModal
           rental={paymentRental}
@@ -545,7 +567,7 @@ function RecordPaymentModal({ rental, onClose, onSave }: { rental: any; onClose:
   );
 }
 
-function RentalModal({ cars, customers, employees, fetchCustomers, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; fetchCustomers: () => void; onClose: () => void; onSave: () => void }) {
+function RentalModal({ cars, customers, employees, fetchCustomers, fetchEmployees, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; fetchCustomers: () => void; fetchEmployees: () => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('Rentals');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -586,6 +608,7 @@ function RentalModal({ cars, customers, employees, fetchCustomers, onClose, onSa
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
@@ -602,6 +625,10 @@ function RentalModal({ cars, customers, employees, fetchCustomers, onClose, onSa
   };
 
   const handleAgentChange = (empId: string) => {
+    if (empId === '__new_agent__') {
+      setShowAgentModal(true);
+      return;
+    }
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
     setForm(prev => ({ 
@@ -796,6 +823,7 @@ function RentalModal({ cars, customers, employees, fetchCustomers, onClose, onSa
                   onChange={handleAgentChange}
                   options={[
                     { value: '', label: cashT('none') },
+                    { value: '__new_agent__', label: cashT('addNewAgent') },
                     ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                   ]}
                   placeholder={cashT('selectAgent')}
@@ -937,12 +965,32 @@ function RentalModal({ cars, customers, employees, fetchCustomers, onClose, onSa
             </div>
           </div>
         )}
+
+        {showAgentModal && (
+          <EmployeeModal 
+            employee={null} 
+            onClose={() => setShowAgentModal(false)} 
+            onSave={(newEmp) => {
+              fetchEmployees();
+              setShowAgentModal(false);
+              if (newEmp) {
+                setAgentId(newEmp._id);
+                setForm(prev => ({
+                  ...prev,
+                  agentName: newEmp.name,
+                  agentCommissionType: 'percentage',
+                  agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+                }));
+              }
+            }} 
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Rental; employees: any[]; onClose: () => void; onSave: (id: string, data: any) => void }) {
+function EditRentalModal({ rental, employees, fetchEmployees, onClose, onSave }: { rental: Rental; employees: any[]; fetchEmployees: () => void; onClose: () => void; onSave: (id: string, data: any) => void }) {
   const t = useTranslations('Rentals');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -965,18 +1013,22 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
   });
   const [agentId, setAgentId] = useState(() => employees.find(e => e.name === rental.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
 
   const handleAgentChange = (empId: string) => {
+    if (empId === '__new_agent__') {
+      setShowAgentModal(true);
+      return;
+    }
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
-    setForm(prev => ({ 
-      ...prev, 
-      agentName: emp?.name || '', 
+    setForm(prev => ({
+      ...prev,
+      agentName: emp?.name || '',
       agentCommissionType: 'percentage',
-      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+      agentCommissionValue: emp?.commissionRate?.toString() || ''
     }));
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -1072,6 +1124,7 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
                   onChange={handleAgentChange}
                   options={[
                     { value: '', label: cashT('none') },
+                    { value: '__new_agent__', label: cashT('addNewAgent') },
                     ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                   ]}
                   placeholder={cashT('selectAgent')}
@@ -1116,6 +1169,26 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
           </div>
         </form>
       </div>
+
+      {showAgentModal && (
+        <EmployeeModal 
+          employee={null} 
+          onClose={() => setShowAgentModal(false)} 
+          onSave={(newEmp) => {
+            fetchEmployees();
+            setShowAgentModal(false);
+            if (newEmp) {
+              setAgentId(newEmp._id);
+              setForm(prev => ({
+                ...prev,
+                agentName: newEmp.name,
+                agentCommissionType: 'percentage',
+                agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+              }));
+            }
+          }} 
+        />
+      )}
     </div>
   );
 }

@@ -330,6 +330,7 @@
     "allStatus": "All Statuses",
     "searchCustomer": "Search customer...",
     "addNewCustomer": "+ Add New Customer",
+    "addNewAgent": "+ Add New Agent",
     "salePrice": "Sale Price",
     "discount": "Discount",
     "saleDate": "Sale Date",
@@ -345,7 +346,11 @@
     "none": "None",
     "addCustomer": "Add Customer",
     "vatPlaceholder": "15-digit VAT number",
-    "cashSale": "Cash Sale"
+    "cashSale": "Cash Sale",
+    "statuses": {
+      "active": "Active",
+      "cancelled": "Cancelled"
+    }
   },
   "Suppliers": {
     "title": "Suppliers",

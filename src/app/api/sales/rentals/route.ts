@@ -36,6 +36,11 @@ export async function GET(request: NextRequest) {
 
     const query: Record<string, any> = { isDeleted: { $ne: true } };
 
+    // Default: Hide cancelled rentals unless specifically requested or searching
+    if (!status && !search) {
+      query.status = { $ne: 'Cancelled' };
+    }
+
     if (customerId) {
       query.customer = new mongoose.Types.ObjectId(customerId);
     }

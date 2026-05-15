@@ -30,10 +30,10 @@ export async function POST(request: NextRequest) {
       const saleObjectIds = sales.map(s => s._id.toString());
 
       if (activeIds.length > 0) {
-        // Soft delete
+        // Mark as Cancelled
         await InstallmentSale.updateMany(
           { _id: { $in: activeIds } },
-          { $set: { isDeleted: true } }
+          { $set: { status: 'Cancelled' } }
         );
 
         // Revert cars status to In Stock
@@ -54,14 +54,14 @@ export async function POST(request: NextRequest) {
         await logActivity({
           userId: auth.userId,
           userName: auth.name,
-          action: `Bulk deleted ${activeIds.length} installment sales`,
+          action: `Bulk cancelled ${activeIds.length} installment sales`,
           module: 'Sales',
           details: `IDs: ${activeIds.join(', ')}`,
           ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
         });
       }
 
-      return NextResponse.json({ message: `Successfully deleted ${activeIds.length} sales` });
+      return NextResponse.json({ message: `Successfully cancelled ${activeIds.length} sales` });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

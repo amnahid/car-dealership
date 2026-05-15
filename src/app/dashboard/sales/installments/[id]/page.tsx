@@ -143,6 +143,32 @@ export default function InstallmentSaleDetailPage() {
     setShowModal(true);
   };
 
+  const handleCancelSale = async () => {
+    if (!sale || !confirm(t('cancelConfirm'))) return;
+    try {
+      const res = await fetch(`/api/sales/installments/${sale._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Cancelled' }),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        alert(resData.error || 'Failed to cancel sale');
+        return;
+      }
+      
+      if (resData.isPending) {
+        alert(resData.message || 'Cancellation request submitted for admin approval');
+      } else {
+        alert('Sale cancelled successfully');
+      }
+      fetchSale();
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    }
+  };
+
   const handleRegenerateAgreement = async () => {
     const id = params?.id;
     if (!id || !confirm('Are you sure you want to regenerate the agreement?')) return;
@@ -280,6 +306,15 @@ export default function InstallmentSaleDetailPage() {
           >
             {regeneratingAgreement ? (sale.agreementUrl ? 'Regenerating...' : 'Generating...') : (sale.agreementUrl ? 'Regenerate Agreement' : 'Generate Agreement')}
           </button>
+          {sale.status !== 'Cancelled' && (
+            <button
+              onClick={handleCancelSale}
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#ffffff', color: '#ec4561', border: '1px solid #ec4561', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
+            >
+              Cancel Sale
+            </button>
+          )}
           {sale.status === 'Cancelled' && (
             <button
               onClick={() => setShowRevertModal(true)}

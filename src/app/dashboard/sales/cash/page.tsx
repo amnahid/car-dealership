@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import SearchableSelect from '@/components/SearchableSelect';
+import EmployeeModal from '@/components/forms/EmployeeModal';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -84,6 +84,7 @@ export default function CashSalesPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -145,6 +146,7 @@ export default function CashSalesPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
+    if (statusFilter) params.set('status', statusFilter);
     if (dateRange.startDate) params.set('startDate', dateRange.startDate);
     if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
@@ -159,7 +161,7 @@ export default function CashSalesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, dateRange]);
+  }, [page, debouncedSearch, statusFilter, dateRange]);
 
   const fetchCars = useCallback(async () => {
     try {
@@ -208,7 +210,11 @@ export default function CashSalesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm(t('cancelConfirm'))) return;
     try {
-      const res = await fetch(`/api/sales/cash/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/sales/cash/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Cancelled' }),
+      });
       if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
       fetchSales();
     } catch (err) { console.error(err); }
@@ -271,6 +277,11 @@ export default function CashSalesPage() {
           onChange={(e) => handleSearch(e.target.value)}
           style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}
         />
+        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
+          <option value="">{t('allStatus') || 'All Status'}</option>
+          <option value="Active">{t('statuses.active') || 'Active'}</option>
+          <option value="Cancelled">{t('statuses.cancelled') || 'Cancelled'}</option>
+        </select>
         <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
 
@@ -427,13 +438,31 @@ export default function CashSalesPage() {
         </div>
       )}
 
-      {showModal && <CashSaleModal cars={cars} customers={customers} employees={employees} fetchCustomers={fetchCustomers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
-      {editingSale && <EditCashSaleModal sale={editingSale} employees={employees} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
+      {showModal && (
+        <CashSaleModal 
+          cars={cars} 
+          customers={customers} 
+          employees={employees} 
+          fetchCustomers={fetchCustomers} 
+          fetchEmployees={fetchEmployees}
+          onClose={() => setShowModal(false)} 
+          onSave={() => { setShowModal(false); fetchSales(); }} 
+        />
+      )}
+      {editingSale && (
+        <EditCashSaleModal 
+          sale={editingSale} 
+          employees={employees} 
+          fetchEmployees={fetchEmployees}
+          onClose={() => setEditingSale(null)} 
+          onSave={handleUpdateSale} 
+        />
+      )}
     </div>
   );
 }
 
-function CashSaleModal({ cars, customers, employees, fetchCustomers, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; fetchCustomers: () => void; onClose: () => void; onSave: () => void }) {
+function CashSaleModal({ cars, customers, employees, fetchCustomers, fetchEmployees, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; fetchCustomers: () => void; fetchEmployees: () => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('CashSales');
   const commonT = useTranslations('Common');
   const customersT = useTranslations('Customers');
@@ -466,6 +495,7 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, onClose, on
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
@@ -483,6 +513,10 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, onClose, on
   };
 
   const handleAgentChange = (empId: string) => {
+    if (empId === '__new_agent__') {
+      setShowAgentModal(true);
+      return;
+    }
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
     setForm(prev => ({ 
@@ -622,6 +656,7 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, onClose, on
                 onChange={handleAgentChange}
                 options={[
                   { value: '', label: t('none') },
+                  { value: '__new_agent__', label: t('addNewAgent') },
                   ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                 ]}
                 placeholder={t('selectAgent')}
@@ -766,11 +801,31 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, onClose, on
           </div>
         </div>
       )}
+
+      {showAgentModal && (
+        <EmployeeModal 
+          employee={null} 
+          onClose={() => setShowAgentModal(false)} 
+          onSave={(newEmp) => {
+            fetchEmployees();
+            setShowAgentModal(false);
+            if (newEmp) {
+              setAgentId(newEmp._id);
+              setForm(prev => ({
+                ...prev,
+                agentName: newEmp.name,
+                agentCommissionType: 'percentage',
+                agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+              }));
+            }
+          }} 
+        />
+      )}
     </div>
   );
 }
 
-function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; employees: Employee[]; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
+function EditCashSaleModal({ sale, employees, fetchEmployees, onClose, onSave }: { sale: Sale; employees: Employee[]; fetchEmployees: () => void; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
   const t = useTranslations('CashSales');
   const commonT = useTranslations('Common');
   const locale = useLocale();
@@ -791,8 +846,13 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
   });
   const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
+  const [showAgentModal, setShowAgentModal] = useState(false);
 
   const handleAgentChange = (empId: string) => {
+    if (empId === '__new_agent__') {
+      setShowAgentModal(true);
+      return;
+    }
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
     setForm(prev => ({ 
@@ -876,6 +936,7 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
                 onChange={handleAgentChange}
                 options={[
                   { value: '', label: t('none') },
+                  { value: '__new_agent__', label: t('addNewAgent') },
                   ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
                 ]}
                 placeholder={t('selectAgent')}
@@ -932,6 +993,26 @@ function EditCashSaleModal({ sale, employees, onClose, onSave }: { sale: Sale; e
           </div>
         </form>
       </div>
+
+      {showAgentModal && (
+        <EmployeeModal 
+          employee={null} 
+          onClose={() => setShowAgentModal(false)} 
+          onSave={(newEmp) => {
+            fetchEmployees();
+            setShowAgentModal(false);
+            if (newEmp) {
+              setAgentId(newEmp._id);
+              setForm(prev => ({
+                ...prev,
+                agentName: newEmp.name,
+                agentCommissionType: 'percentage',
+                agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+              }));
+            }
+          }} 
+        />
+      )}
     </div>
   );
 }
