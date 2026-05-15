@@ -146,7 +146,7 @@ export default function CarsPage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/cars/stats');
+      const res = await fetch('/api/cars/stats', { cache: 'no-store' });
       const data = await res.json();
       setStats({
         inStock: data.statusCounts?.inStock || 0,
@@ -192,7 +192,7 @@ export default function CarsPage() {
     if (colorFilter) params.set('color', colorFilter);
 
     try {
-      const res = await fetch(`/api/cars?${params}`);
+      const res = await fetch(`/api/cars?${params}`, { cache: 'no-store' });
       if (!res.ok) {
         console.error('Failed to fetch cars:', res.status);
         setCars([]);

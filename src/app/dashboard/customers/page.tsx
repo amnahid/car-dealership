@@ -105,7 +105,7 @@ export default function CustomersPage() {
     if (debouncedSearch) params.set('search', debouncedSearch);
 
     try {
-      const res = await fetch(`/api/customers?${params}`);
+      const res = await fetch(`/api/customers?${params}`, { cache: 'no-store' });
       const data = await res.json();
       setCustomers(data.customers || []);
       setTotalPages(data.pagination?.pages || 1);

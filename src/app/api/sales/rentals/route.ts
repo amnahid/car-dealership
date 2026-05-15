@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError, runInTransaction } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
 import Rental from '@/models/Rental';
 import Car from '@/models/Car';
 import Customer from '@/models/Customer';

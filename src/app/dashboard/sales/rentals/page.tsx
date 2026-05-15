@@ -123,7 +123,7 @@ export default function RentalsPage() {
     if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
     try {
-      const res = await fetch(`/api/sales/rentals?${params}`);
+      const res = await fetch(`/api/sales/rentals?${params}`, { cache: 'no-store' });
       const data = await res.json();
       setRentals(data.rentals || []);
       setTotalPages(data.pagination?.pages || 1);
@@ -137,7 +137,7 @@ export default function RentalsPage() {
 
   const fetchCars = useCallback(async () => {
     try {
-      const res = await fetch('/api/cars?limit=100');
+      const res = await fetch('/api/cars?limit=100', { cache: 'no-store' });
       const data = await res.json();
       setCars(data.cars || []);
     } catch (err) { console.error(err); }
@@ -145,7 +145,7 @@ export default function RentalsPage() {
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const res = await fetch('/api/customers?limit=100');
+      const res = await fetch('/api/customers?limit=100', { cache: 'no-store' });
       const data = await res.json();
       setCustomers(data.customers || []);
     } catch (err) { console.error(err); }
@@ -153,7 +153,7 @@ export default function RentalsPage() {
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const res = await fetch('/api/employees?limit=100&active=true&department=Sales');
+      const res = await fetch('/api/employees?limit=100&active=true&department=Sales', { cache: 'no-store' });
       const data = await res.json();
       setEmployees(data.employees || []);
     } catch (err) { console.error(err); }

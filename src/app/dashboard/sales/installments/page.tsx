@@ -166,7 +166,7 @@ export default function InstallmentsPage() {
     if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
     try {
-      const res = await fetch(`/api/sales/installments?${params}`);
+      const res = await fetch(`/api/sales/installments?${params}`, { cache: 'no-store' });
       const data = await res.json();
       setSales(data.sales || []);
       setTotalPages(data.pagination?.pages || 1);
@@ -180,7 +180,7 @@ export default function InstallmentsPage() {
 
   const fetchCars = useCallback(async () => {
     try {
-      const res = await fetch('/api/cars?limit=100');
+      const res = await fetch('/api/cars?limit=100', { cache: 'no-store' });
       const data = await res.json();
       setCars(data.cars?.filter((c: Car) => c.status === 'In Stock') || []);
     } catch (err) { console.error(err); }
@@ -188,7 +188,7 @@ export default function InstallmentsPage() {
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const res = await fetch('/api/customers?limit=100');
+      const res = await fetch('/api/customers?limit=100', { cache: 'no-store' });
       const data = await res.json();
       setCustomers(data.customers || []);
     } catch (err) { console.error(err); }
@@ -196,7 +196,7 @@ export default function InstallmentsPage() {
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const res = await fetch('/api/employees?limit=100&active=true&department=Sales');
+      const res = await fetch('/api/employees?limit=100&active=true&department=Sales', { cache: 'no-store' });
       const data = await res.json();
       setEmployees(data.employees || []);
     } catch (err) { console.error(err); }
@@ -204,7 +204,7 @@ export default function InstallmentsPage() {
 
   const fetchGuarantors = useCallback(async () => {
     try {
-      const res = await fetch('/api/guarantors?limit=1000');
+      const res = await fetch('/api/guarantors?limit=1000', { cache: 'no-store' });
       const data = await res.json();
       setGuarantors(data.guarantors || []);
     } catch (err) { console.error(err); }

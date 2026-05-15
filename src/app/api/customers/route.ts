@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB, DatabaseConnectionError } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
 import Customer from '@/models/Customer';
 import { getAuthPayload } from '@/lib/apiAuth';
 import { logActivity } from '@/lib/activityLogger';

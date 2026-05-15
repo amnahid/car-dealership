@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectDB, DatabaseConnectionError, runInTransaction } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
 import Car from '@/models/Car';
 import CarPurchase from '@/models/CarPurchase';
 import Transaction from '@/models/Transaction';
