@@ -12,7 +12,7 @@ interface Guarantor {
   fullName: string;
   phone: string;
   email?: string;
-  nationalId: string;
+  passportNumber?: string;
   employer?: string;
   salary?: number;
   buildingNumber: string;
@@ -22,7 +22,8 @@ interface Guarantor {
   postalCode: string;
   countryCode: string;
   documents: string[];
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -138,7 +139,7 @@ export default function GuarantorsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('guarantorId')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('fullName')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('phone')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('nationalId')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('passportNumber')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{t('address')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left' }}>{commonT('actions')}</th>
                 </tr>
@@ -154,7 +155,7 @@ export default function GuarantorsPage() {
                         </div>
                     </td>
                     <td style={{ padding: '12px' }}>{guarantor.phone}</td>
-                    <td style={{ padding: '12px' }}>{guarantor.nationalId}</td>
+                    <td style={{ padding: '12px' }}>{guarantor.passportNumber}</td>
                     <td style={{ padding: '12px', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{formatAddress(guarantor)}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -192,7 +193,7 @@ function GuarantorModal({ guarantor, onClose, onSave }: { guarantor?: Guarantor 
     fullName: guarantor?.fullName || '',
     phone: guarantor?.phone || '',
     email: guarantor?.email || '',
-    nationalId: guarantor?.nationalId || '',
+    passportNumber: (guarantor as any)?.passportNumber || '',
     employer: guarantor?.employer || '',
     salary: guarantor?.salary?.toString() || '',
     buildingNumber: guarantor?.buildingNumber || '',
@@ -202,7 +203,8 @@ function GuarantorModal({ guarantor, onClose, onSave }: { guarantor?: Guarantor 
     postalCode: guarantor?.postalCode || '',
     countryCode: guarantor?.countryCode || 'SA',
     documents: guarantor?.documents || [],
-    nationalIdDocument: guarantor?.nationalIdDocument || '',
+    passportDocument: (guarantor as any)?.passportDocument || '',
+    passportExpiryDate: (guarantor as any)?.passportExpiryDate?.split('T')[0] || '',
     drivingLicenseDocument: guarantor?.drivingLicenseDocument || '',
     iqamaDocument: guarantor?.iqamaDocument || '',
     profilePhoto: guarantor?.profilePhoto || '',
@@ -251,8 +253,12 @@ function GuarantorModal({ guarantor, onClose, onSave }: { guarantor?: Guarantor 
               <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('nationalId')} *</label>
-              <input required value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('passportNumber')} *</label>
+              <input required value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{commonT('passportExpiryDate')} *</label>
+              <input required type="date" value={form.passportExpiryDate} onChange={(e) => setForm({ ...form, passportExpiryDate: e.target.value })} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>{t('email')}</label>
@@ -295,8 +301,8 @@ function GuarantorModal({ guarantor, onClose, onSave }: { guarantor?: Guarantor 
           <h4 style={{ borderBottom: '1px solid #eee', paddingBottom: '5px', marginBottom: '15px' }}>{t('documents')}</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('nationalId')}</label>
-              <DocumentUpload value={form.nationalIdDocument} onChange={(url) => setForm({ ...form, nationalIdDocument: url })} label={commonT('nationalId')} />
+              <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('passportDocument')}</label>
+              <DocumentUpload value={form.passportDocument} onChange={(url) => setForm({ ...form, passportDocument: url })} label={commonT('passportDocument')} />
             </div>
             <div>
               <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('drivingLicense')}</label>

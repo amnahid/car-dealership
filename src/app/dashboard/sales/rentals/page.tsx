@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/navigation';
+import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
 import DataTransferButtons from '@/components/DataTransferButtons';
@@ -26,12 +26,14 @@ interface Rental {
   notes?: string;
   returnDate?: string;
   actualReturnDate?: string;
-  car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
+  car?: { _id: string; carId: string; brand: string; model: string; images: string[]; plateNumber?: string };
   customer?: { _id: string; fullName: string; phone: string; profilePhoto?: string; customerType?: string; vatRegistrationNumber?: string };
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   invoiceType?: 'Standard' | 'Simplified';
   agentName?: string;
   agentCommission?: number;
+  agentCommissionType?: 'percentage' | 'flat';
+  agentCommissionValue?: number;
   applyVat?: boolean;
   vatRate?: number;
   vatInclusive?: boolean;
@@ -133,25 +135,44 @@ export default function RentalsPage() {
     }
   }, [page, debouncedSearch, statusFilter, dateRange]);
 
+  const fetchCars = useCallback(async () => {
+    try {
+      const res = await fetch('/api/cars?limit=100');
+      const data = await res.json();
+      setCars(data.cars || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/customers?limit=100');
+      const data = await res.json();
+      setCustomers(data.customers || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const res = await fetch('/api/employees?limit=100&active=true&department=Sales');
+      const data = await res.json();
+      setEmployees(data.employees || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
   useEffect(() => {
     fetchRentals();
   }, [fetchRentals]);
 
   useEffect(() => {
     setPage(1);
-  }, [dateRange]);
+  }, [statusFilter, dateRange]);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/cars?limit=100&status=In+Stock').then(r => r.json()),
-      fetch('/api/customers?limit=100').then(r => r.json()),
-      fetch('/api/employees?limit=100&active=true&department=Sales').then(r => r.json()),
-    ]).then(([carData, custData, empData]) => {
-      setCars(carData.cars || []);
-      setCustomers(custData.customers || []);
-      setEmployees(empData.employees || []);
-    });
-  }, []);
+    fetchCars();
+    fetchCustomers();
+    fetchEmployees();
+  }, [fetchCars, fetchCustomers, fetchEmployees]);
+
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -318,6 +339,7 @@ export default function RentalsPage() {
                     />
                   </th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('car')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('plateNo')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('rentalId')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('total')}</th>
@@ -350,6 +372,7 @@ export default function RentalsPage() {
                         </div>
                       )}
                     </td>
+                    <td style={{ padding: '12px', fontWeight: 500, color: '#525f80' }}>{rental.car?.plateNumber || '-'}</td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{rental.rentalId}</td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
@@ -404,7 +427,7 @@ export default function RentalsPage() {
         </div>
       )}
 
-      {showModal && <RentalModal cars={cars} customers={customers} employees={employees} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchRentals(); }} />}
+      {showModal && <RentalModal cars={cars} customers={customers} employees={employees} fetchCustomers={fetchCustomers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchRentals(); }} />}
       {editingRental && <EditRentalModal rental={editingRental} employees={employees} onClose={() => setEditingRental(null)} onSave={handleUpdateRental} />}
       {paymentRental && (
         <RecordPaymentModal
@@ -522,7 +545,7 @@ function RecordPaymentModal({ rental, onClose, onSave }: { rental: any; onClose:
   );
 }
 
-function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; onClose: () => void; onSave: () => void }) {
+function RentalModal({ cars, customers, employees, fetchCustomers, onClose, onSave }: { cars: any[]; customers: any[]; employees: any[]; fetchCustomers: () => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('Rentals');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -547,6 +570,8 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
     buyerTrn: '',
     agentName: '',
     agentCommission: '',
+    agentCommissionType: 'percentage' as 'percentage' | 'flat',
+    agentCommissionValue: '',
     tafweedAuthorizedTo: '',
     tafweedDriverIqama: '',
     tafweedExpiryDate: '',
@@ -561,7 +586,7 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
+  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
     setForm({ ...form, car: cars.find(c => c.carId === carId)?._id || '', carId });
@@ -579,11 +604,16 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
   const handleAgentChange = (empId: string) => {
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
-    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+    setForm(prev => ({ 
+      ...prev, 
+      agentName: emp?.name || '', 
+      agentCommissionType: 'percentage',
+      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+    }));
   };
 
   const handleAddCustomer = async () => {
-    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.buildingNumber || !newCustomer.streetName || !newCustomer.city || !newCustomer.postalCode) {
+    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.passportNumber || !newCustomer.passportExpiryDate || !newCustomer.buildingNumber || !newCustomer.streetName || !newCustomer.city || !newCustomer.postalCode) {
       alert(commonT('fillRequired'));
       return;
     }
@@ -599,8 +629,8 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
       const created = data.customer || data;
       setForm({ ...form, customer: created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
       setShowCustomerModal(false);
-      setNewCustomer({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
-      onSave();
+      setNewCustomer({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
+      fetchCustomers();
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
@@ -623,9 +653,16 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
     if (!form.car || !form.customer || !form.startDate || !form.endDate) { alert('Please fill required fields'); return; }
     setLoading(true);
     try {
+      const totalAmount = calculateTotal();
+      const commValue = parseFloat(form.agentCommissionValue) || 0;
+      const calculatedCommission = form.agentCommissionType === 'percentage'
+        ? (totalAmount * commValue / 100)
+        : commValue;
+
       const payload = {
         ...form,
-        totalAmount: calculateTotal(),
+        totalAmount,
+        agentCommission: calculatedCommission,
         applyVat: form.calculateVat,
         vatRate: form.calculateVat ? 15 : 0,
         vatInclusive: form.calculateVat ? form.vatInclusive : false,
@@ -764,9 +801,30 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
                   placeholder={cashT('selectAgent')}
                 />
               </div>
-              <div>
-                <label style={labelStyle}>{cashT('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={labelStyle}>{commonT('commissionType')}</label>
+                  <select
+                    value={form.agentCommissionType}
+                    onChange={(e) => setForm({ ...form, agentCommissionType: e.target.value as 'percentage' | 'flat' })}
+                    style={inputStyle}
+                  >
+                    <option value="percentage">{commonT('percentage')}</option>
+                    <option value="flat">{commonT('flatAmount')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    {form.agentCommissionType === 'percentage' ? commonT('commissionValue') + ' (%)' : commonT('commissionValue') + ' (SAR)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={form.agentCommissionValue}
+                    onChange={(e) => setForm({ ...form, agentCommissionValue: e.target.value })}
+                    style={inputStyle}
+                    placeholder="0"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -846,8 +904,15 @@ function RentalModal({ cars, customers, employees, onClose, onSave }: { cars: an
                   <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={inputStyle} placeholder={commonT('email')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>{customersT('buildingNumber')} *</label>
-                  <input required value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
+                  <label style={labelStyle}>{commonT('passportNumber')} *</label>
+                  <input required value={newCustomer.passportNumber} onChange={(e) => setNewCustomer({ ...newCustomer, passportNumber: e.target.value })} style={inputStyle} placeholder={commonT('passportNumber')} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{commonT('passportExpiryDate')} *</label>
+                  <input required type="date" value={newCustomer.passportExpiryDate} onChange={(e) => setNewCustomer({ ...newCustomer, passportExpiryDate: e.target.value })} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{customersT('buildingNumber')} *</label>                  <input required value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
                 </div>
                 <div>
                   <label style={labelStyle}>{customersT('streetName')} *</label>
@@ -893,6 +958,8 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
     notes: rental.notes || '',
     agentName: rental.agentName || '',
     agentCommission: rental.agentCommission?.toString() || '',
+    agentCommissionType: (rental.agentCommissionType || 'flat') as 'percentage' | 'flat',
+    agentCommissionValue: (rental.agentCommissionValue || rental.agentCommission || 0).toString(),
     calculateVat: rental.applyVat ?? ((rental.vatRate || 0) > 0),
     vatInclusive: !!rental.vatInclusive,
   });
@@ -902,15 +969,27 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
   const handleAgentChange = (empId: string) => {
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
-    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+    setForm(prev => ({ 
+      ...prev, 
+      agentName: emp?.name || '', 
+      agentCommissionType: 'percentage',
+      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const price = rental.totalAmount;
+      const commValue = parseFloat(form.agentCommissionValue) || 0;
+      const calculatedCommission = form.agentCommissionType === 'percentage'
+        ? (price * commValue / 100)
+        : commValue;
+
       const payload = {
         ...form,
+        agentCommission: calculatedCommission,
         applyVat: form.calculateVat,
         vatRate: form.calculateVat ? 15 : 0,
         vatInclusive: form.calculateVat ? form.vatInclusive : false,
@@ -998,9 +1077,30 @@ function EditRentalModal({ rental, employees, onClose, onSave }: { rental: Renta
                   placeholder={cashT('selectAgent')}
                 />
               </div>
-              <div>
-                <label style={labelStyle}>{cashT('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={labelStyle}>{commonT('commissionType')}</label>
+                  <select
+                    value={form.agentCommissionType}
+                    onChange={(e) => setForm({ ...form, agentCommissionType: e.target.value as 'percentage' | 'flat' })}
+                    style={inputStyle}
+                  >
+                    <option value="percentage">{commonT('percentage')}</option>
+                    <option value="flat">{commonT('flatAmount')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    {form.agentCommissionType === 'percentage' ? commonT('commissionValue') + ' (%)' : commonT('commissionValue') + ' (SAR)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={form.agentCommissionValue}
+                    onChange={(e) => setForm({ ...form, agentCommissionValue: e.target.value })}
+                    style={inputStyle}
+                    placeholder="0"
+                  />
+                </div>
               </div>
             </div>
           </div>

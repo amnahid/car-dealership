@@ -44,14 +44,14 @@ const SAMPLE_CARS = [
 ];
 
 const SAMPLE_CUSTOMERS = [
-  { fullName: 'Ahmed Hassan', phone: '+8801711123456', address: 'Dhaka, Bangladesh', nationalId: '1234567890', email: 'ahmed@example.com' },
-  { fullName: 'Fatema Begum', phone: '+8801711234567', address: 'Chittagong, Bangladesh', nationalId: '2345678901', email: 'fatema@example.com' },
-  { fullName: 'Karim Islam', phone: '+8801711345678', address: 'Sylhet, Bangladesh', nationalId: '3456789012', email: 'karim@example.com' },
-  { fullName: 'Nusrat Jahan', phone: '+8801711456789', address: 'Dhaka, Bangladesh', nationalId: '4567890123', email: 'nusrat@example.com' },
-  { fullName: 'Rahim Uddin', phone: '+8801711567890', address: 'Khulna, Bangladesh', nationalId: '5678901234', email: 'rahim@example.com' },
-  { fullName: 'Sania Ahmed', phone: '+8801711678901', address: 'Rajshahi, Bangladesh', nationalId: '6789012345', email: 'sania@example.com' },
-  { fullName: 'Tariq Mahmud', phone: '+8801711789012', address: 'Dhaka, Bangladesh', nationalId: '7890123456', email: 'tariq@example.com' },
-  { fullName: 'Lina Khan', phone: '+8801711890123', address: 'Chittagong, Bangladesh', nationalId: '8901234567', email: 'lina@example.com' },
+  { fullName: 'Ahmed Hassan', phone: '+8801711123456', address: 'Dhaka, Bangladesh', passportNumber: '1234567890', email: 'ahmed@example.com' },
+  { fullName: 'Fatema Begum', phone: '+8801711234567', address: 'Chittagong, Bangladesh', passportNumber: '2345678901', email: 'fatema@example.com' },
+  { fullName: 'Karim Islam', phone: '+8801711345678', address: 'Sylhet, Bangladesh', passportNumber: '3456789012', email: 'karim@example.com' },
+  { fullName: 'Nusrat Jahan', phone: '+8801711456789', address: 'Dhaka, Bangladesh', passportNumber: '4567890123', email: 'nusrat@example.com' },
+  { fullName: 'Rahim Uddin', phone: '+8801711567890', address: 'Khulna, Bangladesh', passportNumber: '5678901234', email: 'rahim@example.com' },
+  { fullName: 'Sania Ahmed', phone: '+8801711678901', address: 'Rajshahi, Bangladesh', passportNumber: '6789012345', email: 'sania@example.com' },
+  { fullName: 'Tariq Mahmud', phone: '+8801711789012', address: 'Dhaka, Bangladesh', passportNumber: '7890123456', email: 'tariq@example.com' },
+  { fullName: 'Lina Khan', phone: '+8801711890123', address: 'Chittagong, Bangladesh', passportNumber: '8901234567', email: 'lina@example.com' },
 ];
 
 const SAMPLE_EMPLOYEES = [

@@ -32,8 +32,8 @@ export async function GET(
 
     const sale = await InstallmentSale.findById(id)
       .populate('car', 'carId brand model year plateNumber chassisNumber engineNumber sequenceNumber color images')
-      .populate('customer', 'fullName phone email nationalId buildingNumber streetName district city postalCode otherId otherIdType vatRegistrationNumber')
-      .populate('guarantor', 'fullName phone nationalId employer salary buildingNumber streetName district city postalCode documents profilePhoto')
+      .populate('customer', 'fullName phone email passportNumber buildingNumber streetName district city postalCode otherId otherIdType vatRegistrationNumber')
+      .populate('guarantor', 'fullName phone passportNumber employer salary buildingNumber streetName district city postalCode documents profilePhoto')
       .lean();
       
     if (!sale) {
@@ -84,7 +84,9 @@ export async function PUT(
 
     const body = await request.json();
     const {
-      downPayment, monthlyPayment, interestRate, tenureMonths, monthlyLateFee, notes, invoiceType, buyerTrn, agentName, agentCommission, status,
+      downPayment, monthlyPayment, interestRate, tenureMonths, monthlyLateFee, otherFees, notes, invoiceType, buyerTrn, agentName, agentCommission,
+      agentCommissionType, agentCommissionValue,
+      status,
       applyVat, vatRate, vatInclusive,
       guarantor, guarantorName, guarantorPhone,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
@@ -151,6 +153,7 @@ export async function PUT(
     if (interestRate !== undefined) sale.interestRate = interestRate;
     if (tenureMonths !== undefined) sale.tenureMonths = tenureMonths;
     if (monthlyLateFee !== undefined) sale.monthlyLateFee = monthlyLateFee;
+    if (otherFees !== undefined) sale.otherFees = otherFees;
     if (voucherNumber !== undefined) sale.voucherNumber = voucherNumber;
 
     // Recalculate loan amount and schedule if financial terms changed
@@ -186,6 +189,8 @@ export async function PUT(
     if (notes !== undefined) sale.notes = notes;
     if (agentName !== undefined) sale.agentName = agentName;
     if (agentCommission !== undefined) sale.agentCommission = agentCommission;
+    if (agentCommissionType !== undefined) sale.agentCommissionType = agentCommissionType;
+    if (agentCommissionValue !== undefined) sale.agentCommissionValue = agentCommissionValue;
     const applyVatChanged = applyVat !== undefined;
     const vatRateChanged = vatRate !== undefined;
     const vatInclusiveChanged = vatInclusive !== undefined;
@@ -434,18 +439,20 @@ export async function PATCH(
     }
 
     if (action === 'generate-agreement') {
-      const sale = await InstallmentSale.findById(id);
+      const sale = await InstallmentSale.findById(id).populate('customer');
       if (!sale) {
         return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
       }
 
       const carData = await Car.findById(sale.car).lean() as ICarRaw | null;
+      const customerDoc = sale.customer as unknown as ICustomerDocument;
 
       const agreementUrl = await generateInstallmentAgreement({
         saleId: sale.saleId,
         date: sale.startDate.toString(),
         customerName: sale.customerName,
         customerPhone: sale.customerPhone,
+        customerPassportNumber: customerDoc?.passportNumber,
         carId: sale.carId,
         carBrand: carData?.brand || '',
         carModel: carData?.carModel || '',
@@ -494,7 +501,7 @@ export async function PATCH(
         customer: {
           name: sale.customerName,
           phone: sale.customerPhone,
-          nationalId: customerDoc?.nationalId || '',
+          passportNumber: customerDoc?.passportNumber || '',
         },
         car: {
           carId: sale.carId,
@@ -524,7 +531,7 @@ export async function PATCH(
           .filter(p => p.status === 'Paid')
           .map(p => ({
             date: p.paidDate?.toISOString() || p.dueDate.toISOString(),
-            amount: p.amount,
+            amount: p.paidAmount ? (p.paidAmount - (p.lateFee || 0)) : p.amount,
             lateFee: p.lateFee || 0,
             method: p.method || 'Cash',
             voucherNumber: p.voucherNumber || '-',
@@ -545,6 +552,55 @@ export async function PATCH(
       });
 
       return NextResponse.json({ reportUrl, sale });
+    }
+
+    if (action === 'revert-cancellation') {
+      const { reason } = body;
+      if (!reason || reason.trim() === '') {
+        return NextResponse.json({ error: 'Reason for revert is required' }, { status: 400 });
+      }
+
+      const sale = await InstallmentSale.findById(id);
+      if (!sale) {
+        return NextResponse.json({ error: 'Sale not found' }, { status: 404 });
+      }
+
+      if (sale.status !== 'Cancelled') {
+        return NextResponse.json({ error: 'Sale is not cancelled' }, { status: 400 });
+      }
+
+      const now = new Date();
+      const timestamp = now.toLocaleDateString();
+      const revertNote = `\n[Reverted on ${timestamp}]: ${reason}`;
+      sale.notes = (sale.notes || '') + revertNote;
+      sale.status = 'Active';
+
+      await Promise.all([
+        sale.save(),
+        Car.findByIdAndUpdate(sale.car, {
+          status: 'On Installment',
+          tafweedStatus: sale.tafweedStatus,
+          tafweedAuthorizedTo: sale.tafweedAuthorizedTo,
+          tafweedDriverIqama: sale.tafweedDriverIqama,
+          tafweedDurationMonths: sale.tafweedDurationMonths,
+          tafweedExpiryDate: sale.tafweedExpiryDate,
+        }),
+        Transaction.updateMany(
+          { referenceId: sale._id.toString(), referenceType: 'InstallmentSale', isAutoGenerated: true },
+          { isDeleted: false }
+        ),
+      ]);
+
+      await logActivity({
+        userId: user.userId,
+        userName: user.name,
+        action: `Reverted cancellation for installment sale: ${sale.saleId}. Reason: ${reason}`,
+        module: 'Sales',
+        targetId: sale._id.toString(),
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+
+      return NextResponse.json({ sale });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

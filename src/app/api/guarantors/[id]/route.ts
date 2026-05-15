@@ -72,22 +72,22 @@ export async function PUT(
 
     const body = await request.json();
     const { 
-      fullName, phone, email, nationalId, employer, salary,
+      fullName, phone, email, passportNumber, employer, salary,
       buildingNumber, streetName, district, city, postalCode, countryCode,
-      documents, nationalIdDocument, drivingLicenseDocument, iqamaDocument,
+      documents, passportDocument, passportExpiryDate, drivingLicenseDocument, iqamaDocument,
       profilePhoto, notes
     } = body;
 
-    if (!fullName || !phone || !nationalId || !buildingNumber || !streetName || !district || !city || !postalCode) {
-      return NextResponse.json({ error: 'Full name, phone, national ID, and address are required' }, { status: 400 });
+    if (!fullName || !phone || !buildingNumber || !streetName || !district || !city || !postalCode) {
+      return NextResponse.json({ error: 'Full name, phone, and address are required' }, { status: 400 });
     }
 
     const guarantor = await Guarantor.findByIdAndUpdate(
       id,
       { 
-        fullName, phone, email, nationalId, employer, salary,
+        fullName, phone, email, passportNumber, employer, salary,
         buildingNumber, streetName, district, city, postalCode, countryCode: countryCode || 'SA',
-        documents, nationalIdDocument, drivingLicenseDocument, iqamaDocument,
+        documents, passportDocument, passportExpiryDate, drivingLicenseDocument, iqamaDocument,
         profilePhoto, notes
       },
       { new: true }

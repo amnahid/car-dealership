@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ROLE_OPTIONS } from '@/lib/rbac';
 import { useTranslations, useLocale } from 'next-intl';
+import { DocumentUpload } from '@/components/ImageUpload';
 
 interface User {
   _id: string;
@@ -14,6 +15,9 @@ interface User {
   roles?: string[];
   phone?: string;
   avatar?: string;
+  passportNumber?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -30,7 +34,13 @@ export default function UserDetailPage() {
   const [resetting, setResetting] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', roles: [] as string[] });
+  const [editForm, setEditForm] = useState({ 
+    name: '', 
+    roles: [] as string[],
+    passportNumber: '',
+    passportDocument: '',
+    passportExpiryDate: ''
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -45,7 +55,13 @@ export default function UserDetailPage() {
       .then((data) => {
         setUser(data.user);
         const userRoles = data.user.roles && data.user.roles.length > 0 ? data.user.roles : [data.user.role];
-        setEditForm({ name: data.user.name, roles: userRoles });
+        setEditForm({ 
+          name: data.user.name, 
+          roles: userRoles,
+          passportNumber: data.user.passportNumber || '',
+          passportDocument: data.user.passportDocument || '',
+          passportExpiryDate: data.user.passportExpiryDate ? new Date(data.user.passportExpiryDate).toISOString().split('T')[0] : ''
+        });
       })
       .catch((err) => {
         setError(err.message || 'Failed to load user');
@@ -121,7 +137,15 @@ export default function UserDetailPage() {
         alert(data.error || 'Failed to update');
         return;
       }
-      setUser({ ...user!, name: editForm.name, roles: editForm.roles, role: editForm.roles[0] });
+      setUser({ 
+        ...user!, 
+        name: editForm.name, 
+        roles: editForm.roles, 
+        role: editForm.roles[0],
+        passportNumber: editForm.passportNumber,
+        passportDocument: editForm.passportDocument,
+        passportExpiryDate: editForm.passportExpiryDate
+      });
       setEditMode(false);
     } catch (err) {
       console.error(err);
@@ -212,6 +236,20 @@ export default function UserDetailPage() {
                   <p style={{ fontSize: '16px', color: '#2a3142', margin: 0 }}>{user.phone}</p>
                 </div>
               )}
+              {user.passportNumber && (
+                <div>
+                  <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>{commonT('passportNumber')}</p>
+                  <p style={{ fontSize: '16px', color: '#2a3142', margin: 0 }}>{user.passportNumber}</p>
+                </div>
+              )}
+              {user.passportExpiryDate && (
+                <div>
+                  <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>{commonT('passportExpiryDate')}</p>
+                  <p style={{ fontSize: '16px', color: '#2a3142', margin: 0 }}>
+                    {new Date(user.passportExpiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                </div>
+              )}
               <div>
                 <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>{t('status')}</p>
                 <p style={{ fontSize: '16px', margin: 0, color: user.isActive ? '#16a34a' : '#ec4561', fontWeight: 600 }}>
@@ -236,6 +274,34 @@ export default function UserDetailPage() {
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e5e5', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#9ca8b3', display: 'block', marginBottom: '4px' }}>{commonT('passportNumber')}</label>
+                  <input
+                    type="text"
+                    value={editForm.passportNumber}
+                    onChange={(e) => setEditForm({ ...editForm, passportNumber: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e5e5', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', color: '#9ca8b3', display: 'block', marginBottom: '4px' }}>{commonT('passportExpiryDate')}</label>
+                  <input
+                    type="date"
+                    value={editForm.passportExpiryDate}
+                    onChange={(e) => setEditForm({ ...editForm, passportExpiryDate: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e5e5', borderRadius: '4px', fontSize: '14px', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', color: '#9ca8b3', display: 'block', marginBottom: '4px' }}>{commonT('passportDocument')}</label>
+                <DocumentUpload 
+                  value={editForm.passportDocument} 
+                  onChange={(url) => setEditForm({ ...editForm, passportDocument: url })}
+                  label={commonT('passportDocument')}
+                />
+              </div>
               <div>
                 <label style={{ fontSize: '12px', color: '#9ca8b3', display: 'block', marginBottom: '4px' }}>{t('selectRoles')}</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', padding: '12px', border: '1px solid #e5e5e5', background: '#f9f9f9', borderRadius: '4px' }}>
@@ -255,7 +321,16 @@ export default function UserDetailPage() {
                 <button onClick={handleSave} disabled={saving} style={{ padding: '10px 20px', background: '#28aaa9', color: '#fff', border: 'none', borderRadius: '4px', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
                   {saving ? commonT('saving') : commonT('save')}
                 </button>
-                <button onClick={() => { setEditMode(false); setEditForm({ name: user.name, roles: user.roles || [user.role] }); }} style={{ padding: '10px 20px', background: '#fff', color: '#6b7280', border: '1px solid #e5e5e5', borderRadius: '4px', cursor: 'pointer' }}>
+                <button onClick={() => { 
+                  setEditMode(false); 
+                  setEditForm({ 
+                    name: user.name, 
+                    roles: user.roles || [user.role],
+                    passportNumber: user.passportNumber || '',
+                    passportDocument: user.passportDocument || '',
+                    passportExpiryDate: user.passportExpiryDate ? new Date(user.passportExpiryDate).toISOString().split('T')[0] : ''
+                  }); 
+                }} style={{ padding: '10px 20px', background: '#fff', color: '#6b7280', border: '1px solid #e5e5e5', borderRadius: '4px', cursor: 'pointer' }}>
                   {commonT('cancel')}
                 </button>
               </div>

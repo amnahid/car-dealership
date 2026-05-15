@@ -87,6 +87,8 @@ export async function PUT(
       vatInclusive,
       agentName,
       agentCommission,
+      agentCommissionType,
+      agentCommissionValue,
       notes,
       status,
       invoiceType,
@@ -199,6 +201,8 @@ export async function PUT(
 
     if (agentName !== undefined) sale.agentName = agentName;
     if (agentCommission !== undefined) sale.agentCommission = agentCommission;
+    if (agentCommissionType !== undefined) sale.agentCommissionType = agentCommissionType;
+    if (agentCommissionValue !== undefined) sale.agentCommissionValue = agentCommissionValue;
     if (notes !== undefined) sale.notes = notes;
     if (saleDate !== undefined) sale.saleDate = new Date(saleDate);
 

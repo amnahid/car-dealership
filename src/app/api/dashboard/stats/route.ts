@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       // Fast path: only countDocuments + simple aggregates, no $unwind, no $lookup
       const [
         totalCars, carsInStock, carsUnderRepair, carsSold, carsRented, carsReserved,
+        carsOnInstallment, carsDefaulted,
         totalCashSales, totalInstallments, activeRentals, expiringDocuments,
         monthlyIncomeAgg, monthlyExpensesAgg,
         installmentStatsAgg,
@@ -42,9 +43,11 @@ export async function GET(request: NextRequest) {
         Car.countDocuments({ status: 'Sold', isDeleted: { $ne: true } }),
         Car.countDocuments({ status: 'Rented', isDeleted: { $ne: true } }),
         Car.countDocuments({ status: 'Reserved', isDeleted: { $ne: true } }),
+        Car.countDocuments({ status: 'On Installment', isDeleted: { $ne: true } }),
+        Car.countDocuments({ status: 'Defaulted', isDeleted: { $ne: true } }),
         CashSale.countDocuments({ status: { $ne: 'Cancelled' } }),
-        InstallmentSale.countDocuments({ status: 'Active' }),
-        Rental.countDocuments({ status: 'Active' }),
+        InstallmentSale.countDocuments({ status: { $ne: 'Cancelled' } }),
+        Rental.countDocuments({ status: { $ne: 'Cancelled' } }),
         VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
         Transaction.aggregate([
           { $match: { type: 'Income', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
@@ -81,6 +84,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         totalCars, carsInStock, carsUnderRepair, carsSold, carsRented, carsReserved,
+        carsOnInstallment, carsDefaulted,
         totalCashSales, totalInstallments, activeRentals, expiringDocuments,
         monthlyRevenue: monthlyIncomeAgg[0]?.total || 0,
         monthlyExpenses: monthlyExpensesAgg[0]?.total || 0,
@@ -99,6 +103,8 @@ export async function GET(request: NextRequest) {
       carsSold,
       carsRented,
       carsReserved,
+      carsOnInstallment,
+      carsDefaulted,
       totalRepairCostAgg,
       totalCashSales,
       totalInstallments,
@@ -123,13 +129,15 @@ export async function GET(request: NextRequest) {
       Car.countDocuments({ status: 'Sold', isDeleted: { $ne: true } }),
       Car.countDocuments({ status: 'Rented', isDeleted: { $ne: true } }),
       Car.countDocuments({ status: 'Reserved', isDeleted: { $ne: true } }),
+      Car.countDocuments({ status: 'On Installment', isDeleted: { $ne: true } }),
+      Car.countDocuments({ status: 'Defaulted', isDeleted: { $ne: true } }),
       Car.aggregate([
         { $match: { isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
       ]),
       CashSale.countDocuments({ status: { $ne: 'Cancelled' } }),
-      InstallmentSale.countDocuments({ status: 'Active' }),
-      Rental.countDocuments({ status: 'Active' }),
+      InstallmentSale.countDocuments({ status: { $ne: 'Cancelled' } }),
+      Rental.countDocuments({ status: { $ne: 'Cancelled' } }),
       CashSale.aggregate([
         { $match: { status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$finalPrice' } } },
@@ -225,6 +233,8 @@ export async function GET(request: NextRequest) {
       carsSold,
       carsRented,
       carsReserved,
+      carsOnInstallment,
+      carsDefaulted,
       totalRepairCost,
       expiringDocuments,
       recentActivity,

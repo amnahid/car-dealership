@@ -47,7 +47,7 @@ interface ReportData {
     name: string;
     phone: string;
     id?: string;
-    nationalId?: string;
+    passportNumber?: string;
   };
   car: {
     carId: string;
@@ -217,8 +217,8 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
   doc.text(`${processArabic('Plate No / رقم اللوحة')}: ${data.car.plateNumber || '-'}`, pageWidth / 2 + 5, y);
 
   y += 5;
-  if (data.customer.nationalId) {
-    doc.text(`${processArabic('National ID / الهوية الوطنية')}: ${data.customer.nationalId}`, margin, y);
+  if (data.customer.passportNumber) {
+    doc.text(`${processArabic('Passport Number / رقم الجواز')}: ${data.customer.passportNumber}`, margin, y);
   }
   if (data.car.chassisNumber) {
     doc.text(`${processArabic('VIN / رقم الشاصي')}: ${data.car.chassisNumber}`, pageWidth / 2 + 5, y);

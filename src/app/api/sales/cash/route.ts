@@ -49,10 +49,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
+      const matchingCars = await Car.find({ plateNumber: { $regex: search, $options: 'i' } }).select('_id').lean();
+      const matchingCarIds = matchingCars.map(c => c._id);
+
       query.$or = [
         { customerName: { $regex: search, $options: 'i' } },
         { carId: { $regex: search, $options: 'i' } },
         { saleId: { $regex: search, $options: 'i' } },
+        { car: { $in: matchingCarIds } },
       ];
     }
 
@@ -62,12 +66,12 @@ export async function GET(request: NextRequest) {
         .sort({ saleDate: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('car', 'carId brand model images')
+        .populate('car', 'carId brand model images plateNumber')
         .populate('customer', 'fullName phone profilePhoto')
         .lean(),
       CashSale.countDocuments(query),
       CashSale.aggregate([
-        { $match: query },
+        { $match: { ...query, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$finalPrice' } } },
       ]),
     ]);
@@ -102,6 +106,7 @@ export async function POST(request: NextRequest) {
     const {
       carId, car, customer, customerName, customerPhone,
       salePrice, discountType = 'flat', discountValue = 0, agentName, agentCommission,
+      agentCommissionType, agentCommissionValue,
       saleDate, notes,
       invoiceType = 'Simplified',
       buyerTrn,
@@ -156,9 +161,10 @@ export async function POST(request: NextRequest) {
         finalPriceWithVat: totalWithVat,
         agentName,
         agentCommission: agentCommission || 0,
+        agentCommissionType: agentCommissionType || 'flat',
+        agentCommissionValue: agentCommissionValue || 0,
         saleDate,
-        notes,
-        invoiceType,
+        notes,        invoiceType,
         zatcaStatus: 'Pending',
         registrationDriverName: registrationDriverName || customerName || agentName || '',
         registrationDriverIqama: registrationDriverIqama || '',

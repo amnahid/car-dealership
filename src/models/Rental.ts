@@ -57,6 +57,8 @@ export interface IRentalDocument extends Document {
   zatcaErrorMessage?: string;
   agentName?: string;
   agentCommission?: number;
+  agentCommissionType?: 'percentage' | 'flat';
+  agentCommissionValue?: number;
   invoiceUrl?: string;
   reportUrl?: string;
   notes?: string;
@@ -116,6 +118,8 @@ const RentalSchema = new Schema<IRentalDocument>(
     zatcaErrorMessage: { type: String },
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
+    agentCommissionType: { type: String, enum: ['percentage', 'flat'], default: 'flat' },
+    agentCommissionValue: { type: Number, default: 0, min: 0 },
     invoiceUrl: { type: String },
     reportUrl: { type: String },
     notes: { type: String },

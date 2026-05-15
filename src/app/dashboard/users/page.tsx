@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { ROLE_OPTIONS } from '@/lib/rbac';
+import { DocumentUpload } from '@/components/ImageUpload';
 
 interface User {
   _id: string;
@@ -20,6 +21,9 @@ interface UserFormData {
   email: string;
   password: string;
   roles: string[];
+  passportNumber: string;
+  passportExpiryDate: string;
+  passportDocument: string;
 }
 
 interface CreateResponse {
@@ -42,7 +46,15 @@ export default function UsersPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [generatedPw, setGeneratedPw] = useState('');
-  const [formData, setFormData] = useState<UserFormData>({ name: '', email: '', password: '', roles: ['Sales Person'] });
+  const [formData, setFormData] = useState<UserFormData>({ 
+    name: '', 
+    email: '', 
+    password: '', 
+    roles: ['Sales Person'],
+    passportNumber: '',
+    passportExpiryDate: '',
+    passportDocument: ''
+  });
   const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -131,7 +143,10 @@ export default function UsersPage() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        roles: formData.roles 
+        roles: formData.roles,
+        passportNumber: formData.passportNumber,
+        passportExpiryDate: formData.passportExpiryDate,
+        passportDocument: formData.passportDocument
       };
       if (!payload.password) delete payload.password;
       const res = await fetch('/api/users', {
@@ -151,7 +166,15 @@ export default function UsersPage() {
         setSuccess(t('successCreated'));
       }
       setShowForm(false);
-      setFormData({ name: '', email: '', password: '', roles: ['Sales Person'] });
+      setFormData({ 
+        name: '', 
+        email: '', 
+        password: '', 
+        roles: ['Sales Person'],
+        passportNumber: '',
+        passportExpiryDate: '',
+        passportDocument: ''
+      });
       fetchUsers();
     } catch {
       setError(t('errors.networkError'));
@@ -320,6 +343,33 @@ export default function UsersPage() {
               <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '4px 0 0', textAlign: isRtl ? 'right' : 'left' }}>
                 {t('pwHelp')}
               </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={labelStyle}>{commonT('passportNumber')}</label>
+                <input
+                  value={formData.passportNumber}
+                  onChange={(e) => setFormData((p) => ({ ...p, passportNumber: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>{commonT('passportExpiryDate')}</label>
+                <input
+                  type="date"
+                  value={formData.passportExpiryDate}
+                  onChange={(e) => setFormData((p) => ({ ...p, passportExpiryDate: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={labelStyle}>{commonT('passportDocument')}</label>
+              <DocumentUpload 
+                value={formData.passportDocument} 
+                onChange={(url) => setFormData((p) => ({ ...p, passportDocument: url }))}
+                label={commonT('passportDocument')}
+              />
             </div>
             <div style={{ marginBottom: '16px' }}>
               <label style={labelStyle}>{t('selectRoles')} *</label>

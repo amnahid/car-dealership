@@ -119,6 +119,9 @@ export async function PUT(
 
     if (body.phone !== undefined) updatePayload.phone = body.phone;
     if (body.avatar !== undefined) updatePayload.avatar = body.avatar;
+    if (body.passportNumber !== undefined) updatePayload.passportNumber = body.passportNumber;
+    if (body.passportDocument !== undefined) updatePayload.passportDocument = body.passportDocument;
+    if (body.passportExpiryDate !== undefined) updatePayload.passportExpiryDate = body.passportExpiryDate;
     if (body.isActive !== undefined) {
       if (typeof body.isActive !== 'boolean') {
         return NextResponse.json({ error: 'isActive must be a boolean' }, { status: 400 });

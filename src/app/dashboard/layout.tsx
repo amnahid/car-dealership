@@ -6,7 +6,7 @@ import User from '@/models/User';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { getLocale } from 'next-intl/server';
-import { normalizeRole } from '@/lib/rbac';
+import { normalizeRole, normalizeRoles } from '@/lib/rbac';
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -44,11 +44,15 @@ async function getUser() {
       await User.updateOne({ _id: user._id }, { $set: { role: normalizedRole } });
     }
 
+    const userRoles = user.roles && user.roles.length > 0 ? user.roles : [user.role];
+    const normalizedRoles = normalizeRoles(userRoles);
+
     return {
       id: user._id.toString(),
       name: user.name,
       email: user.email,
       role: normalizedRole,
+      roles: normalizedRoles,
       avatar: user.avatar,
     };
   } catch {
@@ -65,8 +69,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9fbfd', display: 'flex', flexDirection: 'column' }}>
-      <Sidebar userRole={user.role} />
-      <Header userName={user.name} userRole={user.role} userEmail={user.email} userAvatar={user.avatar} />
+      <Sidebar userRoles={user.roles} />
+      <Header userName={user.name} userRole={user.roles.join(', ')} userEmail={user.email} userAvatar={user.avatar} />
       <main style={{ 
         padding: '24px', 
         marginTop: '70px', 

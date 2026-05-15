@@ -47,6 +47,9 @@ interface Employee {
   joiningDate: string;
   isActive: boolean;
   photo?: string;
+  passportNumber?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
 }
 
 export default function EmployeeDetailPage() {
@@ -132,6 +135,24 @@ export default function EmployeeDetailPage() {
               <span className="text-gray-500">{t('commissionRate')}</span>
               <span className="text-indigo-600 font-bold">{employee.commissionRate || 0}%</span>
             </div>
+            {employee.passportNumber && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">{commonT('passportNumber')}</span>
+                <span className="text-gray-800 font-medium">{employee.passportNumber}</span>
+              </div>
+            )}
+            {employee.passportExpiryDate && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">{commonT('passportExpiryDate')}</span>
+                <span className="text-gray-800 font-medium">{new Date(employee.passportExpiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</span>
+              </div>
+            )}
+            {employee.passportDocument && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">{commonT('passportDocument')}</span>
+                <a href={employee.passportDocument} target="_blank" rel="noopener noreferrer" className="text-teal-600 font-medium hover:underline">{isRtl ? 'عرض' : 'View'}</a>
+              </div>
+            )}
           </div>
         </div>
 

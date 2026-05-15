@@ -77,9 +77,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { 
-      fullName, phone, email, nationalId, passportNumber,
+      fullName, phone, email, passportNumber,
       buildingNumber, streetName, district, city, postalCode, countryCode,
-      nationalIdDocument, drivingLicenseDocument, iqamaDocument, 
+      passportDocument, passportExpiryDate, drivingLicenseDocument, iqamaDocument, 
       emergencyContactName, emergencyContactPhone, 
       licenseExpiryDate, notes, profilePhoto, customerType, vatRegistrationNumber,
       otherId, otherIdType
@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
       fullName,
       phone,
       email,
-      nationalId,
       passportNumber,
       buildingNumber,
       streetName,
@@ -101,7 +100,8 @@ export async function POST(request: NextRequest) {
       city,
       postalCode,
       countryCode: countryCode || 'SA',
-      nationalIdDocument,
+      passportDocument,
+      passportExpiryDate,
       drivingLicenseDocument,
       iqamaDocument,
       emergencyContactName,

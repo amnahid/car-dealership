@@ -34,6 +34,7 @@ export async function GET(
     const sales = await CashSale.find({
       agentName: employee.name,
       agentCommission: { $gt: 0 },
+      status: { $ne: 'Cancelled' },
     })
       .sort({ createdAt: -1 })
       .select('saleId agentCommission createdAt carId finalPrice')

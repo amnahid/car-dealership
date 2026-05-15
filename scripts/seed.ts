@@ -27,6 +27,11 @@ import SalaryPayment from '../src/models/SalaryPayment';
 import Transaction from '../src/models/Transaction';
 import ZatcaConfig from '../src/models/ZatcaConfig';
 import ActivityLog from '../src/models/ActivityLog';
+import Guarantor from '../src/models/Guarantor';
+import PurchaseReturn from '../src/models/PurchaseReturn';
+import EditRequest from '../src/models/EditRequest';
+import NotificationLog from '../src/models/NotificationLog';
+import WhatsAppConfig from '../src/models/WhatsAppConfig';
 
 // ─── ID helpers ─────────────────────────────────────────────────────────────
 const OID = () => new mongoose.Types.ObjectId();
@@ -155,6 +160,9 @@ async function main() {
     phone: `+96651200${String(i + 1).padStart(4, '0')}`,
     email: `${name.toLowerCase().replace(/ /g, '.')}@example.com`,
     customerType: i >= 25 ? 'Business' : 'Individual',
+    passportNumber: `1${Math.floor(Math.random() * 1000000000)}`,
+    drivingLicenseExpiryDate: new Date(2026 + (i % 3), i % 12, 1),
+    profilePhoto: `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
     vatRegistrationNumber: i >= 25 ? `3${Math.floor(Math.random() * 100000000000000)}` : undefined,
     buildingNumber: `${1000 + i}`,
     streetName: i % 2 === 0 ? 'King Fahd Road' : 'Takhassusi Street',
@@ -205,10 +213,14 @@ async function main() {
     const models = carModels[brand];
     const model = models[i % models.length];
     const status = i < 15 ? 'In Stock' : (i < 30 ? 'Sold' : (i < 35 ? 'Rented' : (i < 38 ? 'Under Repair' : 'Reserved')));
+    const plateLetters = ['ABC', 'XYZ', 'KSA', 'RIT', 'JKL', 'HMO'];
+    const plateNum = 1000 + i;
+    const plateNumber = `${plateLetters[i % plateLetters.length]} ${plateNum}`;
     
     return {
       _id: id,
       carId: `CAR-${String(i + 1).padStart(3, '0')}`,
+      plateNumber,
       brand,
       model,
       year: 2020 + (i % 5),
@@ -217,6 +229,7 @@ async function main() {
       sequenceNumber: `SEQ-${String(i + 1).padStart(3, '0')}`,
       color: colors[i % colors.length],
       status,
+      images: [`https://placehold.co/600x400?text=${brand}+${model}`],
       purchasePrice: 50000 + (Math.floor(Math.random() * 150) * 1000),
       totalRepairCost: status === 'Under Repair' ? 2000 + (i * 100) : 0,
       createdBy: adminId,
@@ -306,6 +319,32 @@ async function main() {
   });
   await VehicleDocument.insertMany(allDocs);
 
+  // ─── 7.5 GUARANTORS ────────────────────────────────────────────────────────
+  console.log('🤝 Seeding guarantors…');
+  const guarantorIds = Array.from({ length: 10 }, () => OID());
+  const guarantorNames = [
+    'Sultan Al-Otaibi', 'Mishari Al-Harbi', 'Bandar Al-Dawsari', 'Turki Al-Shehri', 'Nawaf Al-Qahtani',
+    'Rayan Al-Mutairi', 'Saud Al-Anazi', 'Waleed Al-Ghamdi', 'Yousef Al-Zahrani', 'Majed Al-Shammari'
+  ];
+  const guarantors = guarantorNames.map((name, i) => ({
+    _id: guarantorIds[i],
+    guarantorId: `GUA-${String(i + 1).padStart(4, '0')}`,
+    fullName: name,
+    phone: `+96655000${String(i + 1).padStart(4, '0')}`,
+    email: `${name.toLowerCase().replace(/ /g, '.')}@example.com`,
+    passportNumber: `1${Math.floor(Math.random() * 1000000000)}`,
+    employer: i % 2 === 0 ? 'Ministry of Interior' : 'Aramco',
+    salary: 8000 + (i * 1000),
+    buildingNumber: `${2000 + i}`,
+    streetName: 'Olaya Street',
+    district: 'Al-Mursalat',
+    city: 'Riyadh',
+    postalCode: '12461',
+    countryCode: 'SA',
+    createdBy: adminId,
+  }));
+  await Guarantor.insertMany(guarantors);
+
   // ─── 8. SALES (Cash & Installments) ────────────────────────────────────────
   console.log('💰 Seeding sales…');
 
@@ -313,6 +352,7 @@ async function main() {
   const cashSales: any[] = [];
   const installmentSales: any[] = [];
   const salesTxns: any[] = [];
+  const zatcaStatuses: Array<'Reported' | 'Cleared' | 'Failed' | 'Pending'> = ['Reported', 'Cleared', 'Failed', 'Pending'];
 
   soldCars.forEach((car, i) => {
     const customer = customers[i % customers.length];
@@ -322,6 +362,7 @@ async function main() {
     const vatRate = 15;
     const vatAmount = salePrice * 0.15;
     const finalPriceWithVat = salePrice + vatAmount;
+    const zStatus = zatcaStatuses[i % zatcaStatuses.length];
 
     if (i % 2 === 0) {
       // Cash Sale
@@ -334,15 +375,17 @@ async function main() {
         customer: customer._id, customerName: customer.fullName, customerPhone: customer.phone,
         salePrice, finalPrice: salePrice, vatRate, vatAmount, finalPriceWithVat,
         agentName: agent.name, agentCommission: agent.commissionRate || 0,
-        saleDate, status: 'Active',
+        saleDate, status: i === 0 ? 'Cancelled' : 'Active', // One cancelled
         invoiceType: customer.customerType === 'Business' ? 'Standard' : 'Simplified',
-        zatcaStatus: 'Reported',
+        zatcaStatus: zStatus,
         zatcaQRCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABKLAcXAAAABlBMVEUAAAD///+l2Z/dAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5gYFDBIWKyE9bAAAABlJREFUOMtjYBgFo2AUjIJRMApGwSgYBaMAAAAByAABp76S7gAAAABJRU5ErkJggg==',
         createdBy: adminId,
       });
-      salesTxns.push({
-        _id: txnId, transactionId: nextTxnId(), date: saleDate, type: 'Income', category: 'Cash Sale', amount: finalPriceWithVat, description: `Cash sale — ${car.carId}`, referenceId: saleId.toString(), referenceType: 'CashSale', isAutoGenerated: true, createdBy: adminId
-      });
+      if (i !== 0) {
+        salesTxns.push({
+          _id: txnId, transactionId: nextTxnId(), date: saleDate, type: 'Income', category: 'Cash Sale', amount: finalPriceWithVat, description: `Cash sale — ${car.carId}`, referenceId: saleId.toString(), referenceType: 'CashSale', isAutoGenerated: true, createdBy: adminId
+        });
+      }
     } else {
       // Installment Sale
       const saleId = OID();
@@ -354,12 +397,14 @@ async function main() {
       
       const tenure = 12 + (i % 3) * 12;
       const monthly = Math.round(loanAmount / tenure);
+      const guarantor = guarantors[i % guarantors.length];
       
       installmentSales.push({
         _id: saleId,
         saleId: `INS-${String(installmentSales.length + 1).padStart(4, '0')}`,
         car: car._id, carId: car.carId,
         customer: customer._id, customerName: customer.fullName, customerPhone: customer.phone,
+        guarantor: guarantor._id, guarantorName: guarantor.fullName, guarantorPhone: guarantor.phone,
         totalPrice: salePrice, downPayment, loanAmount, monthlyPayment: monthly,
         interestRate, tenureMonths: tenure, startDate: saleDate,
         totalPaid: downPayment + monthly * 2, remainingAmount: loanAmount - (monthly * 2),
@@ -367,7 +412,7 @@ async function main() {
         finalPriceWithVat,
         agentName: agent.name, agentCommission: agent.commissionRate || 0,
         status: 'Active',
-        zatcaStatus: 'Reported',
+        zatcaStatus: zStatus,
         zatcaQRCode: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkAQMAAABKLAcXAAAABlBMVEUAAAD///+l2Z/dAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH5gYFDBIWKyE9bAAAABlJREFUOMtjYBgFo2AUjIJRMApGwSgYBaMAAAAByAABp76S7gAAAABJRU5ErkJggg==',
         paymentSchedule: Array.from({ length: tenure }, (_, j) => ({
           installmentNumber: j + 1,
@@ -507,6 +552,95 @@ async function main() {
   await SalaryPayment.insertMany(salaryPayments);
   await Transaction.insertMany(salaryTxns);
 
+  // ─── 11.5 PURCHASE RETURNS ─────────────────────────────────────────────────
+  console.log('↩️ Seeding purchase returns…');
+  const returnDocs: any[] = [];
+  const returnTxns: any[] = [];
+  
+  // Return one cash sale
+  const returnedCashSale = cashSales[1];
+  if (returnedCashSale) {
+    const retId = OID();
+    const retDate = new Date();
+    returnDocs.push({
+      _id: retId,
+      returnId: 'RET-0001',
+      originalSale: returnedCashSale._id,
+      originalSaleId: returnedCashSale.saleId,
+      saleType: 'Cash',
+      car: returnedCashSale.car,
+      carId: returnedCashSale.carId,
+      customer: returnedCashSale.customer,
+      customerName: returnedCashSale.customerName,
+      customerPhone: returnedCashSale.customerPhone,
+      originalPrice: returnedCashSale.finalPriceWithVat,
+      refundAmount: returnedCashSale.finalPriceWithVat * 0.9,
+      penaltyAmount: returnedCashSale.finalPriceWithVat * 0.1,
+      returnDate: retDate,
+      status: 'Completed',
+      createdBy: adminId,
+    });
+    returnTxns.push({
+      _id: OID(), transactionId: nextTxnId(), date: retDate, type: 'Expense', category: 'Refund', amount: returnedCashSale.finalPriceWithVat * 0.9, description: `Refund for ${returnedCashSale.saleId}`, referenceId: retId.toString(), referenceType: 'PurchaseReturn', isAutoGenerated: true, createdBy: adminId
+    });
+  }
+  await PurchaseReturn.insertMany(returnDocs);
+  await Transaction.insertMany(returnTxns);
+
+  // ─── 11.6 ACTIVITY & NOTIFICATION LOGS ────────────────────────────────────
+  console.log('📝 Seeding logs…');
+  const logs = [
+    { user: adminId, userName: 'Ahmed Al-Rashidi', action: 'LOGIN', module: 'Auth', details: 'User logged in from 192.168.1.1', ipAddress: '192.168.1.1' },
+    { user: salesId, userName: 'Khalid Al-Ghamdi', action: 'CREATE', module: 'CashSale', targetId: cashSales[0]?._id.toString(), details: 'Created cash sale CSH-0001', ipAddress: '192.168.1.5' },
+    { user: managerId, userName: 'Mohammed Al-Otaibi', action: 'UPDATE', module: 'Car', targetId: carDocs[0]?._id.toString(), details: 'Updated car details CAR-001', ipAddress: '192.168.1.10' },
+  ];
+  await ActivityLog.insertMany(logs);
+
+  const nLogs = [
+    { notificationId: 'NTF-000001', channel: 'email', type: 'SaleConfirmation', recipientName: 'Abdul Rahman Al-Dosari', recipientEmail: 'rahman@example.com', subject: 'Sale Confirmation', content: 'Your sale CSH-0001 has been confirmed.', status: 'sent', sentAt: new Date() },
+    { notificationId: 'NTF-000002', channel: 'whatsapp', type: 'InstallmentReminder', recipientName: 'Tariq Al-Mutairi', recipientPhone: '+966512000002', subject: 'Payment Reminder', content: 'Your installment is due tomorrow.', status: 'sent', sentAt: new Date() },
+  ];
+  await NotificationLog.insertMany(nLogs);
+
+  // ─── 11.7 EDIT REQUESTS ───────────────────────────────────────────────────
+  console.log('✍️ Seeding edit requests…');
+  await EditRequest.insertMany([
+    {
+      targetModel: 'CashSale',
+      targetId: cashSales[2]?._id,
+      requestedBy: salesId,
+      proposedChanges: { salePrice: cashSales[2]?.salePrice + 500 },
+      status: 'Pending',
+    },
+    {
+      targetModel: 'Car',
+      targetId: carDocs[5]?._id,
+      requestedBy: managerId,
+      proposedChanges: { color: 'Matte Black' },
+      status: 'Approved',
+      reviewedBy: adminId,
+      reviewedAt: new Date(),
+    }
+  ]);
+
+  // ─── 11.8 WHATSAPP CONFIG ──────────────────────────────────────────────────
+  console.log('📱 Seeding WhatsApp config…');
+  await WhatsAppConfig.insertMany([{
+    accessToken: 'EAAG...dummy...token',
+    phoneNumberId: '1234567890',
+    adminPhone: '+966500000000',
+    isActive: true,
+    updatedBy: adminId,
+  }]);
+
+  // ─── 11.9 STANDALONE TRANSACTIONS ──────────────────────────────────────────
+  console.log('💸 Seeding manual transactions…');
+  await Transaction.insertMany([
+    { transactionId: nextTxnId(), date: subDays(new Date(), 2), type: 'Expense', category: 'Other Expense', amount: 5000, description: 'Office Rent - April', createdBy: adminId },
+    { transactionId: nextTxnId(), date: subDays(new Date(), 5), type: 'Expense', category: 'Other Expense', amount: 800, description: 'Utility Bill (Electricity)', createdBy: adminId },
+    { transactionId: nextTxnId(), date: subDays(new Date(), 1), type: 'Expense', category: 'Other Expense', amount: 1500, description: 'Google Ads Campaign', createdBy: adminId },
+  ]);
+
   // ─── 12. ZATCA CONFIG ──────────────────────────────────────────────────────
   console.log('🧾 Seeding ZATCA config…');
 
@@ -544,7 +678,9 @@ async function main() {
   console.log(`  Users: 4  |  Employees: 10  |  Customers: 30  |  Suppliers: 5`);
   console.log(`  Cars: 40  |  Cash Sales: ${cashSales.length}  |  Installments: ${installmentSales.length}`);
   console.log(`  Rentals: ${rentals.length}  |  Repairs: ${repairDocs.length}  |  Salaries: ${salaryPayments.length}`);
-  console.log(`  Transactions: ${txnSeq}`);
+  console.log(`  Guarantors: ${guarantorIds.length}  |  Purchase Returns: ${returnDocs.length}`);
+  console.log(`  Activity Logs: ${logs.length}  |  Notification Logs: ${nLogs.length}`);
+  console.log(`  Transactions: ${txnSeq + 3}`); // +3 for standalone txns
   console.log('═'.repeat(60) + '\n');
 }
 

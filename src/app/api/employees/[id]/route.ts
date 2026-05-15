@@ -38,15 +38,15 @@ export async function GET(
 
     const [payments, cashSales, installmentSales, rentals] = await Promise.all([
       SalaryPayment.find({ employee: id, isDeleted: false }).sort({ paymentDate: -1 }).lean(),
-      CashSale.find({ agentName: (employee as any).name, isDeleted: false })
+      CashSale.find({ agentName: (employee as any).name, isDeleted: false, status: { $ne: 'Cancelled' } })
         .populate('car', 'brand model')
         .sort({ saleDate: -1 })
         .lean(),
-      InstallmentSale.find({ agentName: (employee as any).name, isDeleted: false })
+      InstallmentSale.find({ agentName: (employee as any).name, isDeleted: false, status: { $ne: 'Cancelled' } })
         .populate('car', 'brand model')
         .sort({ startDate: -1 })
         .lean(),
-      Rental.find({ agentName: (employee as any).name, isDeleted: false })
+      Rental.find({ agentName: (employee as any).name, isDeleted: false, status: { $ne: 'Cancelled' } })
         .populate('car', 'brand model')
         .sort({ startDate: -1 })
         .lean(),
@@ -104,11 +104,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, phone, email, designation, department, baseSalary, commissionRate, joiningDate, isActive, photo } = body;
+    const { name, phone, email, passportNumber, designation, department, baseSalary, commissionRate, joiningDate, isActive, photo, passportDocument, passportExpiryDate } = body;
 
     const employee = await Employee.findByIdAndUpdate(
       id,
-      { name, phone, email, designation, department, baseSalary, commissionRate, joiningDate, isActive, photo },
+      { name, phone, email, passportNumber, designation, department, baseSalary, commissionRate, joiningDate, isActive, photo, passportDocument, passportExpiryDate },
       { new: true }
     );
 

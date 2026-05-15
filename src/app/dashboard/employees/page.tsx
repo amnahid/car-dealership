@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import ImageUpload from '@/components/ImageUpload';
+import ImageUpload, { DocumentUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -14,12 +14,15 @@ interface Employee {
   name: string;
   phone: string;
   email?: string;
+  passportNumber?: string;
   designation: string;
   department: string;
   baseSalary: number;
   joiningDate: string;
   isActive: boolean;
   photo?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
   commissionRate?: number;
 }
 
@@ -328,6 +331,9 @@ function EmployeeModal({ employee, onClose, onSave }: { employee: Employee | nul
     joiningDate: employee?.joiningDate?.split('T')[0] || new Date().toISOString().split('T')[0],
     isActive: employee?.isActive ?? true,
     photo: employee?.photo || '',
+    passportNumber: (employee as any)?.passportNumber || '',
+    passportDocument: (employee as any)?.passportDocument || '',
+    passportExpiryDate: (employee as any)?.passportExpiryDate?.split('T')[0] || '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -385,6 +391,12 @@ function EmployeeModal({ employee, onClose, onSave }: { employee: Employee | nul
             <div><label style={labelStyle}>{t('salary')} *</label><input required type="number" value={form.baseSalary} onChange={(e) => setForm({ ...form, baseSalary: e.target.value })} style={inputStyle} /></div>
             <div><label style={labelStyle}>{t('commissionRate')}</label><input type="number" min="0" max="100" step="0.1" value={form.commissionRate} onChange={(e) => setForm({ ...form, commissionRate: e.target.value })} style={inputStyle} /></div>
             <div><label style={labelStyle}>{t('joiningDate')} *</label><input required type="date" value={form.joiningDate} onChange={(e) => setForm({ ...form, joiningDate: e.target.value })} style={inputStyle} /></div>
+            <div><label style={labelStyle}>{commonT('passportNumber')}</label><input value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} /></div>
+            <div><label style={labelStyle}>{commonT('passportExpiryDate')}</label><input type="date" value={form.passportExpiryDate} onChange={(e) => setForm({ ...form, passportExpiryDate: e.target.value })} style={inputStyle} /></div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('passportDocument')}</label>
+              <DocumentUpload value={form.passportDocument} onChange={(url) => setForm({ ...form, passportDocument: url })} label={commonT('passportDocument')} />
+            </div>
             <div><label style={labelStyle}>{t('status')}</label><SearchableSelect value={form.isActive.toString()} onChange={(v) => setForm({ ...form, isActive: v === 'true' })} options={[{ value: 'true', label: t('active') }, { value: 'false', label: t('inactive') }]} /></div>
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>

@@ -5,6 +5,7 @@ export interface IEmployeeDocument extends Document {
   name: string;
   phone: string;
   email?: string;
+  passportNumber?: string;
   designation: string;
   department: string;
   baseSalary: number;
@@ -12,6 +13,8 @@ export interface IEmployeeDocument extends Document {
   joiningDate: Date;
   isActive: boolean;
   photo?: string;
+  passportDocument?: string;
+  passportExpiryDate?: Date;
   createdBy: mongoose.Types.ObjectId;
 }
 
@@ -21,6 +24,7 @@ const EmployeeSchema = new Schema<IEmployeeDocument>(
     name: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     email: { type: String, trim: true },
+    passportNumber: { type: String, trim: true },
     designation: { type: String, required: true, trim: true },
     department: { type: String, required: true, trim: true },
     baseSalary: { type: Number, required: true, min: 0 },
@@ -28,6 +32,8 @@ const EmployeeSchema = new Schema<IEmployeeDocument>(
     joiningDate: { type: Date, required: true },
     isActive: { type: Boolean, default: true },
     photo: { type: String },
+    passportDocument: { type: String },
+    passportExpiryDate: { type: Date },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

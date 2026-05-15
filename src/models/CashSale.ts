@@ -22,6 +22,8 @@ export interface ICashSaleDocument extends Document {
   finalPriceWithVat: number;
   agentName?: string;
   agentCommission?: number;
+  agentCommissionType?: 'percentage' | 'flat';
+  agentCommissionValue?: number;
   saleDate: Date;
   status: 'Active' | 'Cancelled';
   isDeleted: boolean;
@@ -62,6 +64,8 @@ const CashSaleSchema = new Schema<ICashSaleDocument>(
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
+    agentCommissionType: { type: String, enum: ['percentage', 'flat'], default: 'flat' },
+    agentCommissionValue: { type: Number, default: 0, min: 0 },
     saleDate: { type: Date, required: true },
     status: { type: String, enum: ['Active', 'Cancelled'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import EditCustomerModal from '@/components/EditCustomerModal';
 import ImageUpload from '@/components/ImageUpload';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface Customer {
   _id: string;
@@ -12,7 +13,6 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
-  nationalId?: string;
   passportNumber?: string;
   buildingNumber: string;
   streetName: string;
@@ -20,7 +20,8 @@ interface Customer {
   city: string;
   postalCode: string;
   countryCode: string;
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -34,6 +35,11 @@ interface Customer {
 }
 
 export default function CustomerDetailPage() {
+  const t = useTranslations('Customers');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
+
   const params = useParams();
   const router = useRouter();
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -207,16 +213,16 @@ export default function CustomerDetailPage() {
                 {customer.customerType || 'Individual'}
               </span>
             </div>
-            {customer.nationalId && (
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca8b3' }}>National ID</span>
-                <span style={{ color: '#2a3142', fontFamily: 'monospace' }}>{customer.nationalId}</span>
-              </div>
-            )}
             {customer.passportNumber && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#9ca8b3' }}>Passport Number</span>
+                <span style={{ color: '#9ca8b3' }}>{commonT('passportNumber')}</span>
                 <span style={{ color: '#2a3142', fontFamily: 'monospace' }}>{customer.passportNumber}</span>
+              </div>
+            )}
+            {customer.passportExpiryDate && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>{commonT('passportExpiryDate')}</span>
+                <span style={{ color: '#2a3142' }}>{new Date(customer.passportExpiryDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</span>
               </div>
             )}
             {customer.vatRegistrationNumber && (
@@ -237,14 +243,14 @@ export default function CustomerDetailPage() {
         <div className="card" style={{ padding: '24px' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Documents & Emergency</h3>
           <div style={{ display: 'grid', gap: '12px' }}>
-            {customer.nationalIdDocument ? (
+            {customer.passportDocument ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#9ca8b3' }}>National ID</span>
-                <a href={customer.nationalIdDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px' }}>View Document</a>
+                <span style={{ color: '#9ca8b3' }}>{commonT('passportDocument')}</span>
+                <a href={customer.passportDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px' }}>{isRtl ? 'عرض' : 'View'}</a>
               </div>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#9ca8b3' }}>National ID</span>
+                <span style={{ color: '#9ca8b3' }}>{commonT('passportDocument')}</span>
                 <span style={{ color: '#9ca8b3' }}>-</span>
               </div>
             )}

@@ -80,6 +80,7 @@ export async function PUT(
     const body = await request.json();
     const {
       dailyRate, rateType, securityDeposit, returnDate, actualReturnDate, notes, status, invoiceType, buyerTrn, agentName, agentCommission,
+      agentCommissionType, agentCommissionValue,
       applyVat, vatRate, vatInclusive,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
       voucherNumber,
@@ -224,6 +225,8 @@ export async function PUT(
     if (notes !== undefined) rental.notes = notes;
     if (agentName !== undefined) (rental as any).agentName = agentName;
     if (agentCommission !== undefined) (rental as any).agentCommission = agentCommission;
+    if (agentCommissionType !== undefined) (rental as any).agentCommissionType = agentCommissionType;
+    if (agentCommissionValue !== undefined) (rental as any).agentCommissionValue = agentCommissionValue;
     const applyVatChanged = applyVat !== undefined;
     const vatRateChanged = vatRate !== undefined;
     const vatInclusiveChanged = vatInclusive !== undefined;
@@ -431,18 +434,20 @@ export async function PATCH(
     }
 
     if (action === 'generate-agreement') {
-      const rental = await Rental.findById(id);
+      const rental = await Rental.findById(id).populate('customer');
       if (!rental) {
         return NextResponse.json({ error: 'Rental not found' }, { status: 404 });
       }
 
       const carData = await Car.findById(rental.car).lean() as any;
+      const customerDoc = rental.customer as any;
 
       const agreementUrl = await generateRentalAgreement({
         saleId: rental.rentalId,
         date: rental.startDate.toString(),
         customerName: rental.customerName,
         customerPhone: rental.customerPhone,
+        customerPassportNumber: customerDoc?.passportNumber,
         carId: rental.carId,
         carBrand: carData?.brand || '',
         carModel: carData?.model || '',
@@ -491,7 +496,7 @@ export async function PATCH(
         customer: {
           name: rental.customerName,
           phone: rental.customerPhone,
-          nationalId: customerDoc?.nationalId || '',
+          passportNumber: customerDoc?.passportNumber || '',
         },
         car: {
           carId: rental.carId,

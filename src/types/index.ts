@@ -7,8 +7,34 @@ export interface IUser {
   email: string;
   password: string;
   phone?: string;
+  avatar?: string;
+  passportNumber?: string;
+  passportDocument?: string;
+  passportExpiryDate?: Date;
   role: UserRole;
+  roles: UserRole[];
   isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IEmployee {
+  _id: Types.ObjectId;
+  employeeId: string;
+  name: string;
+  phone: string;
+  email?: string;
+  passportNumber?: string;
+  designation: string;
+  department: string;
+  baseSalary: number;
+  commissionRate?: number;
+  joiningDate: Date;
+  isActive: boolean;
+  photo?: string;
+  passportDocument?: string;
+  passportExpiryDate?: Date;
+  createdBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,7 +138,8 @@ export interface ICustomer {
   city: string;
   postalCode: string;
   countryCode: string;
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: Date;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -123,6 +150,33 @@ export interface ICustomer {
   vatRegistrationNumber?: string;
   otherId?: string;
   otherIdType?: 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH';
+  notes?: string;
+  createdBy: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IGuarantor {
+  _id: Types.ObjectId;
+  guarantorId: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  passportNumber?: string;
+  employer?: string;
+  salary?: number;
+  buildingNumber: string;
+  streetName: string;
+  district: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
+  documents: string[];
+  passportDocument?: string;
+  passportExpiryDate?: Date;
+  drivingLicenseDocument?: string;
+  iqamaDocument?: string;
+  profilePhoto?: string;
   notes?: string;
   createdBy: Types.ObjectId;
   createdAt: Date;

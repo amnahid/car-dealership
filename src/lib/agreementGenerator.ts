@@ -59,7 +59,7 @@ interface CommonData {
   customerName: string;
   customerPhone: string;
   customerAddress?: string;
-  customerNationalId?: string;
+  customerPassportNumber?: string;
   carId: string;
   carBrand: string;
   carModel: string;
@@ -194,6 +194,10 @@ export async function generateInstallmentAgreement(data: InstallmentData): Promi
   doc.text(`Buyer (Second Party): ${processArabic(data.customerName)}`, margin, y);
   y += 5;
   doc.text(`Phone: ${data.customerPhone}`, margin, y);
+  if (data.customerPassportNumber) {
+    y += 5;
+    doc.text(`Passport No: ${data.customerPassportNumber}`, margin, y);
+  }
 
   // Vehicle
   y += 12;
@@ -315,6 +319,10 @@ export async function generateRentalAgreement(data: RentalData): Promise<string>
   doc.text(`Lessee: ${processArabic(data.customerName)}`, margin, y);
   y += 5;
   doc.text(`Phone: ${data.customerPhone}`, margin, y);
+  if (data.customerPassportNumber) {
+    y += 5;
+    doc.text(`Passport No: ${data.customerPassportNumber}`, margin, y);
+  }
 
   // Vehicle
   y += 12;

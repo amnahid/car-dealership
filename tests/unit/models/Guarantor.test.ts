@@ -14,7 +14,6 @@ describe('Guarantor Model', () => {
 
     expect(err.errors.fullName).toBeDefined();
     expect(err.errors.phone).toBeDefined();
-    expect(err.errors.nationalId).toBeDefined();
     expect(err.errors.buildingNumber).toBeDefined();
     expect(err.errors.streetName).toBeDefined();
     expect(err.errors.district).toBeDefined();
@@ -27,7 +26,7 @@ describe('Guarantor Model', () => {
     const guarantor = new Guarantor({
       fullName: 'Test Guarantor',
       phone: '123456789',
-      nationalId: '1234567890',
+      passportNumber: '1234567890',
       buildingNumber: '1',
       streetName: 'Street',
       district: 'District',
@@ -44,7 +43,7 @@ describe('Guarantor Model', () => {
     const guarantor = new Guarantor({
       fullName: 'Test Guarantor',
       phone: '123456789',
-      nationalId: '1234567890',
+      passportNumber: '1234567890',
       buildingNumber: '1',
       streetName: 'Street',
       district: 'District',

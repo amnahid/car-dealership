@@ -79,7 +79,10 @@ export async function POST(request: NextRequest) {
       email, 
       password: hashed, 
       role: normalizedRoles[0], // primary role for legacy support
-      roles: normalizedRoles 
+      roles: normalizedRoles,
+      passportNumber: body.passportNumber,
+      passportDocument: body.passportDocument,
+      passportExpiryDate: body.passportExpiryDate
     });
 
     await logActivity({

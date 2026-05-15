@@ -77,7 +77,7 @@ describe('Guarantors API', () => {
       const guarantorData = {
         fullName: 'Jane Doe',
         phone: '987654321',
-        nationalId: '0987654321',
+        passportNumber: '0987654321',
         buildingNumber: '10',
         streetName: 'Side St',
         district: 'East',

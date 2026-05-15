@@ -52,10 +52,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
+      const matchingCars = await Car.find({ plateNumber: { $regex: search, $options: 'i' } }).select('_id').lean();
+      const matchingCarIds = matchingCars.map(c => c._id);
+
       query.$or = [
         { customerName: { $regex: search, $options: 'i' } },
         { carId: { $regex: search, $options: 'i' } },
         { saleId: { $regex: search, $options: 'i' } },
+        { car: { $in: matchingCarIds } },
       ];
     }
 
@@ -69,12 +73,12 @@ export async function GET(request: NextRequest) {
         .sort({ startDate: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('car', 'carId brand model images')
+        .populate('car', 'carId brand model images plateNumber')
         .populate('customer', 'fullName phone profilePhoto')
         .lean(),
       InstallmentSale.countDocuments(query),
       InstallmentSale.aggregate([
-        { $match: query },
+        { $match: { ...query, status: { $ne: 'Cancelled' } } },
         {
           $group: {
             _id: null,
@@ -142,9 +146,10 @@ export async function POST(request: NextRequest) {
     const {
       carId, car, customer, customerName, customerPhone,
       totalPrice, downPayment, interestRate, tenureMonths, startDate, notes,
-      deliveryThresholdPercent, monthlyLateFee,
+      deliveryThresholdPercent, monthlyLateFee, otherFees,
       invoiceType, buyerTrn,
       agentName, agentCommission,
+      agentCommissionType, agentCommissionValue,
       guarantor, guarantorName, guarantorPhone,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
       applyVat = true,
@@ -235,8 +240,11 @@ export async function POST(request: NextRequest) {
         remainingAmount,
         deliveryThresholdPercent: deliveryThresholdPercent ?? 30,
         monthlyLateFee: monthlyLateFee ?? 200,
+        otherFees: otherFees ?? 0,
         agentName: agentName || '',
         agentCommission: agentCommission || 0,
+        agentCommissionType: agentCommissionType || 'flat',
+        agentCommissionValue: agentCommissionValue || 0,
         guarantor: (guarantor ? new mongoose.Types.ObjectId(guarantor) : undefined),
         guarantorName: guarantorName || '',
         guarantorPhone: guarantorPhone || '',

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       query.$or = [
         { fullName: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
-        { nationalId: { $regex: search, $options: 'i' } },
+        { passportNumber: { $regex: search, $options: 'i' } },
         { guarantorId: { $regex: search, $options: 'i' } },
       ];
     }
@@ -76,21 +76,21 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { 
-      fullName, phone, email, nationalId, employer, salary,
+      fullName, phone, email, passportNumber, employer, salary,
       buildingNumber, streetName, district, city, postalCode, countryCode,
-      documents, nationalIdDocument, drivingLicenseDocument, iqamaDocument,
+      documents, passportDocument, passportExpiryDate, drivingLicenseDocument, iqamaDocument,
       profilePhoto, notes
     } = body;
 
-    if (!fullName || !phone || !nationalId || !buildingNumber || !streetName || !district || !city || !postalCode) {
-      return NextResponse.json({ error: 'Full name, phone, national ID, and address are required' }, { status: 400 });
+    if (!fullName || !phone || !buildingNumber || !streetName || !district || !city || !postalCode) {
+      return NextResponse.json({ error: 'Full name, phone, and address are required' }, { status: 400 });
     }
 
     const guarantor = await Guarantor.create({
       fullName,
       phone,
       email,
-      nationalId,
+      passportNumber,
       employer,
       salary,
       buildingNumber,
@@ -100,7 +100,8 @@ export async function POST(request: NextRequest) {
       postalCode,
       countryCode: countryCode || 'SA',
       documents: documents || [],
-      nationalIdDocument,
+      passportDocument,
+      passportExpiryDate,
       drivingLicenseDocument,
       iqamaDocument,
       profilePhoto,

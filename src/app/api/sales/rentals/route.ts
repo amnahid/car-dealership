@@ -52,10 +52,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
+      const matchingCars = await Car.find({ plateNumber: { $regex: search, $options: 'i' } }).select('_id').lean();
+      const matchingCarIds = matchingCars.map(c => c._id);
+
       query.$or = [
         { customerName: { $regex: search, $options: 'i' } },
         { carId: { $regex: search, $options: 'i' } },
         { rentalId: { $regex: search, $options: 'i' } },
+        { car: { $in: matchingCarIds } },
       ];
     }
 
@@ -69,12 +73,12 @@ export async function GET(request: NextRequest) {
         .sort({ startDate: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('car', 'carId brand model images')
+        .populate('car', 'carId brand model images plateNumber')
         .populate('customer', 'fullName phone profilePhoto')
         .lean(),
       Rental.countDocuments(query),
       Rental.aggregate([
-        { $match: query },
+        { $match: { ...query, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]),
     ]);
@@ -122,6 +126,7 @@ export async function POST(request: NextRequest) {
       startDate, endDate, dailyRate, securityDeposit, notes,
       invoiceType, buyerTrn,
       agentName, agentCommission,
+      agentCommissionType, agentCommissionValue,
       tafweedAuthorizedTo, tafweedDriverIqama, tafweedExpiryDate, tafweedDurationMonths,
       applyVat = true,
       vatInclusive = false,
@@ -209,6 +214,8 @@ export async function POST(request: NextRequest) {
         }] : [],
         agentName: agentName || '',
         agentCommission: agentCommission || 0,
+        agentCommissionType: agentCommissionType || 'flat',
+        agentCommissionValue: agentCommissionValue || 0,
         status: 'Active',
         tafweedStatus: tafweedData.status,
         tafweedAuthorizedTo: tafweedData.authorizedTo,

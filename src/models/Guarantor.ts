@@ -5,7 +5,7 @@ export interface IGuarantorDocument extends Document {
   fullName: string;
   phone: string;
   email?: string;
-  nationalId: string;
+  passportNumber?: string;
   employer?: string;
   salary?: number;
   buildingNumber: string;
@@ -15,7 +15,8 @@ export interface IGuarantorDocument extends Document {
   postalCode: string;
   countryCode: string;
   documents: string[]; // URLs for ID copy, salary cert, etc.
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: Date;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -30,7 +31,7 @@ const GuarantorSchema = new Schema<IGuarantorDocument>(
     fullName: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     email: { type: String, trim: true },
-    nationalId: { type: String, required: true, trim: true },
+    passportNumber: { type: String, trim: true },
     employer: { type: String, trim: true },
     salary: { type: Number, min: 0 },
     buildingNumber: { type: String, required: true, trim: true },
@@ -40,7 +41,8 @@ const GuarantorSchema = new Schema<IGuarantorDocument>(
     postalCode: { type: String, required: true, trim: true },
     countryCode: { type: String, default: 'SA' },
     documents: [{ type: String }],
-    nationalIdDocument: { type: String },
+    passportDocument: { type: String },
+    passportExpiryDate: { type: Date },
     drivingLicenseDocument: { type: String },
     iqamaDocument: { type: String },
     profilePhoto: { type: String },
@@ -54,7 +56,7 @@ const GuarantorSchema = new Schema<IGuarantorDocument>(
 GuarantorSchema.index({ isDeleted: 1 });
 GuarantorSchema.index({ createdAt: -1 });
 GuarantorSchema.index({ phone: 1 });
-GuarantorSchema.index({ nationalId: 1 });
+GuarantorSchema.index({ passportNumber: 1 });
 
 GuarantorSchema.pre('save', async function (this: IGuarantorDocument) {
   if (!this.isNew || this.guarantorId) return;

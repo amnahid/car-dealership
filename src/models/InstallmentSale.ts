@@ -45,6 +45,7 @@ export interface IInstallmentSaleDocument extends Document {
   vatAmount: number;
   vatInclusive: boolean;
   finalPriceWithVat: number;
+  otherFees?: number;
   paymentMethod?: string;
   paymentReference?: string;
   voucherNumber?: string;
@@ -61,6 +62,8 @@ export interface IInstallmentSaleDocument extends Document {
   zatcaErrorMessage?: string;
   agentName?: string;
   agentCommission?: number;
+  agentCommissionType?: 'percentage' | 'flat';
+  agentCommissionValue?: number;
   invoiceUrl?: string;
   reportUrl?: string;
   guarantor?: mongoose.Types.ObjectId;
@@ -117,6 +120,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     vatAmount: { type: Number, default: 0, min: 0 },
     vatInclusive: { type: Boolean, default: false },
     finalPriceWithVat: { type: Number, default: 0, min: 0 },
+    otherFees: { type: Number, default: 0, min: 0 },
     paymentMethod: { type: String },
     paymentReference: { type: String },
     voucherNumber: { type: String, trim: true },
@@ -132,6 +136,8 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     zatcaErrorMessage: { type: String },
     agentName: { type: String, trim: true },
     agentCommission: { type: Number, default: 0, min: 0 },
+    agentCommissionType: { type: String, enum: ['percentage', 'flat'], default: 'flat' },
+    agentCommissionValue: { type: Number, default: 0, min: 0 },
     invoiceUrl: { type: String },
     reportUrl: { type: String },
     guarantor: { type: Schema.Types.ObjectId, ref: 'Guarantor' },

@@ -7,7 +7,6 @@ export interface ICustomerDocument extends Document {
   fullName: string;
   phone: string;
   email?: string;
-  nationalId?: string;
   passportNumber?: string;
   buildingNumber: string;
   streetName: string;
@@ -15,7 +14,8 @@ export interface ICustomerDocument extends Document {
   city: string;
   postalCode: string;
   countryCode: string;
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: Date;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -37,7 +37,6 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     fullName: { type: String, required: true, trim: true },
     phone: { type: String, required: true, trim: true },
     email: { type: String, trim: true },
-    nationalId: { type: String, trim: true },
     passportNumber: { type: String, trim: true },
     buildingNumber: { type: String, required: true, trim: true },
     streetName: { type: String, required: true, trim: true },
@@ -45,7 +44,8 @@ const CustomerSchema = new Schema<ICustomerDocument>(
     city: { type: String, required: true, trim: true },
     postalCode: { type: String, required: true, trim: true },
     countryCode: { type: String, default: 'SA' },
-    nationalIdDocument: { type: String },
+    passportDocument: { type: String },
+    passportExpiryDate: { type: Date },
     drivingLicenseDocument: { type: String },
     iqamaDocument: { type: String },
     profilePhoto: { type: String },

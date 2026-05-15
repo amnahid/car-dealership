@@ -68,7 +68,9 @@ interface Sale {
   monthlyLateFee?: number;
   agentName?: string;
   agentCommission?: number;
-  car?: { _id: string; carId: string; brand: string; model: string; images: string[] };
+  agentCommissionType?: 'percentage' | 'flat';
+  agentCommissionValue?: number;
+  car?: { _id: string; carId: string; brand: string; model: string; images: string[]; plateNumber?: string };
   customer?: Customer;
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   invoiceType?: 'Standard' | 'Simplified';
@@ -80,6 +82,7 @@ interface Sale {
   vatInclusive?: boolean;
   voucherNumber?: string;
   lateFeeCharged?: number;
+  otherFees?: number;
 }
 
 export default function InstallmentsPage() {
@@ -174,6 +177,38 @@ export default function InstallmentsPage() {
     }
   }, [page, debouncedSearch, statusFilter, dateRange]);
 
+  const fetchCars = useCallback(async () => {
+    try {
+      const res = await fetch('/api/cars?limit=100');
+      const data = await res.json();
+      setCars(data.cars?.filter((c: Car) => c.status === 'In Stock') || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/customers?limit=100');
+      const data = await res.json();
+      setCustomers(data.customers || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchEmployees = useCallback(async () => {
+    try {
+      const res = await fetch('/api/employees?limit=100&active=true&department=Sales');
+      const data = await res.json();
+      setEmployees(data.employees || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchGuarantors = useCallback(async () => {
+    try {
+      const res = await fetch('/api/guarantors?limit=1000');
+      const data = await res.json();
+      setGuarantors(data.guarantors || []);
+    } catch (err) { console.error(err); }
+  }, []);
+
   useEffect(() => {
     fetchSales();
   }, [fetchSales]);
@@ -183,18 +218,11 @@ export default function InstallmentsPage() {
   }, [dateRange]);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/cars?limit=100').then(r => r.json()),
-      fetch('/api/customers?limit=100').then(r => r.json()),
-      fetch('/api/employees?limit=100&active=true&department=Sales').then(r => r.json()),
-      fetch('/api/guarantors?limit=1000').then(r => r.json()),
-    ]).then(([carData, custData, empData, guaData]) => {
-      setCars(carData.cars?.filter((c: Car) => c.status === 'In Stock') || []);
-      setCustomers(custData.customers || []);
-      setEmployees(empData.employees || []);
-      setGuarantors(guaData.guarantors || []);
-    });
-  }, []);
+    fetchCars();
+    fetchCustomers();
+    fetchEmployees();
+    fetchGuarantors();
+  }, [fetchCars, fetchCustomers, fetchEmployees, fetchGuarantors]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -363,6 +391,7 @@ export default function InstallmentsPage() {
                     />
                   </th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('car')}</th>
+                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('plateNo')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('saleId')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('voucherNumber')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
@@ -396,6 +425,7 @@ export default function InstallmentsPage() {
                         </div>
                       )}
                     </td>
+                    <td style={{ padding: '12px', fontWeight: 500, color: '#525f80' }}>{sale.car?.plateNumber || '-'}</td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', color: '#28aaa9' }}>{sale.saleId}</td>
                     <td style={{ padding: '12px', color: '#525f80' }}>{sale.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px' }}>
@@ -460,13 +490,13 @@ export default function InstallmentsPage() {
         </div>
       )}
 
-      {showModal && <InstallmentModal cars={cars} customers={customers} employees={employees} guarantors={guarantors} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
+      {showModal && <InstallmentModal cars={cars} customers={customers} employees={employees} guarantors={guarantors} fetchCustomers={fetchCustomers} onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); fetchSales(); }} />}
       {editingSale && <EditInstallmentModal sale={editingSale} employees={employees} guarantors={guarantors} onClose={() => setEditingSale(null)} onSave={handleUpdateSale} />}
     </div>
   );
 }
 
-function InstallmentModal({ cars, customers, employees, guarantors, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; guarantors: Guarantor[]; onClose: () => void; onSave: () => void }) {
+function InstallmentModal({ cars, customers, employees, guarantors, fetchCustomers, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; guarantors: Guarantor[]; fetchCustomers: () => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -487,6 +517,7 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
     startDate: new Date().toISOString().split('T')[0],
     notes: '',
     monthlyLateFee: '200',
+    otherFees: '0',
     voucherNumber: '',
     paymentMethod: 'Cash',
     paymentReference: '',
@@ -495,6 +526,8 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
     agreementDocument: '',
     agentName: '',
     agentCommission: '',
+    agentCommissionType: 'percentage' as 'percentage' | 'flat',
+    agentCommissionValue: '',
     guarantor: '',
     guarantorName: '',
     guarantorPhone: '',
@@ -508,7 +541,7 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
   const [agentId, setAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
+  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
     const car = cars.find(c => c.carId === carId);
@@ -527,7 +560,12 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
   const handleAgentChange = (empId: string) => {
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
-    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+    setForm(prev => ({ 
+      ...prev, 
+      agentName: emp?.name || '', 
+      agentCommissionType: 'percentage',
+      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+    }));
   };
 
   const handleGuarantorChange = (guarantorId: string) => {
@@ -536,7 +574,7 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
   };
 
   const handleAddCustomer = async () => {
-    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.buildingNumber || !newCustomer.streetName || !newCustomer.city || !newCustomer.postalCode) {
+    if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.passportNumber || !newCustomer.passportExpiryDate || !newCustomer.buildingNumber || !newCustomer.streetName || !newCustomer.city || !newCustomer.postalCode) {
       alert(commonT('fillRequired'));
       return;
     }
@@ -552,18 +590,25 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
       const created = data.customer || data;
       setForm({ ...form, customer: created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
       setShowCustomerModal(false);
-      setNewCustomer({ fullName: '', phone: '', email: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
-      onSave();
+      setNewCustomer({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
+      fetchCustomers();
     } catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.car || !form.customer) { alert('Please select a car and customer'); return; }
+    if (!form.car) { alert('Please select a car'); return; }
     setLoading(true);
     try {
+      const price = parseFloat(form.totalPrice) || 0;
+      const commValue = parseFloat(form.agentCommissionValue) || 0;
+      const calculatedCommission = form.agentCommissionType === 'percentage'
+        ? (price * commValue / 100)
+        : commValue;
+
       const payload = {
         ...form,
+        agentCommission: calculatedCommission,
         applyVat: form.calculateVat,
         vatRate: form.calculateVat ? 15 : 0,
         vatInclusive: form.calculateVat ? form.vatInclusive : false,
@@ -664,6 +709,10 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
               <input type="number" value={form.monthlyLateFee} onChange={(e) => setForm({ ...form, monthlyLateFee: e.target.value })} style={inputStyle} />
             </div>
             <div>
+              <label style={labelStyle}>{t('otherFees')}</label>
+              <input type="number" value={form.otherFees} onChange={(e) => setForm({ ...form, otherFees: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
               <label style={labelStyle}>{t('startDate')} *</label>
               <input required type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} style={inputStyle} />
             </div>
@@ -723,9 +772,30 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
                   placeholder={cashT('selectAgent')}
                 />
               </div>
-              <div>
-                <label style={labelStyle}>{t('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={labelStyle}>{commonT('commissionType')}</label>
+                  <select
+                    value={form.agentCommissionType}
+                    onChange={(e) => setForm({ ...form, agentCommissionType: e.target.value as 'percentage' | 'flat' })}
+                    style={inputStyle}
+                  >
+                    <option value="percentage">{commonT('percentage')}</option>
+                    <option value="flat">{commonT('flatAmount')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    {form.agentCommissionType === 'percentage' ? commonT('commissionValue') + ' (%)' : commonT('commissionValue') + ' (SAR)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={form.agentCommissionValue}
+                    onChange={(e) => setForm({ ...form, agentCommissionValue: e.target.value })}
+                    style={inputStyle}
+                    placeholder="0"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -809,8 +879,15 @@ function InstallmentModal({ cars, customers, employees, guarantors, onClose, onS
                   <input type="email" value={newCustomer.email} onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })} style={inputStyle} placeholder={commonT('email')} />
                 </div>
                 <div>
-                  <label style={labelStyle}>{customersT('buildingNumber')} *</label>
-                  <input required value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
+                  <label style={labelStyle}>{commonT('passportNumber')} *</label>
+                  <input required value={newCustomer.passportNumber} onChange={(e) => setNewCustomer({ ...newCustomer, passportNumber: e.target.value })} style={inputStyle} placeholder={commonT('passportNumber')} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{commonT('passportExpiryDate')} *</label>
+                  <input required type="date" value={newCustomer.passportExpiryDate} onChange={(e) => setNewCustomer({ ...newCustomer, passportExpiryDate: e.target.value })} style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>{customersT('buildingNumber')} *</label>                  <input required value={newCustomer.buildingNumber} onChange={(e) => setNewCustomer({ ...newCustomer, buildingNumber: e.target.value })} style={inputStyle} placeholder={customersT('buildingNumber')} />
                 </div>
                 <div>
                   <label style={labelStyle}>{customersT('streetName')} *</label>
@@ -854,10 +931,13 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
     interestRate: sale.interestRate?.toString() || '0',
     tenureMonths: sale.tenureMonths.toString(),
     monthlyLateFee: sale.monthlyLateFee?.toString() || '200',
+    otherFees: sale.otherFees?.toString() || '0',
     voucherNumber: sale.voucherNumber || '',
     notes: sale.notes || '',
     agentName: sale.agentName || '',
     agentCommission: sale.agentCommission?.toString() || '',
+    agentCommissionType: (sale.agentCommissionType || 'flat') as 'percentage' | 'flat',
+    agentCommissionValue: (sale.agentCommissionValue || sale.agentCommission || 0).toString(),
     guarantor: (sale.guarantor as unknown as Guarantor)?._id || (sale.guarantor as string) || '',
     guarantorName: sale.guarantorName || '',
     guarantorPhone: sale.guarantorPhone || '',
@@ -870,7 +950,12 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
   const handleAgentChange = (empId: string) => {
     setAgentId(empId);
     const emp = employees.find(e => e._id === empId);
-    setForm(prev => ({ ...prev, agentName: emp?.name || '', agentCommission: emp?.commissionRate?.toString() || '' }));
+    setForm(prev => ({ 
+      ...prev, 
+      agentName: emp?.name || '', 
+      agentCommissionType: 'percentage',
+      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+    }));
   };
 
   const handleGuarantorChange = (guarantorId: string) => {
@@ -882,8 +967,15 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
     e.preventDefault();
     setLoading(true);
     try {
+      const price = sale.totalPrice;
+      const commValue = parseFloat(form.agentCommissionValue) || 0;
+      const calculatedCommission = form.agentCommissionType === 'percentage'
+        ? (price * commValue / 100)
+        : commValue;
+
       const payload = {
         ...form,
+        agentCommission: calculatedCommission,
         applyVat: form.calculateVat,
         vatRate: form.calculateVat ? 15 : 0,
         vatInclusive: form.calculateVat ? form.vatInclusive : false,
@@ -944,6 +1036,10 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
             <div>
               <label style={labelStyle}>{t('monthlyLateFee')}</label>
               <input type="number" value={form.monthlyLateFee} onChange={(e) => setForm({ ...form, monthlyLateFee: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('otherFees')}</label>
+              <input type="number" value={form.otherFees} onChange={(e) => setForm({ ...form, otherFees: e.target.value })} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>{t('voucherNumber')}</label>
@@ -1009,9 +1105,30 @@ function EditInstallmentModal({ sale, employees, guarantors, onClose, onSave }: 
                   placeholder={cashT('selectAgent')}
                 />
               </div>
-              <div>
-                <label style={labelStyle}>{t('commission')} (%)</label>
-                <input type="number" value={form.agentCommission} onChange={(e) => setForm({ ...form, agentCommission: e.target.value })} style={inputStyle} placeholder="0" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label style={labelStyle}>{commonT('commissionType')}</label>
+                  <select
+                    value={form.agentCommissionType}
+                    onChange={(e) => setForm({ ...form, agentCommissionType: e.target.value as 'percentage' | 'flat' })}
+                    style={inputStyle}
+                  >
+                    <option value="percentage">{commonT('percentage')}</option>
+                    <option value="flat">{commonT('flatAmount')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    {form.agentCommissionType === 'percentage' ? commonT('commissionValue') + ' (%)' : commonT('commissionValue') + ' (SAR)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={form.agentCommissionValue}
+                    onChange={(e) => setForm({ ...form, agentCommissionValue: e.target.value })}
+                    style={inputStyle}
+                    placeholder="0"
+                  />
+                </div>
               </div>
             </div>
           </div>

@@ -38,7 +38,8 @@ jest.mock('@/components/DataTransferButtons', () => ({
 }));
 jest.mock('@/components/ImageUpload', () => ({
   __esModule: true,
-  default: () => <div data-testid="image-upload" />
+  default: () => <div data-testid="image-upload" />,
+  DocumentUpload: () => <div data-testid="document-upload" />
 }));
 
 global.fetch = jest.fn();

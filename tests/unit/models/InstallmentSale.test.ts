@@ -53,6 +53,30 @@ describe('InstallmentSale Model', () => {
     expect(sale.totalPaid).toBe(0);
     expect(sale.deliveryThresholdPercent).toBe(30);
     expect(sale.monthlyLateFee).toBe(200);
+    expect(sale.otherFees).toBe(0);
     expect(sale.isDeleted).toBe(false);
+  });
+
+  it('should save otherFees', async () => {
+    const sale = new InstallmentSale({
+      car: new mongoose.Types.ObjectId(),
+      carId: 'CAR-001',
+      customer: new mongoose.Types.ObjectId(),
+      customerName: 'John Doe',
+      customerPhone: '123456789',
+      totalPrice: 100000,
+      downPayment: 20000,
+      loanAmount: 80000,
+      monthlyPayment: 2000,
+      tenureMonths: 48,
+      startDate: new Date(),
+      nextPaymentDate: new Date(),
+      nextPaymentAmount: 2000,
+      remainingAmount: 80000,
+      createdBy: new mongoose.Types.ObjectId(),
+      otherFees: 1500,
+    });
+
+    expect(sale.otherFees).toBe(1500);
   });
 });

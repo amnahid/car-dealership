@@ -10,7 +10,6 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
-  nationalId?: string;
   passportNumber?: string;
   buildingNumber: string;
   streetName: string;
@@ -18,7 +17,8 @@ interface Customer {
   city: string;
   postalCode: string;
   countryCode: string;
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -48,7 +48,6 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     fullName: customer.fullName,
     phone: customer.phone,
     email: customer.email || '',
-    nationalId: (customer as any).nationalId || '',
     passportNumber: customer.passportNumber || '',
     buildingNumber: customer.buildingNumber || '',
     streetName: customer.streetName || '',
@@ -56,7 +55,7 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     city: customer.city || '',
     postalCode: customer.postalCode || '',
     countryCode: customer.countryCode || 'SA',
-    nationalIdDocument: customer.nationalIdDocument || '',
+    passportDocument: customer.passportDocument || '',
     drivingLicenseDocument: customer.drivingLicenseDocument || '',
     iqamaDocument: customer.iqamaDocument || '',
     profilePhoto: customer.profilePhoto || '',
@@ -67,7 +66,8 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
     vatRegistrationNumber: customer.vatRegistrationNumber || '',
     otherId: customer.otherId || '',
     otherIdType: customer.otherIdType || 'CRN' as 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH',
-    licenseExpiryDate: customer.licenseExpiryDate ? customer.licenseExpiryDate.split('T')[0] : '',
+    licenseExpiryDate: customer.licenseExpiryDate ? new Date(customer.licenseExpiryDate).toISOString().split('T')[0] : '',
+    passportExpiryDate: customer.passportExpiryDate ? new Date(customer.passportExpiryDate).toISOString().split('T')[0] : '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -145,12 +145,12 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
               <input value={form.vatRegistrationNumber} onChange={(e) => setForm({ ...form, vatRegistrationNumber: e.target.value })} placeholder="3xxxxxxxxxxxxxx3" style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('nationalId')}</label>
-              <input value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} style={inputStyle} />
-            </div>
-            <div>
               <label style={labelStyle}>{t('passportNumber')}</label>
               <input value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('passportExpiryDate')}</label>
+              <input type="date" value={form.passportExpiryDate} onChange={(e) => setForm({ ...form, passportExpiryDate: e.target.value })} style={inputStyle} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
               <div>
@@ -213,8 +213,8 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
             <label style={labelStyle}>{t('documents')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <div>
-                <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{t('nationalId')}</label>
-                <DocumentUpload value={form.nationalIdDocument} onChange={(url) => setForm({ ...form, nationalIdDocument: url })} label={t('nationalId')} />
+                <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{t('passportDocument')}</label>
+                <DocumentUpload value={form.passportDocument} onChange={(url) => setForm({ ...form, passportDocument: url })} label={t('passportDocument')} />
               </div>
               <div>
                 <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{t('drivingLicense')}</label>

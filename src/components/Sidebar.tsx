@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 
 interface SidebarProps {
-  userRole: string;
+  userRoles: string[];
 }
 
 interface MenuItem {
@@ -96,12 +96,12 @@ const navItems: MenuItem[] = [
   },
 ];
 
-function filterMenuItems(items: MenuItem[], role: string): MenuItem[] {
+function filterMenuItems(items: MenuItem[], roles: string[]): MenuItem[] {
   return items
-    .filter(item => item.roles.includes(role))
+    .filter(item => item.roles.some(role => roles.includes(role)))
     .map(item => {
       if (item.children) {
-        return { ...item, children: filterMenuItems(item.children, role) };
+        return { ...item, children: filterMenuItems(item.children, roles) };
       }
       return item;
     });
@@ -355,7 +355,7 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
   );
 }
 
-export default function Sidebar({ userRole }: SidebarProps) {
+export default function Sidebar({ userRoles }: SidebarProps) {
   const t = useTranslations('Sidebar');
   const commonT = useTranslations('Common');
   const locale = useLocale();
@@ -385,7 +385,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
 
   const [openMenus, setOpenMenus] = useState<Set<string>>(() => getInitialOpenMenus());
 
-  const filteredItems = filterMenuItems(navItems, userRole);
+  const filteredItems = filterMenuItems(navItems, userRoles);
 
   useEffect(() => {
     const parentMenus = getInitialOpenMenus();

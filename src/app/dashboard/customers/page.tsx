@@ -14,14 +14,15 @@ interface Customer {
   fullName: string;
   phone: string;
   email?: string;
-  nationalId?: string;
+  passportNumber?: string;
   buildingNumber: string;
   streetName: string;
   district: string;
   city: string;
   postalCode: string;
   countryCode: string;
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -282,7 +283,6 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
     fullName: '',
     phone: '',
     email: '',
-    nationalId: '',
     passportNumber: '',
     buildingNumber: '',
     streetName: '',
@@ -295,8 +295,9 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
     otherId: '',
     otherIdType: 'CRN' as 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH',
     licenseExpiryDate: '',
+    passportExpiryDate: '',
     profilePhoto: '',
-    nationalIdDocument: '',
+    passportDocument: '',
     drivingLicenseDocument: '',
     iqamaDocument: '',
     emergencyContactName: '',
@@ -357,12 +358,12 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('nationalId')} *</label>
-              <input required value={form.nationalId} onChange={(e) => setForm({ ...form, nationalId: e.target.value })} style={inputStyle} placeholder="1xxxxxxxxx0" />
+              <label style={labelStyle}>{t('passportNumber')} *</label>
+              <input required value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('passportNumber')}</label>
-              <input value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} />
+              <label style={labelStyle}>{t('passportExpiryDate')} *</label>
+              <input required type="date" value={form.passportExpiryDate} onChange={(e) => setForm({ ...form, passportExpiryDate: e.target.value })} style={inputStyle} />
             </div>
             <div>
               <label style={labelStyle}>{t('customerType')}</label>
@@ -432,12 +433,23 @@ function CustomerModal({ onClose, onSave }: { onClose: () => void; onSave: () =>
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
+            <div>
+              <label style={labelStyle}>{commonT('passportExpiryDate')}</label>
+              <input type="date" value={form.passportExpiryDate} onChange={(e) => setForm({ ...form, passportExpiryDate: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>{t('licenseExpiryDate')}</label>
+              <input type="date" value={form.licenseExpiryDate} onChange={(e) => setForm({ ...form, licenseExpiryDate: e.target.value })} style={inputStyle} />
+            </div>
+          </div>
+
           <div style={{ marginBottom: '20px', paddingTop: '20px', borderTop: '1px solid #e9ecef' }}>
             <label style={labelStyle}>{t('documents')}</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
               <div>
-                <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{t('nationalId')}</label>
-                <DocumentUpload value={form.nationalIdDocument} onChange={(url) => setForm({ ...form, nationalIdDocument: url })} label={t('nationalId')} />
+                <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{commonT('passportDocument')}</label>
+                <DocumentUpload value={form.passportDocument} onChange={(url) => setForm({ ...form, passportDocument: url })} label={commonT('passportDocument')} />
               </div>
               <div>
                 <label style={{ ...labelStyle, fontSize: '12px', color: '#6c757d' }}>{t('drivingLicense')}</label>

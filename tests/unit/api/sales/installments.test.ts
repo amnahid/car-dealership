@@ -138,6 +138,7 @@ describe('Installment Sales API', () => {
         downPayment: 20000,
         tenureMonths: 24,
         startDate: new Date().toISOString(),
+        otherFees: 500,
       };
 
       mockRunInTransaction.mockImplementation(async (callback) => {
@@ -168,9 +169,13 @@ describe('Installment Sales API', () => {
         customerPhone: '123456789',
         carId: 'CAR-001',
         totalPrice: 100000,
+        otherFees: 500,
         save: jest.fn().mockResolvedValue(true),
       };
-      mockInstallmentSale.create.mockResolvedValue([mockCreatedSale]);
+      mockInstallmentSale.create.mockImplementation((args: any) => {
+        expect(args[0].otherFees).toBe(500);
+        return Promise.resolve([mockCreatedSale]);
+      });
       mockInstallmentSale.findById.mockResolvedValue(mockCreatedSale);
 
       mockProcessZatcaInvoice.mockResolvedValue({
@@ -193,6 +198,7 @@ describe('Installment Sales API', () => {
       expect(res.status).toBe(201);
       const data = await res.json();
       expect(data.sale.saleId).toBe('INS-0001');
+      expect(data.sale.otherFees).toBe(500);
     });
   });
 });

@@ -12,7 +12,7 @@ interface Guarantor {
   fullName: string;
   phone: string;
   email?: string;
-  nationalId: string;
+  passportNumber?: string;
   employer?: string;
   salary?: number;
   buildingNumber: string;
@@ -22,7 +22,8 @@ interface Guarantor {
   postalCode: string;
   countryCode: string;
   documents: string[];
-  nationalIdDocument?: string;
+  passportDocument?: string;
+  passportExpiryDate?: string;
   drivingLicenseDocument?: string;
   iqamaDocument?: string;
   profilePhoto?: string;
@@ -131,9 +132,15 @@ export default function GuarantorDetailPage() {
               <span style={{ color: '#2a3142' }}>{guarantor.phone}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#9ca8b3' }}>{t('nationalId')}</span>
-              <span style={{ color: '#2a3142' }}>{guarantor.nationalId}</span>
+              <span style={{ color: '#9ca8b3' }}>{commonT('passportNumber')}</span>
+              <span style={{ color: '#2a3142' }}>{guarantor.passportNumber || '-'}</span>
             </div>
+            {guarantor.passportExpiryDate && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>{commonT('passportExpiryDate')}</span>
+                <span style={{ color: '#2a3142' }}>{new Date(guarantor.passportExpiryDate).toLocaleDateString()}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>{t('employer')}</span>
               <span style={{ color: '#2a3142' }}>{guarantor.employer || '-'}</span>
@@ -155,10 +162,10 @@ export default function GuarantorDetailPage() {
 
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginTop: '24px', marginBottom: '16px' }}>{t('documents')}</h3>
           <div style={{ display: 'grid', gap: '12px' }}>
-            {guarantor.nationalIdDocument && (
+            {guarantor.passportDocument && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: '#f8f9fa', borderRadius: '4px' }}>
-                <span style={{ fontSize: '14px', color: '#2a3142' }}>{commonT('nationalId')}</span>
-                <a href={guarantor.nationalIdDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '13px', fontWeight: 500 }}>{isRtl ? 'عرض' : 'View'}</a>
+                <span style={{ fontSize: '14px', color: '#2a3142' }}>{commonT('passportDocument')}</span>
+                <a href={guarantor.passportDocument} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '13px', fontWeight: 500 }}>{isRtl ? 'عرض' : 'View'}</a>
               </div>
             )}
             {guarantor.drivingLicenseDocument && (
@@ -185,7 +192,7 @@ export default function GuarantorDetailPage() {
                 </div>
               </div>
             )}
-            {!guarantor.nationalIdDocument && !guarantor.drivingLicenseDocument && !guarantor.iqamaDocument && (!guarantor.documents || guarantor.documents.length === 0) && (
+            {!guarantor.passportDocument && !guarantor.drivingLicenseDocument && !guarantor.iqamaDocument && (!guarantor.documents || guarantor.documents.length === 0) && (
               <p style={{ color: '#9ca8b3', fontSize: '14px' }}>{isRtl ? 'لا يوجد مستندات' : 'No documents uploaded'}</p>
             )}
           </div>

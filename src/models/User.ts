@@ -7,6 +7,9 @@ export interface IUserDocument extends Document {
   password: string;
   phone?: string;
   avatar?: string;
+  passportNumber?: string;
+  passportDocument?: string;
+  passportExpiryDate?: Date;
   role: KnownUserRole;
   roles: KnownUserRole[];
   isActive: boolean;
@@ -24,6 +27,9 @@ const UserSchema = new Schema<IUserDocument>(
     password: { type: String, required: true },
     phone: { type: String, trim: true },
     avatar: { type: String, trim: true },
+    passportNumber: { type: String, trim: true },
+    passportDocument: { type: String },
+    passportExpiryDate: { type: Date },
     role: {
       type: String,
       enum: [...USER_ROLES, ...LEGACY_USER_ROLES],
