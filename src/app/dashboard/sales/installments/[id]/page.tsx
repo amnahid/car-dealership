@@ -87,6 +87,7 @@ export default function InstallmentSaleDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPaymentModal, setShowModal] = useState(false);
+  const [showRevertModal, setShowRevertModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
   const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
@@ -279,6 +280,15 @@ export default function InstallmentSaleDetailPage() {
           >
             {regeneratingAgreement ? (sale.agreementUrl ? 'Regenerating...' : 'Generating...') : (sale.agreementUrl ? 'Regenerate Agreement' : 'Generate Agreement')}
           </button>
+          {sale.status === 'Cancelled' && (
+            <button
+              onClick={() => setShowRevertModal(true)}
+              className="no-print"
+              style={{ padding: '8px 16px', background: '#f8b425', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
+            >
+              Revert Cancellation
+            </button>
+          )}
           <span
             style={{
               padding: '6px 12px',
@@ -578,6 +588,16 @@ export default function InstallmentSaleDetailPage() {
         }}
         saleId={sale._id}
         payment={selectedPayment}
+      />
+
+      <RevertCancellationModal
+        isOpen={showRevertModal}
+        onClose={() => setShowRevertModal(false)}
+        onSave={() => {
+          setShowRevertModal(false);
+          fetchSale();
+        }}
+        saleId={sale._id}
       />
 
       {sale.agreementDocument && (

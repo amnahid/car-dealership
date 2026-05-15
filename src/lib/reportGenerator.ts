@@ -277,26 +277,26 @@ export async function generateStatusReport(data: ReportData): Promise<string> {
   y += 6;
   doc.setFont('Cairo', 'normal');
   doc.text(`${processArabic('Total Amount / الإجمالي')}:`, margin, y);
-  doc.text(fmt(data.agreement.totalAmount), margin + 45, y);
+  doc.text(fmt(data.agreement.totalAmount), pageWidth - margin, y, { align: 'right' });
 
   y += 5;
   doc.text(`${processArabic('Paid Amount / المبلغ المدفوع')}:`, margin, y);
   doc.setTextColor(46, 125, 50);
-  doc.text(fmt(data.agreement.paidAmount), margin + 45, y);
+  doc.text(fmt(data.agreement.paidAmount), pageWidth - margin, y, { align: 'right' });
   doc.setTextColor(51, 51, 51);
 
   y += 5;
   doc.setFont('Cairo', 'bold');
   doc.text(`${processArabic('Remaining / المبلغ المتبقي')}:`, margin, y);
   doc.setTextColor(198, 40, 40);
-  doc.text(fmt(data.agreement.remainingAmount), margin + 45, y);
+  doc.text(fmt(data.agreement.remainingAmount), pageWidth - margin, y, { align: 'right' });
   doc.setTextColor(51, 51, 51);
 
   if (data.agreement.totalLateFee) {
     y += 5;
     doc.text(`${processArabic('Total Late Fees / إجمالي غرامات التأخير')}:`, margin, y);
     doc.setTextColor(198, 40, 40);
-    doc.text(fmt(data.agreement.totalLateFee), margin + 45, y);
+    doc.text(fmt(data.agreement.totalLateFee), pageWidth - margin, y, { align: 'right' });
     doc.setTextColor(51, 51, 51);
   }
 
@@ -474,15 +474,18 @@ export async function generateCarProfitLossReport(data: CarPLData): Promise<stri
 
   y += 8;
   doc.setFont('Cairo', 'normal');
-  doc.text(`${processArabic('Total Expenses')}: ${fmt(data.summary.totalExpense)}`, margin + 5, y);
-  doc.text(`${processArabic('Total Revenue')}: ${fmt(data.summary.totalRevenue)}`, pageWidth / 2, y);
+  doc.text(processArabic('Total Expenses'), margin + 5, y);
+  doc.text(fmt(data.summary.totalExpense), pageWidth / 2 - 5, y, { align: 'right' });
+  doc.text(processArabic('Total Revenue'), pageWidth / 2 + 5, y);
+  doc.text(fmt(data.summary.totalRevenue), pageWidth - margin - 5, y, { align: 'right' });
 
   y += 10;
   doc.setFontSize(14);
   doc.setFont('Cairo', 'bold');
   const isProfit = data.summary.netProfit >= 0;
   doc.setTextColor(isProfit ? 46 : 198, isProfit ? 125 : 40, isProfit ? 50 : 40);
-  doc.text(`${processArabic(isProfit ? 'Net Profit / صافي الربح' : 'Net Loss / صافي الخسارة')}: ${fmt(data.summary.netProfit)}`, margin + 5, y);
+  doc.text(processArabic(isProfit ? 'Net Profit / صافي الربح' : 'Net Loss / صافي الخسارة'), margin + 5, y);
+  doc.text(fmt(data.summary.netProfit), pageWidth - margin - 5, y, { align: 'right' });
 
   const pdfBuffer = doc.output('arraybuffer');
   fs.writeFileSync(filePath, Buffer.from(pdfBuffer));
