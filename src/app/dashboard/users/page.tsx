@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
 import DataTransferButtons from '@/components/DataTransferButtons';
-import { ROLE_OPTIONS } from '@/lib/rbac';
-import { DocumentUpload } from '@/components/ImageUpload';
+import UserModal from '@/components/forms/UserModal';
 
 interface User {
   _id: string;
@@ -13,25 +13,10 @@ interface User {
   role: string;
   roles?: string[];
   isActive: boolean;
+  passportNumber?: string;
+  passportExpiryDate?: string;
+  passportDocument?: string;
   createdAt: string;
-}
-
-interface UserFormData {
-  name: string;
-  email: string;
-  password: string;
-  roles: string[];
-  passportNumber: string;
-  passportExpiryDate: string;
-  passportDocument: string;
-}
-
-interface CreateResponse {
-  message?: string;
-  generatedPassword?: string;
-  emailSent?: boolean;
-  error?: string;
-  user: User;
 }
 
 export default function UsersPage() {
@@ -43,19 +28,9 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [error, setError] = useState('');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [success, setSuccess] = useState('');
   const [generatedPw, setGeneratedPw] = useState('');
-  const [formData, setFormData] = useState<UserFormData>({ 
-    name: '', 
-    email: '', 
-    password: '', 
-    roles: ['Sales Person'],
-    passportNumber: '',
-    passportExpiryDate: '',
-    passportDocument: ''
-  });
-  const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
@@ -122,65 +97,16 @@ export default function UsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  const toggleRole = (role: string) => {
-    setFormData(prev => {
-      const next = prev.roles.includes(role)
-        ? prev.roles.filter(r => r !== role)
-        : [...prev.roles, role];
-      if (next.length === 0) return prev;
-      return { ...prev, roles: next };
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setGeneratedPw('');
-    setSaving(true);
-    try {
-      const payload: Record<string, unknown> = { 
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        roles: formData.roles,
-        passportNumber: formData.passportNumber,
-        passportExpiryDate: formData.passportExpiryDate,
-        passportDocument: formData.passportDocument
-      };
-      if (!payload.password) delete payload.password;
-      const res = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data: CreateResponse = await res.json();
-      if (!res.ok) {
-        setError(data.error || t('errors.failedToCreate'));
-        return;
-      }
-      if (data.generatedPassword) {
-        setGeneratedPw(data.generatedPassword);
-        setSuccess(t('successCreatedWithPw'));
-      } else {
-        setSuccess(t('successCreated'));
-      }
-      setShowForm(false);
-      setFormData({ 
-        name: '', 
-        email: '', 
-        password: '', 
-        roles: ['Sales Person'],
-        passportNumber: '',
-        passportExpiryDate: '',
-        passportDocument: ''
-      });
-      fetchUsers();
-    } catch {
-      setError(t('errors.networkError'));
-    } finally {
-      setSaving(false);
+  const handleSave = (pw?: string) => {
+    if (pw) {
+      setGeneratedPw(pw);
+      setSuccess(t('successCreatedWithPw'));
+    } else {
+      setSuccess(t('successCreated'));
     }
+    setShowForm(false);
+    setEditingUser(null);
+    fetchUsers();
   };
 
   const toggleActive = async (id: string, current: boolean) => {
@@ -212,26 +138,6 @@ export default function UsersPage() {
     return t(`roles.${key}`);
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    height: '40px',
-    fontSize: '14px',
-    borderRadius: '0',
-    padding: '0 12px',
-    border: '1px solid #ced4da',
-    background: '#ffffff',
-    textAlign: isRtl ? 'right' : 'left'
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: 500,
-    color: '#2a3142',
-    marginBottom: '4px',
-    textAlign: isRtl ? 'right' : 'left'
-  };
-
   return (
     <div style={{ marginBottom: '24px' }}>
       <div
@@ -247,7 +153,7 @@ export default function UsersPage() {
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <DataTransferButtons entityType="users" showImport={false} />
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => { setEditingUser(null); setShowForm(true); }}
             style={{
               background: '#28aaa9',
               color: '#ffffff',
@@ -264,164 +170,23 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {showForm && (
-        <div className="card" style={{ padding: '24px', maxWidth: '500px', marginLeft: isRtl ? 'auto' : '0', marginRight: isRtl ? '0' : 'auto' }}>
-          <h3
-            style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              color: '#2a3142',
-              marginBottom: '16px',
-              textAlign: isRtl ? 'right' : 'left'
-            }}
-          >
-            {t('createUser')}
-          </h3>
-          {error && (
-            <div
-              style={{
-                background: 'rgba(236, 69, 97, 0.1)',
-                border: '1px solid #ec4561',
-                borderRadius: '3px',
-                padding: '12px',
-                marginBottom: '16px',
-                textAlign: isRtl ? 'right' : 'left'
-              }}
-            >
-              <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
-            </div>
-          )}
-          {success && (
-            <div
-              style={{
-                background: 'rgba(40, 170, 169, 0.1)',
-                border: '1px solid #28aaa9',
-                borderRadius: '3px',
-                padding: '12px',
-                marginBottom: '16px',
-                textAlign: isRtl ? 'right' : 'left'
-              }}
-            >
-              <p style={{ color: '#28aaa9', fontSize: '14px', margin: 0 }}>{success}</p>
-              {generatedPw && (
-                <div style={{ marginTop: '8px', padding: '8px', background: '#fff', borderRadius: '4px' }}>
-                  <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>{t('generatedPw')}</p>
-                  <code style={{ fontSize: '14px', color: '#2a3142', fontWeight: 600 }}>{generatedPw}</code>
-                </div>
-              )}
-            </div>
-          )}
-          <form onSubmit={handleSubmit} style={{ marginBottom: '16px' }}>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>{t('name')} *</label>
-              <input
-                required
-                value={formData.name}
-                onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                style={inputStyle}
-              />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>{t('email')} *</label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-                style={inputStyle}
-              />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>{t('password')} {formData.password ? '' : t('pwAutoHint')}</label>
-              <input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData((p) => ({ ...p, password: e.target.value }))}
-                placeholder={t('pwAutoHint')}
-                style={inputStyle}
-              />
-              <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '4px 0 0', textAlign: isRtl ? 'right' : 'left' }}>
-                {t('pwHelp')}
-              </p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-              <div>
-                <label style={labelStyle}>{commonT('passportNumber')}</label>
-                <input
-                  value={formData.passportNumber}
-                  onChange={(e) => setFormData((p) => ({ ...p, passportNumber: e.target.value }))}
-                  style={inputStyle}
-                />
+      {(showForm || editingUser) && (
+        <UserModal 
+          user={editingUser}
+          onClose={() => { setShowForm(false); setEditingUser(null); }}
+          onSave={handleSave}
+        />
+      )}
+
+      {success && (
+        <div className="card" style={{ padding: '16px', marginBottom: '24px', background: 'rgba(40, 170, 169, 0.1)', border: '1px solid #28aaa9' }}>
+           <p style={{ color: '#28aaa9', fontSize: '14px', margin: 0, textAlign: isRtl ? 'right' : 'left' }}>{success}</p>
+           {generatedPw && (
+              <div style={{ marginTop: '8px', padding: '8px', background: '#fff', borderRadius: '4px' }}>
+                <p style={{ fontSize: '12px', color: '#9ca8b3', margin: '0 0 4px' }}>{t('generatedPw')}</p>
+                <code style={{ fontSize: '14px', color: '#2a3142', fontWeight: 600 }}>{generatedPw}</code>
               </div>
-              <div>
-                <label style={labelStyle}>{commonT('passportExpiryDate')}</label>
-                <input
-                  type="date"
-                  value={formData.passportExpiryDate}
-                  onChange={(e) => setFormData((p) => ({ ...p, passportExpiryDate: e.target.value }))}
-                  style={inputStyle}
-                />
-              </div>
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>{commonT('passportDocument')}</label>
-              <DocumentUpload 
-                value={formData.passportDocument} 
-                onChange={(url) => setFormData((p) => ({ ...p, passportDocument: url }))}
-                label={commonT('passportDocument')}
-              />
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={labelStyle}>{t('selectRoles')} *</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '12px', border: '1px solid #ced4da', background: '#f9f9f9' }}>
-                {ROLE_OPTIONS.map((r) => (
-                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={formData.roles.includes(r)} 
-                      onChange={() => toggleRole(r)}
-                    />
-                    {getRoleLabel(r)}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: '#2a3142',
-                  background: '#ffffff',
-                  border: '1px solid #ced4da',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                }}
-              >
-                {commonT('cancel')}
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: '#ffffff',
-                  background: '#28aaa9',
-                  border: '1px solid #28aaa9',
-                  borderRadius: '3px',
-                  cursor: saving ? 'not-allowed' : 'pointer',
-                  opacity: saving ? 0.6 : 1,
-                }}
-              >
-                {saving ? commonT('loading') : t('createBtn')}
-              </button>
-            </div>
-          </form>
+            )}
         </div>
       )}
 
@@ -552,6 +317,29 @@ export default function UsersPage() {
                   <td style={{ padding: '12px', color: '#525f80' }}>{new Date(u.createdAt).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')}</td>
                   <td style={{ padding: '12px' }}>
                     <div style={{ display: 'flex', gap: '12px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                      <Link
+                        href={`/dashboard/users/${u._id}`}
+                        style={{
+                          color: '#28aaa9',
+                          fontSize: '14px',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        {commonT('view')}
+                      </Link>
+                      <button
+                        onClick={() => setEditingUser(u)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#28aaa9',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      >
+                        {commonT('edit')}
+                      </button>
                       <button
                         onClick={() => toggleActive(u._id, u.isActive)}
                         style={{

@@ -149,13 +149,13 @@ export default function EditCustomerModal({ customer, onClose, onSave }: EditCus
               <input value={form.passportNumber} onChange={(e) => setForm({ ...form, passportNumber: e.target.value })} style={inputStyle} />
             </div>
             <div>
-              <label style={labelStyle}>{t('passportExpiryDate')}</label>
+              <label style={labelStyle}>{commonT('passportExpiryDate')}</label>
               <input type="date" value={form.passportExpiryDate} onChange={(e) => setForm({ ...form, passportExpiryDate: e.target.value })} style={inputStyle} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px' }}>
               <div>
                 <label style={labelStyle}>{t('otherIdType')}</label>
-                <select value={form.otherIdType} onChange={(e) => setForm({ ...form, otherIdType: e.target.value as any })} style={{ ...inputStyle, background: '#fff' }}>
+                <select value={form.otherIdType} onChange={(e) => setForm({ ...form, otherIdType: e.target.value as 'CRN' | 'MOM' | 'MLSD' | 'SAGIA' | 'OTH' })} style={{ ...inputStyle, background: '#fff' }}>
                   <option value="CRN">CRN</option>
                   <option value="MOM">MOM</option>
                   <option value="MLSD">MLSD</option>

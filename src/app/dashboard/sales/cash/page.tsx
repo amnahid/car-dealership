@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
-import EmployeeModal from '@/components/forms/EmployeeModal';
+import SalesAgentModal, { SalesAgent } from '@/components/forms/SalesAgentModal';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -32,13 +32,6 @@ interface Customer {
   customerType?: string;
   vatRegistrationNumber?: string;
   licenseExpiryDate?: string;
-}
-
-interface Employee {
-  _id: string;
-  name: string;
-  designation: string;
-  commissionRate: number;
 }
 
 interface Sale {
@@ -140,7 +133,7 @@ export default function CashSalesPage() {
 
   const [cars, setCars] = useState<Car[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [salesAgents, setSalesAgents] = useState<SalesAgent[]>([]);
 
   const fetchSales = useCallback(async () => {
     setLoading(true);
@@ -179,11 +172,11 @@ export default function CashSalesPage() {
     } catch (err) { console.error(err); }
   }, []);
 
-  const fetchEmployees = useCallback(async () => {
+  const fetchSalesAgents = useCallback(async () => {
     try {
-      const res = await fetch('/api/employees?limit=100&active=true&department=Sales', { cache: 'no-store' });
+      const res = await fetch('/api/crm/sales-agents?limit=100', { cache: 'no-store' });
       const data = await res.json();
-      setEmployees(data.employees || []);
+      setSalesAgents(data.agents || []);
     } catch (err) { console.error(err); }
   }, []);
 
@@ -198,8 +191,8 @@ export default function CashSalesPage() {
   useEffect(() => {
     fetchCars();
     fetchCustomers();
-    fetchEmployees();
-  }, [fetchCars, fetchCustomers, fetchEmployees]);
+    fetchSalesAgents();
+  }, [fetchCars, fetchCustomers, fetchSalesAgents]);
 
 
   const handleSearch = (value: string) => {
@@ -442,18 +435,19 @@ export default function CashSalesPage() {
         <CashSaleModal 
           cars={cars} 
           customers={customers} 
-          employees={employees} 
+          salesAgents={salesAgents} 
           fetchCustomers={fetchCustomers} 
-          fetchEmployees={fetchEmployees}
+          fetchSalesAgents={fetchSalesAgents}
           onClose={() => setShowModal(false)} 
           onSave={() => { setShowModal(false); fetchSales(); }} 
         />
       )}
+
       {editingSale && (
         <EditCashSaleModal 
           sale={editingSale} 
-          employees={employees} 
-          fetchEmployees={fetchEmployees}
+          salesAgents={salesAgents} 
+          fetchSalesAgents={fetchSalesAgents}
           onClose={() => setEditingSale(null)} 
           onSave={handleUpdateSale} 
         />
@@ -462,7 +456,7 @@ export default function CashSalesPage() {
   );
 }
 
-function CashSaleModal({ cars, customers, employees, fetchCustomers, fetchEmployees, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; fetchCustomers: () => void; fetchEmployees: () => void; onClose: () => void; onSave: () => void }) {
+function CashSaleModal({ cars, customers, salesAgents, fetchCustomers, fetchSalesAgents, onClose, onSave }: { cars: Car[]; customers: Customer[]; salesAgents: SalesAgent[]; fetchCustomers: () => void; fetchSalesAgents: () => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('CashSales');
   const commonT = useTranslations('Common');
   const customersT = useTranslations('Customers');
@@ -512,18 +506,16 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, fetchEmploy
     setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '', invoiceType: cust?.customerType === 'Business' ? 'Standard' : 'Simplified', buyerTrn: cust?.vatRegistrationNumber || '' });
   };
 
-  const handleAgentChange = (empId: string) => {
-    if (empId === '__new_agent__') {
+  const handleAgentChange = (agentId: string) => {
+    if (agentId === '__new_agent__') {
       setShowAgentModal(true);
       return;
     }
-    setAgentId(empId);
-    const emp = employees.find(e => e._id === empId);
+    setAgentId(agentId);
+    const agent = salesAgents.find(e => e._id === agentId);
     setForm(prev => ({ 
       ...prev, 
-      agentName: emp?.name || '', 
-      agentCommissionType: 'percentage',
-      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+      agentName: agent?.fullName || '', 
     }));
   };
 
@@ -651,15 +643,15 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, fetchEmploy
             </div>
             <div>
               <SearchableSelect
-                label={t('salesAgent')}
-                value={agentId}
-                onChange={handleAgentChange}
                 options={[
                   { value: '', label: t('none') },
                   { value: '__new_agent__', label: t('addNewAgent') },
-                  ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                  ...salesAgents.map(e => ({ value: e._id, label: `${e.fullName} (${e.agentId})` })),
                 ]}
                 placeholder={t('selectAgent')}
+                value={agentId}
+                onChange={handleAgentChange}
+                label={t('salesAgent')}
               />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -803,21 +795,12 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, fetchEmploy
       )}
 
       {showAgentModal && (
-        <EmployeeModal 
-          employee={null} 
+        <SalesAgentModal 
+          agent={null} 
           onClose={() => setShowAgentModal(false)} 
-          onSave={(newEmp) => {
-            fetchEmployees();
+          onSave={() => {
+            fetchSalesAgents();
             setShowAgentModal(false);
-            if (newEmp) {
-              setAgentId(newEmp._id);
-              setForm(prev => ({
-                ...prev,
-                agentName: newEmp.name,
-                agentCommissionType: 'percentage',
-                agentCommissionValue: newEmp.commissionRate?.toString() || '0'
-              }));
-            }
           }} 
         />
       )}
@@ -825,7 +808,7 @@ function CashSaleModal({ cars, customers, employees, fetchCustomers, fetchEmploy
   );
 }
 
-function EditCashSaleModal({ sale, employees, fetchEmployees, onClose, onSave }: { sale: Sale; employees: Employee[]; fetchEmployees: () => void; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
+function EditCashSaleModal({ sale, salesAgents, fetchSalesAgents, onClose, onSave }: { sale: Sale; salesAgents: SalesAgent[]; fetchSalesAgents: () => void; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
   const t = useTranslations('CashSales');
   const commonT = useTranslations('Common');
   const locale = useLocale();
@@ -844,22 +827,20 @@ function EditCashSaleModal({ sale, employees, fetchEmployees, onClose, onSave }:
     calculateVat: sale.applyVat ?? ((sale.vatRate || 0) > 0),
     vatInclusive: !!(sale as any).vatInclusive,
   });
-  const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
+  const [agentId, setAgentId] = useState(() => salesAgents.find(e => e.fullName === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
 
-  const handleAgentChange = (empId: string) => {
-    if (empId === '__new_agent__') {
+  const handleAgentChange = (agentId: string) => {
+    if (agentId === '__new_agent__') {
       setShowAgentModal(true);
       return;
     }
-    setAgentId(empId);
-    const emp = employees.find(e => e._id === empId);
+    setAgentId(agentId);
+    const agent = salesAgents.find(e => e._id === agentId);
     setForm(prev => ({ 
       ...prev, 
-      agentName: emp?.name || '', 
-      agentCommissionType: 'percentage',
-      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+      agentName: agent?.fullName || '', 
     }));
   };
 
@@ -931,15 +912,15 @@ function EditCashSaleModal({ sale, employees, fetchEmployees, onClose, onSave }:
             </div>
             <div>
               <SearchableSelect
-                label={t('salesAgent')}
-                value={agentId}
-                onChange={handleAgentChange}
                 options={[
                   { value: '', label: t('none') },
                   { value: '__new_agent__', label: t('addNewAgent') },
-                  ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                  ...salesAgents.map(e => ({ value: e._id, label: `${e.fullName} (${e.agentId})` })),
                 ]}
                 placeholder={t('selectAgent')}
+                value={agentId}
+                onChange={handleAgentChange}
+                label={t('salesAgent')}
               />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -995,21 +976,12 @@ function EditCashSaleModal({ sale, employees, fetchEmployees, onClose, onSave }:
       </div>
 
       {showAgentModal && (
-        <EmployeeModal 
-          employee={null} 
+        <SalesAgentModal 
+          agent={null} 
           onClose={() => setShowAgentModal(false)} 
-          onSave={(newEmp) => {
-            fetchEmployees();
+          onSave={() => {
+            fetchSalesAgents();
             setShowAgentModal(false);
-            if (newEmp) {
-              setAgentId(newEmp._id);
-              setForm(prev => ({
-                ...prev,
-                agentName: newEmp.name,
-                agentCommissionType: 'percentage',
-                agentCommissionValue: newEmp.commissionRate?.toString() || '0'
-              }));
-            }
           }} 
         />
       )}

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
-import EmployeeModal from '@/components/forms/EmployeeModal';
+import SalesAgentModal, { SalesAgent } from '@/components/forms/SalesAgentModal';
+import GuarantorModal, { IGuarantor as Guarantor } from '@/components/forms/GuarantorModal';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -17,12 +17,6 @@ interface Customer {
   profilePhoto?: string;
   customerType?: string;
   vatRegistrationNumber?: string;
-}
-
-interface Guarantor {
-  _id: string;
-  fullName: string;
-  phone: string;
 }
 
 interface Car {
@@ -40,13 +34,6 @@ interface Car {
   purchasePrice?: number;
   status?: string;
   images?: string[];
-}
-
-interface Employee {
-  _id: string;
-  name: string;
-  designation: string;
-  commissionRate: number;
 }
 
 interface Sale {
@@ -154,7 +141,7 @@ export default function InstallmentsPage() {
 
   const [cars, setCars] = useState<Car[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [salesAgents, setSalesAgents] = useState<SalesAgent[]>([]);
   const [guarantors, setGuarantors] = useState<Guarantor[]>([]);
 
   const fetchSales = useCallback(async () => {
@@ -194,11 +181,11 @@ export default function InstallmentsPage() {
     } catch (err) { console.error(err); }
   }, []);
 
-  const fetchEmployees = useCallback(async () => {
+  const fetchSalesAgents = useCallback(async () => {
     try {
-      const res = await fetch('/api/employees?limit=100&active=true&department=Sales', { cache: 'no-store' });
+      const res = await fetch('/api/crm/sales-agents?limit=100', { cache: 'no-store' });
       const data = await res.json();
-      setEmployees(data.employees || []);
+      setSalesAgents(data.agents || []);
     } catch (err) { console.error(err); }
   }, []);
 
@@ -221,9 +208,9 @@ export default function InstallmentsPage() {
   useEffect(() => {
     fetchCars();
     fetchCustomers();
-    fetchEmployees();
+    fetchSalesAgents();
     fetchGuarantors();
-  }, [fetchCars, fetchCustomers, fetchEmployees, fetchGuarantors]);
+  }, [fetchCars, fetchCustomers, fetchSalesAgents, fetchGuarantors]);
 
   const handleSearch = (value: string) => {
     setSearch(value);
@@ -501,33 +488,36 @@ export default function InstallmentsPage() {
         <InstallmentModal 
           cars={cars} 
           customers={customers} 
-          employees={employees} 
+          salesAgents={salesAgents} 
           guarantors={guarantors} 
           fetchCustomers={fetchCustomers} 
-          fetchEmployees={fetchEmployees}
+          fetchSalesAgents={fetchSalesAgents}
+          fetchGuarantors={fetchGuarantors}
           onClose={() => setShowModal(false)} 
           onSave={() => { setShowModal(false); fetchSales(); }} 
         />
       )}
+
       {editingSale && (
         <EditInstallmentModal 
           sale={editingSale} 
-          employees={employees} 
+          salesAgents={salesAgents} 
           guarantors={guarantors}
-          fetchEmployees={fetchEmployees}
+          fetchSalesAgents={fetchSalesAgents}
+          fetchGuarantors={fetchGuarantors}
           onClose={() => setEditingSale(null)} 
           onSave={handleUpdateSale} 
-        />
-      )}
+        />      )}
     </div>
   );
 }
 
-function InstallmentModal({ cars, customers, employees, guarantors, fetchCustomers, fetchEmployees, onClose, onSave }: { cars: Car[]; customers: Customer[]; employees: Employee[]; guarantors: Guarantor[]; fetchCustomers: () => void; fetchEmployees: () => void; onClose: () => void; onSave: () => void }) {
+function InstallmentModal({ cars, customers, salesAgents, guarantors, fetchCustomers, fetchSalesAgents, fetchGuarantors, onClose, onSave }: { cars: Car[]; customers: Customer[]; salesAgents: SalesAgent[]; guarantors: Guarantor[]; fetchCustomers: () => void; fetchSalesAgents: () => void; fetchGuarantors: () => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
   const customersT = useTranslations('Customers');
+  const guarantorsT = useTranslations('Guarantors');
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
@@ -569,7 +559,9 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
   const [loading, setLoading] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
+  const [showGuarantorModal, setShowGuarantorModal] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ 
+ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
 
   const handleCarChange = (carId: string) => {
     const car = cars.find(c => c.carId === carId);
@@ -585,22 +577,24 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
     setForm({ ...form, customer: customerId, customerName: cust?.fullName || '', customerPhone: cust?.phone || '', invoiceType: cust?.customerType === 'Business' ? 'Standard' : 'Simplified', buyerTrn: cust?.vatRegistrationNumber || '' });
   };
 
-  const handleAgentChange = (empId: string) => {
-    if (empId === '__new_agent__') {
+  const handleAgentChange = (agentId: string) => {
+    if (agentId === '__new_agent__') {
       setShowAgentModal(true);
       return;
     }
-    setAgentId(empId);
-    const emp = employees.find(e => e._id === empId);
+    setAgentId(agentId);
+    const agent = salesAgents.find(e => e._id === agentId);
     setForm(prev => ({ 
       ...prev, 
-      agentName: emp?.name || '', 
-      agentCommissionType: 'percentage',
-      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+      agentName: agent?.fullName || '', 
     }));
   };
 
   const handleGuarantorChange = (guarantorId: string) => {
+    if (guarantorId === '__new_guarantor__') {
+      setShowGuarantorModal(true);
+      return;
+    }
     const gua = guarantors.find(g => g._id === guarantorId);
     setForm(prev => ({ ...prev, guarantor: guarantorId, guarantorName: gua?.fullName || '', guarantorPhone: gua?.phone || '' }));
   };
@@ -711,13 +705,11 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
               onChange={handleGuarantorChange}
               options={[
                 { value: '', label: commonT('none') },
+                { value: '__new_guarantor__', label: `+ ${guarantorsT('addNew')}` },
                 ...guarantors.map(g => ({ value: g._id, label: `${g.fullName} - ${g.phone}` })),
               ]}
               placeholder={t('guarantorName')}
             />
-            <div style={{ textAlign: isRtl ? 'left' : 'right', marginTop: '4px' }}>
-                <Link href="/dashboard/crm/guarantors" target="_blank" style={{ fontSize: '12px', color: '#28aaa9', textDecoration: 'none' }}>+ {isRtl ? 'إضافة كفيل جديد في CRM' : 'Add new guarantor in CRM'}</Link>
-            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
@@ -800,7 +792,7 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
                   options={[
                     { value: '', label: cashT('none') },
                     { value: '__new_agent__', label: cashT('addNewAgent') },
-                    ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                    ...salesAgents.map(e => ({ value: e._id, label: e.fullName })),
                   ]}
                   placeholder={cashT('selectAgent')}
                 />
@@ -949,19 +941,29 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
         )}
 
         {showAgentModal && (
-          <EmployeeModal 
-            employee={null} 
+          <SalesAgentModal 
+            agent={null} 
             onClose={() => setShowAgentModal(false)} 
-            onSave={(newEmp) => {
-              fetchEmployees();
+            onSave={() => {
+              fetchSalesAgents();
               setShowAgentModal(false);
-              if (newEmp) {
-                setAgentId(newEmp._id);
-                setForm(prev => ({
-                  ...prev,
-                  agentName: newEmp.name,
-                  agentCommissionType: 'percentage',
-                  agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+            }} 
+          />
+        )}
+
+        {showGuarantorModal && (
+          <GuarantorModal 
+            guarantor={null} 
+            onClose={() => setShowGuarantorModal(false)} 
+            onSave={(newGua) => {
+              fetchGuarantors();
+              setShowGuarantorModal(false);
+              if (newGua) {
+                setForm(prev => ({ 
+                  ...prev, 
+                  guarantor: newGua._id, 
+                  guarantorName: newGua.fullName, 
+                  guarantorPhone: newGua.phone 
                 }));
               }
             }} 
@@ -972,10 +974,11 @@ function InstallmentModal({ cars, customers, employees, guarantors, fetchCustome
   );
 }
 
-function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onClose, onSave }: { sale: Sale; employees: Employee[]; guarantors: Guarantor[]; fetchEmployees: () => void; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
+function EditInstallmentModal({ sale, salesAgents, guarantors, fetchSalesAgents, fetchGuarantors, onClose, onSave }: { sale: Sale; salesAgents: SalesAgent[]; guarantors: Guarantor[]; fetchSalesAgents: () => void; fetchGuarantors: () => void; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
+  const guarantorsT = useTranslations('Guarantors');
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
@@ -996,24 +999,31 @@ function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onC
     guarantorName: sale.guarantorName || '',
     guarantorPhone: sale.guarantorPhone || '',
     calculateVat: sale.applyVat ?? ((sale.vatRate || 0) > 0),
-    vatInclusive: !!(sale as any).vatInclusive,
+    vatInclusive: !!(sale as Sale).vatInclusive,
   });
-  const [agentId, setAgentId] = useState(() => employees.find(e => e.name === sale.agentName)?._id || '');
+  const [agentId, setAgentId] = useState(() => salesAgents.find(e => e.fullName === sale.agentName)?._id || '');
   const [loading, setLoading] = useState(false);
   const [showAgentModal, setShowAgentModal] = useState(false);
+  const [showGuarantorModal, setShowGuarantorModal] = useState(false);
 
-  const handleAgentChange = (empId: string) => {
-    setAgentId(empId);
-    const emp = employees.find(e => e._id === empId);
+  const handleAgentChange = (agentId: string) => {
+    if (agentId === '__new_agent__') {
+      setShowAgentModal(true);
+      return;
+    }
+    setAgentId(agentId);
+    const agent = salesAgents.find(e => e._id === agentId);
     setForm(prev => ({ 
       ...prev, 
-      agentName: emp?.name || '', 
-      agentCommissionType: 'percentage',
-      agentCommissionValue: emp?.commissionRate?.toString() || '' 
+      agentName: agent?.fullName || '', 
     }));
   };
 
   const handleGuarantorChange = (guarantorId: string) => {
+    if (guarantorId === '__new_guarantor__') {
+      setShowGuarantorModal(true);
+      return;
+    }
     const gua = guarantors.find(g => g._id === guarantorId);
     setForm(prev => ({ ...prev, guarantor: guarantorId, guarantorName: gua?.fullName || '', guarantorPhone: gua?.phone || '' }));
   };
@@ -1030,6 +1040,12 @@ function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onC
 
       const payload = {
         ...form,
+        downPayment: parseFloat(form.downPayment) || 0,
+        monthlyPayment: parseFloat(form.monthlyPayment) || 0,
+        interestRate: parseFloat(form.interestRate) || 0,
+        tenureMonths: parseInt(form.tenureMonths) || 0,
+        monthlyLateFee: parseFloat(form.monthlyLateFee) || 0,
+        otherFees: parseFloat(form.otherFees) || 0,
         agentCommission: calculatedCommission,
         applyVat: form.calculateVat,
         vatRate: form.calculateVat ? 15 : 0,
@@ -1156,7 +1172,7 @@ function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onC
                   options={[
                     { value: '', label: cashT('none') },
                     { value: '__new_agent__', label: cashT('addNewAgent') },
-                    ...employees.map(e => ({ value: e._id, label: `${e.name}${e.designation ? ` (${e.designation})` : ''}` })),
+                    ...salesAgents.map(e => ({ value: e._id, label: e.fullName })),
                   ]}
                   placeholder={cashT('selectAgent')}
                 />
@@ -1197,6 +1213,7 @@ function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onC
                   onChange={handleGuarantorChange}
                   options={[
                     { value: '', label: commonT('none') },
+                    { value: '__new_guarantor__', label: `+ ${guarantorsT('addNew')}` },
                     ...guarantors.map(g => ({ value: g._id, label: `${g.fullName} - ${g.phone}` })),
                   ]}
                   placeholder={t('guarantorName')}
@@ -1205,7 +1222,7 @@ function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onC
           </div>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             {sale.status !== 'Cancelled' && (
-              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { await onSave(sale._id, { ...form, status: 'Cancelled' } as any); onClose(); } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
+              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { await onSave(sale._id, { status: 'Cancelled' } as any); onClose(); } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
             )}
             <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('close')}</button>
             <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : commonT('save')}</button>
@@ -1214,19 +1231,29 @@ function EditInstallmentModal({ sale, employees, guarantors, fetchEmployees, onC
       </div>
 
       {showAgentModal && (
-        <EmployeeModal 
-          employee={null} 
+        <SalesAgentModal 
+          agent={null} 
           onClose={() => setShowAgentModal(false)} 
-          onSave={(newEmp) => {
-            fetchEmployees();
+          onSave={() => {
+            fetchSalesAgents();
             setShowAgentModal(false);
-            if (newEmp) {
-              setAgentId(newEmp._id);
-              setForm(prev => ({
-                ...prev,
-                agentName: newEmp.name,
-                agentCommissionType: 'percentage',
-                agentCommissionValue: newEmp.commissionRate?.toString() || '0'
+          }} 
+        />
+      )}
+
+      {showGuarantorModal && (
+        <GuarantorModal 
+          guarantor={null} 
+          onClose={() => setShowGuarantorModal(false)} 
+          onSave={(newGua) => {
+            fetchGuarantors();
+            setShowGuarantorModal(false);
+            if (newGua) {
+              setForm(prev => ({ 
+                ...prev, 
+                guarantor: newGua._id, 
+                guarantorName: newGua.fullName, 
+                guarantorPhone: newGua.phone 
               }));
             }
           }} 

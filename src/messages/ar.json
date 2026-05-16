@@ -103,6 +103,9 @@
     "rentalsPerformance": "أداء الإيجارات (وكيل)",
     "noRentals": "لا توجد إيجارات مسجلة.",
     "commission": "العمولة",
+    "saleId": "رقم البيع",
+    "rentalId": "رقم الإيجار",
+    "car": "السيارة",
     "paidOn": "دفع في",
     "totalEarnings": "إجمالي المستحقات",
     "totalCommission": "إجمالي العمولات",
@@ -860,7 +863,10 @@
       "payment_reminder": "تذكير بالدفع",
       "payment_overdue": "تأخر الدفع",
       "salary_payment": "دفع الراتب",
-      "document_renewed": "تجديد المستند"
+      "document_renewed": "تجديد المستند",
+      "SaleConfirmation": "تأكيد البيع",
+      "InstallmentReminder": "تذكير بالقسط",
+      "document_expiry": "انتهاء المستند"
     }
   },
   "ActivityLogs": {
@@ -876,6 +882,7 @@
     "title": "إدارة المستخدمين",
     "addNew": "إضافة مستخدم",
     "createUser": "إنشاء مستخدم جديد",
+    "editUser": "تعديل مستخدم",
     "createBtn": "إنشاء مستخدم",
     "name": "الاسم",
     "email": "البريد الإلكتروني",

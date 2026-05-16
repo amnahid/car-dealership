@@ -103,6 +103,9 @@
     "rentalsPerformance": "Rentals Performance (Agent)",
     "noRentals": "No rentals recorded.",
     "commission": "Commission",
+    "saleId": "Sale ID",
+    "rentalId": "Rental ID",
+    "car": "Car",
     "paidOn": "Paid on",
     "totalEarnings": "Total Earnings",
     "totalCommission": "Total Commission",
@@ -861,7 +864,10 @@
       "payment_reminder": "Payment Reminder",
       "payment_overdue": "Payment Overdue",
       "salary_payment": "Salary Payment",
-      "document_renewed": "Document Renewed"
+      "document_renewed": "Document Renewed",
+      "SaleConfirmation": "Sale Confirmation",
+      "InstallmentReminder": "Installment Reminder",
+      "document_expiry": "Document Expiry"
     }
   },
   "ActivityLogs": {
@@ -877,6 +883,7 @@
     "title": "User Management",
     "addNew": "Add User",
     "createUser": "Create New User",
+    "editUser": "Edit User",
     "createBtn": "Create User",
     "name": "Name",
     "email": "Email",
