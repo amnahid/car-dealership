@@ -4,7 +4,7 @@ services:
     container_name: car-dealership-mongodb
     restart: unless-stopped
     volumes:
-      - mongodb-data:/data/db
+      - /var/lib/car-dealership/mongodb:/data/db
     networks:
       - car-network
 
@@ -69,4 +69,3 @@ networks:
 volumes:
   caddy-data:
   caddy-config:
-  mongodb-data:

@@ -1,3 +1,7 @@
-amyalcar.com, 193.24.208.229 {
+amyalcar.com {
+    reverse_proxy nginx:81
+}
+
+http://193.24.208.229 {
     reverse_proxy nginx:81
 }
