@@ -1,12 +1,4 @@
 services:
-  mongodb:
-    image: mongo:6.0
-    container_name: car-dealership-mongodb
-    restart: unless-stopped
-    volumes:
-      - /var/lib/car-dealership/mongodb:/data/db
-    networks:
-      - car-network
 
   app:
     build:
@@ -22,8 +14,7 @@ services:
       - car-network
     volumes:
       - /var/lib/car-dealership/uploads:/app/public/uploads
-    depends_on:
-      - mongodb
+
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:4000', function(r){process.exit(0)}).on('error', function(){process.exit(1)})"]
       interval: 30s
