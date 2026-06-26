@@ -10,7 +10,7 @@ interface DateRangeFilterProps {
   initialPreset?: DateRangePreset;
 }
 
-export function DateRangeFilter({ onChange, initialPreset = '1y' }: DateRangeFilterProps) {
+export function DateRangeFilter({ onChange, initialPreset = 'all' }: DateRangeFilterProps) {
   const t = useTranslations('Charts.DateRange');
   const locale = useLocale();
   const isRtl = locale === 'ar';

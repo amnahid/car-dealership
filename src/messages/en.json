@@ -15,6 +15,7 @@
     "cost": "Total Cost",
     "profit": "Profit",
     "presets": {
+      "all": "All Time",
       "day": "Today",
       "week": "This Week",
       "month": "This Month",

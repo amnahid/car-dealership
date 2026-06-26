@@ -134,7 +134,7 @@ function IncomesContent() {
         </div>
       </div>
 
-      <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} initialPreset="30d" />
+      <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
 
       <div className="no-print" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '20px' }}>

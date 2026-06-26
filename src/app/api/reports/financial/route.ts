@@ -26,12 +26,12 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
 
     // Set date range based on period or custom dates
-    let dateFilter: Record<string, Date> = {};
+    let dateFilter: Record<string, Date> | null = null;
     const now = new Date();
 
     if (startDate && endDate) {
       dateFilter = { $gte: new Date(startDate), $lte: new Date(endDate) };
-    } else {
+    } else if (period !== 'all') {
       switch (period) {
         case 'day':
           dateFilter = { $gte: new Date(now.setHours(0, 0, 0, 0)) };
@@ -50,6 +50,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const incomeMatch: Record<string, any> = { type: 'Income', isDeleted: { $ne: true } };
+    const expenseMatch: Record<string, any> = { type: 'Expense', isDeleted: { $ne: true } };
+    const cashSaleMatch: Record<string, any> = { status: { $ne: 'Cancelled' } };
+    const salesByMonthMatch: Record<string, any> = { type: 'Income', category: 'Cash Sale', isDeleted: { $ne: true } };
+
+    if (dateFilter) {
+      incomeMatch.date = dateFilter;
+      expenseMatch.date = dateFilter;
+      cashSaleMatch.saleDate = dateFilter;
+      salesByMonthMatch.date = dateFilter;
+    }
+
     const [
       incomeStats,
       expenseStats,
@@ -58,17 +70,17 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       // Aggregate all incomes by category
       Transaction.aggregate([
-        { $match: { type: 'Income', date: dateFilter, isDeleted: { $ne: true } } },
+        { $match: incomeMatch },
         { $group: { _id: '$category', total: { $sum: '$amount' } } },
       ]),
       // Aggregate all expenses by category
       Transaction.aggregate([
-        { $match: { type: 'Expense', date: dateFilter, isDeleted: { $ne: true } } },
+        { $match: expenseMatch },
         { $group: { _id: '$category', total: { $sum: '$amount' } } },
       ]),
       // Profit per car (based on Active cash sales)
       CashSale.aggregate([
-        { $match: { saleDate: dateFilter, status: { $ne: 'Cancelled' } } },
+        { $match: cashSaleMatch },
         {
           $lookup: {
             from: 'cars',
@@ -96,7 +108,7 @@ export async function GET(request: NextRequest) {
       ]),
       // Sales counts and totals by month (from Transactions)
       Transaction.aggregate([
-        { $match: { type: 'Income', category: 'Cash Sale', date: dateFilter, isDeleted: { $ne: true } } },
+        { $match: salesByMonthMatch },
         {
           $group: {
             _id: { $month: '$date' },
@@ -154,7 +166,7 @@ export async function GET(request: NextRequest) {
         total: profitPerCar[0]?.totalProfit || 0,
       },
       salesByMonth,
-      period: { start: dateFilter.$gte, end: dateFilter.$lte || new Date() },
+      period: { start: dateFilter?.$gte || null, end: dateFilter?.$lte || null },
     });
   } catch (error) {
     console.error('Get financial report error:', error);

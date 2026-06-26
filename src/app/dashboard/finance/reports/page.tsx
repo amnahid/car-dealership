@@ -59,7 +59,7 @@ function ReportsContent() {
   const [breakdown, setBreakdown] = useState<Breakdown>({ cashSales: 0, installmentPayments: 0, rentalIncome: 0, salaryExpenses: 0, carPurchaseCosts: 0, repairCosts: 0, otherExpenses: 0 });
   const [cars, setCars] = useState<Car[]>([]);
   const [profitSummary, setProfitSummary] = useState<ProfitSummary>({ totalCars: 0, soldCars: 0, totalRevenue: 0, totalCost: 0, totalProfit: 0, avgProfit: 0 });
-  const [period, setPeriod] = useState('month');
+  const [period, setPeriod] = useState('all');
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   const fetchData = useCallback(async () => {
@@ -100,7 +100,15 @@ function ReportsContent() {
   }, [fetchData, fetchProfitPerCar]);
 
   useEffect(() => {
-    const preset = searchParams.get('preset') || 'thisMonth';
+    const preset = searchParams.get('preset');
+    if (!preset) return;
+
+    if (preset === 'all') {
+      setPeriod('all');
+      setDateRange({ startDate: '', endDate: '' });
+      return;
+    }
+
     const now = new Date();
     let start: Date;
 
@@ -119,7 +127,17 @@ function ReportsContent() {
         start = new Date(now.getFullYear(), 0, 1);
         break;
       default:
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        return;
+    }
+
+    const periodMap: Record<string, string> = {
+      today: 'day',
+      thisWeek: 'week',
+      thisMonth: 'month',
+      thisYear: 'year',
+    };
+    if (periodMap[preset]) {
+      setPeriod(periodMap[preset]);
     }
 
     setDateRange({
@@ -130,6 +148,15 @@ function ReportsContent() {
 
   const handlePresetChange = (value: string) => {
     setPeriod(value);
+    
+    if (value === 'all') {
+      setDateRange({
+        startDate: '',
+        endDate: '',
+      });
+      return;
+    }
+
     const now = new Date();
     let start: Date;
 
@@ -217,7 +244,7 @@ function ReportsContent() {
       </div>
 
       <div className="no-print" style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-        {['day', 'week', 'month', 'year'].map(p => (
+        {['all', 'day', 'week', 'month', 'year'].map(p => (
           <button
             key={p}
             onClick={() => handlePresetChange(p)}
