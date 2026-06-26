@@ -21,6 +21,7 @@ export default function EmployeesPage() {
   const [deptFilter, setDeptFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalEmployees, setTotalEmployees] = useState(0);
   const [totalMonthlySalary, setTotalMonthlySalary] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -82,6 +83,7 @@ export default function EmployeesPage() {
       const data = await res.json();
       setEmployees(data.employees || []);
       setTotalPages(data.pagination?.pages || 1);
+      setTotalEmployees(data.pagination?.total || 0);
       setTotalMonthlySalary(data.totalMonthlySalary || 0);
     } catch (err) {
       console.error(err);
@@ -124,7 +126,7 @@ export default function EmployeesPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #28aaa9', borderRight: isRtl ? '4px solid #28aaa9' : 'none' }}>
           <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalEmployees')}</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{employees.length}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{totalEmployees}</p>
         </div>
         <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #ec4561', borderRight: isRtl ? '4px solid #ec4561' : 'none' }}>
           <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('monthlySalaryExpense')}</p>

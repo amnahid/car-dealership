@@ -58,6 +58,8 @@ export default function RentalsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRentals, setTotalRentals] = useState(0);
+  const [totalActiveRentals, setTotalActiveRentals] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [editingRental, setEditingRental] = useState<Rental | null>(null);
@@ -127,6 +129,8 @@ export default function RentalsPage() {
       const data = await res.json();
       setRentals(data.rentals || []);
       setTotalPages(data.pagination?.pages || 1);
+      setTotalRentals(data.pagination?.total || 0);
+      setTotalActiveRentals(data.activeCount || 0);
       setTotalRevenue(data.totalRevenue || 0);
     } catch (err) {
       console.error(err);
@@ -243,7 +247,7 @@ export default function RentalsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #28aaa9', borderRight: isRtl ? '4px solid #28aaa9' : 'none' }}>
           <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('totalRentals')}</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{rentals.length}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#28aaa9', margin: '4px 0 0' }}>{totalRentals}</p>
         </div>
         <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #42ca7f', borderRight: isRtl ? '4px solid #42ca7f' : 'none' }}>
           <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{cashT('totalRevenue')}</p>
@@ -251,7 +255,7 @@ export default function RentalsPage() {
         </div>
         <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #f5a623', borderRight: isRtl ? '4px solid #f5a623' : 'none' }}>
           <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('active')}</p>
-          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0' }}>{rentals.filter(r => r.status === 'Active').length}</p>
+          <p style={{ fontSize: '28px', fontWeight: 700, color: '#f5a623', margin: '4px 0 0' }}>{totalActiveRentals}</p>
         </div>
       </div>
 

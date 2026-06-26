@@ -43,6 +43,7 @@ export default function SalaryPaymentsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalThisMonth, setTotalThisMonth] = useState(0);
   const [totalShown, setTotalShown] = useState(0);
+  const [totalPayments, setTotalPayments] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
@@ -116,6 +117,7 @@ export default function SalaryPaymentsPage() {
       setTotalPages(data.pagination?.pages || 1);
       setTotalThisMonth(data.totalThisMonth || 0);
       setTotalShown(data.totalShown || 0);
+      setTotalPayments(data.pagination?.total || 0);
     } catch (err) {
       console.error(err);
     } finally {
@@ -182,7 +184,7 @@ export default function SalaryPaymentsPage() {
         </div>
         <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #525f80', borderRight: isRtl ? '4px solid #525f80' : 'none' }}>
           <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase' }}>{t('recordsShown')}</p>
-          <p style={{ fontSize: '24px', fontWeight: 700, color: '#2a3142', margin: '4px 0 0' }}>{payments.length}</p>
+          <p style={{ fontSize: '24px', fontWeight: 700, color: '#2a3142', margin: '4px 0 0' }}>{totalPayments}</p>
         </div>
       </div>
 

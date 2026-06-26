@@ -44,20 +44,20 @@ export default function SalesHubPage() {
 
         setStats({
           cash: { 
-            count: cashData.sales?.length || 0, 
+            count: cashData.pagination?.total || 0, 
             revenue: cashData.totalRevenue || 0 
           },
           installments: { 
-            count: installData.sales?.length || 0, 
+            count: installData.pagination?.total || 0, 
             totalValue: installData.totalValue || 0,
             totalPaid: installData.totalPaid || 0
           },
           rentals: { 
-            count: rentalData.sales?.length || 0, 
+            count: rentalData.pagination?.total || 0, 
             revenue: rentalData.totalRevenue || 0 
           },
           returns: { 
-            count: returnData.returns?.length || 0, 
+            count: returnData.pagination?.total || 0, 
             totalRefunds: returnData.stats?.totalRefunds || 0 
           },
         });

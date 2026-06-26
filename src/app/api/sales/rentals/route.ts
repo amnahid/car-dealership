@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     }
 
     const skip = (page - 1) * limit;
-    const [rentals, total, totalStatsAgg] = await Promise.all([
+    const [rentals, total, totalStatsAgg, activeCount] = await Promise.all([
       Rental.find(query)
         .sort({ startDate: -1 })
         .skip(skip)
@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
         { $match: { ...query, status: { $ne: 'Cancelled' } } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]),
+      Rental.countDocuments({ ...query, status: 'Active' }),
     ]);
 
     const rentalsWithStatus = rentals.map((r) => {
@@ -106,6 +107,7 @@ export async function GET(request: NextRequest) {
       rentals: rentalsWithStatus,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       totalRevenue: totalStatsAgg[0]?.total || 0,
+      activeCount,
     });
   } catch (error) {
     console.error('Get rentals error:', error);
