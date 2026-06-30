@@ -268,13 +268,15 @@ export async function POST(request: NextRequest) {
           { $set: { errorMessage } }
         );
         // Write error back to the sale so it surfaces in the detail page
+        // Critical: Only downgrade the status to 'Failed' if the parent sale record is NOT already in a successful state ('Reported' or 'Cleared')
         const failUpdate = { zatcaStatus: 'Failed', zatcaErrorMessage: errorMessage };
+        const query = { _id: invoice.referenceId, zatcaStatus: { $nin: ['Reported', 'Cleared'] } };
         if (invoice.referenceType === 'CashSale') {
-          await CashSale.updateOne({ _id: invoice.referenceId }, { $set: failUpdate });
+          await CashSale.updateOne(query, { $set: failUpdate });
         } else if (invoice.referenceType === 'InstallmentSale') {
-          await InstallmentSale.updateOne({ _id: invoice.referenceId }, { $set: failUpdate });
+          await InstallmentSale.updateOne(query, { $set: failUpdate });
         } else if (invoice.referenceType === 'Rental') {
-          await Rental.updateOne({ _id: invoice.referenceId }, { $set: failUpdate });
+          await Rental.updateOne(query, { $set: failUpdate });
         }
         results.push({ uuid: invoice.uuid, status: 'Failed', success: false, error: errorMessage });
       }
