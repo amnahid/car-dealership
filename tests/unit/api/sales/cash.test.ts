@@ -117,7 +117,7 @@ describe('Cash Sales API', () => {
       };
 
       mockRunInTransaction.mockImplementation(async (callback) => {
-        return callback({});
+        return callback(null);
       });
 
       mockCar.findById.mockReturnValue({

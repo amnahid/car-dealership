@@ -64,7 +64,7 @@ describe('Installment Payments API', () => {
 
       // Mock transaction wrapper to just call the function
       mockRunInTransaction.mockImplementation(async (callback) => {
-        return callback({ session: 'dummy-session' });
+        return callback({ hasEnded: false } as any);
       });
 
       const mockSale = {

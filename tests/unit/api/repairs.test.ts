@@ -83,7 +83,7 @@ describe('Repairs API', () => {
       const repairData = { car: validCarId, carId: 'CAR-001', repairDescription: 'Oil change', repairDate: '2024-01-01', totalCost: 100 };
       
       mockRunInTransaction.mockImplementation(async (callback) => {
-        return callback({});
+        return callback(null);
       });
 
       mockCar.findById.mockReturnValue({ session: jest.fn().mockResolvedValue({ status: 'In Stock' }) } as any);

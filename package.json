@@ -9,10 +9,12 @@
     "build": "next build --webpack",
     "start": "next start -p 4000",
     "lint": "eslint",
+    "type-check": "tsc --noEmit",
     "cron": "node scripts/cron-alerts.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "pre-deploy": "npm run type-check && npm run lint && npm test"
   },
   "dependencies": {
     "@mailerlite/mailerlite-nodejs": "^1.5.0",

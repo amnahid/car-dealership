@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -21,6 +21,12 @@ export default function DocumentDetailPage() {
   const [doc, setDoc] = useState<DocData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const expiryDate = doc?.expiryDate;
+  const daysLeft = useMemo(() => {
+    if (!expiryDate) return 0;
+    return Math.ceil((new Date(expiryDate).getTime() - new Date().getTime()) / 86400000);
+  }, [expiryDate]);
+
   useEffect(() => {
     if (id) {
       fetch(`/api/documents/${id}`)
@@ -34,8 +40,6 @@ export default function DocumentDetailPage() {
 
   if (loading) return <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Loading...</div>;
   if (!doc) return <div style={{ padding: '32px', textAlign: 'center', color: '#9ca8b3' }}>Document not found</div>;
-
-  const daysLeft = Math.ceil((new Date(doc.expiryDate).getTime() - Date.now()) / 86400000);
 
   return (
     <div style={{ maxWidth: '600px' }}>

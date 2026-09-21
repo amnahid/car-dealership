@@ -93,7 +93,7 @@ describe('Cars API', () => {
       const carData = { brand: 'Toyota', model: 'Camry', year: 2023, chassisNumber: 'CH123' };
       
       mockRunInTransaction.mockImplementation(async (callback) => {
-        return callback({});
+        return callback(null);
       });
 
       mockCar.create.mockResolvedValue([ { ...carData, _id: 'carid', carId: 'CAR-001' } ]);

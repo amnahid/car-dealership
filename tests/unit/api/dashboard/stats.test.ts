@@ -66,14 +66,14 @@ describe('Dashboard Stats API', () => {
   });
 
   it('returns 403 if forbidden role', async () => {
-    mockGetAuthPayload.mockResolvedValue({ userId: '123', email: 'test@test.com', normalizedRoles: ['Mechanic'] });
+    mockGetAuthPayload.mockResolvedValue({ userId: '123', email: 'test@test.com', normalizedRoles: ['Mechanic'] } as any);
     const req = new NextRequest('http://localhost/api/dashboard/stats');
     const res = await GET(req);
     expect(res.status).toBe(403);
   });
 
   it('fetches quick stats correctly including On Installment and Defaulted statuses', async () => {
-    mockGetAuthPayload.mockResolvedValue({ userId: '123', email: 'test@test.com', normalizedRoles: ['Admin'] });
+    mockGetAuthPayload.mockResolvedValue({ userId: '123', email: 'test@test.com', normalizedRoles: ['Admin'] } as any);
     
     // Quick Path Mocks
     (Car.countDocuments as jest.Mock)
@@ -111,7 +111,7 @@ describe('Dashboard Stats API', () => {
   });
 
   it('fetches standard stats correctly including On Installment and Defaulted statuses', async () => {
-    mockGetAuthPayload.mockResolvedValue({ userId: '123', email: 'test@test.com', normalizedRoles: ['Admin'] });
+    mockGetAuthPayload.mockResolvedValue({ userId: '123', email: 'test@test.com', normalizedRoles: ['Admin'] } as any);
     
     // Standard Path Mocks
     (Car.countDocuments as jest.Mock)

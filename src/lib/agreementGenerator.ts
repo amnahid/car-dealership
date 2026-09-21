@@ -1,9 +1,9 @@
 import { jsPDF } from 'jspdf';
 import fs from 'fs';
 import path from 'path';
-// @ts-expect-error
+// @ts-expect-error missing type definitions for arabic-reshaper
 import arabicReshaper from 'arabic-reshaper';
-// @ts-expect-error
+// @ts-expect-error missing type definitions for bidi-js
 import bidiFactoryImport from 'bidi-js';
 
 // Robust detection for CJS/ESM interop in Turbopack/Next.js
@@ -15,15 +15,15 @@ const bidi = typeof bidiFactory === 'function'
   ? bidiFactory() 
   : { 
       getReorderedString: (s: string) => s,
-      getEmbeddingLevels: (s: string) => ({ paragraphs: [] })
+      getEmbeddingLevels: (_s: string) => ({ paragraphs: [] })
     };
 
 function processArabic(text: string): string {
   if (!text) return '';
   if (!/[\u0600-\u06FF]/.test(text)) return text;
   
-  let reshaper: any = arabicReshaper;
-  const findReshape = (obj: any): Function | null => {
+  const reshaper: any = arabicReshaper;
+  const findReshape = (obj: any): ((t: string) => string) | null => {
     if (!obj) return null;
     if (typeof obj.convertArabic === 'function') return obj.convertArabic.bind(obj);
     if (typeof obj.reshape === 'function') return obj.reshape.bind(obj);
@@ -43,7 +43,7 @@ function processArabic(text: string): string {
   const reshapeFn = findReshape(reshaper);
   
   try {
-    let reshaped = reshapeFn ? reshapeFn(text) : text;
+    const reshaped = reshapeFn ? reshapeFn(text) : text;
     return reshaped.replace(/[\u0600-\u06FF\uFE70-\uFEFF]+/g, (match: string) => {
       return match.split('').reverse().join('');
     });

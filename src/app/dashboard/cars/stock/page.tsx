@@ -42,18 +42,25 @@ export default function StockPage() {
   const [stats, setStats] = useState<StockStats>({ count: 0, totalPurchase: 0, totalRepair: 0 });
 
   useEffect(() => {
-    setLoading(true);
+    let active = true;
     const params = new URLSearchParams({ limit: '15', status: 'In Stock', page: page.toString() });
     if (debouncedSearch) params.set('brand', debouncedSearch);
 
     fetch(`/api/cars?${params}`)
       .then(res => res.json())
       .then(data => {
+        if (!active) return;
         setCars(data.cars || []);
         setTotalPages(data.pagination?.pages || 1);
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, [page, debouncedSearch]);
 
   useEffect(() => {

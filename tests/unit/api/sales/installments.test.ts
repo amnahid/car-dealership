@@ -142,7 +142,7 @@ describe('Installment Sales API', () => {
       };
 
       mockRunInTransaction.mockImplementation(async (callback) => {
-        return callback({});
+        return callback(null);
       });
 
       const mockResult = { status: 'In Stock', brand: 'Toyota', carModel: 'Camry', carId: 'CAR-001' };
