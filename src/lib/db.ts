@@ -94,27 +94,52 @@ export async function connectDB(): Promise<typeof mongoose> {
 /**
  * Safely runs a callback within a MongoDB transaction.
  * Automatically falls back to non-transactional execution if the MongoDB 
- * instance is a standalone (not a replica set), which is common in local dev.
+ * instance is a standalone, does not support transactions, or if a session mismatch occurs.
  */
 export async function runInTransaction<T>(
-  callback: (session: mongoose.ClientSession) => Promise<T>
+  callback: (session: mongoose.ClientSession | null) => Promise<T>
 ): Promise<T> {
-  const session = await mongoose.startSession();
+  const conn = await connectDB();
+  let session: mongoose.ClientSession | null = null;
+
+  try {
+    session = await conn.startSession();
+  } catch {
+    return await callback(null);
+  }
+
   try {
     let result: T | undefined;
+    let transactionRan = false;
+
     try {
       await session.withTransaction(async () => {
+        transactionRan = true;
         result = await callback(session);
       });
       return result as T;
     } catch (error: any) {
-      // Error code 20 or specific message indicates standalone mode
-      if (error.code === 20 || error.message?.includes('replica set')) {
-        return await callback(session);
+      const msg = error?.message || '';
+      const name = error?.name || '';
+      const isSessionOrStandaloneError =
+        error?.code === 20 ||
+        name === 'MongoInvalidArgumentError' ||
+        name === 'MongoDriverError' ||
+        msg.includes('replica set') ||
+        msg.includes('MongoClient') ||
+        msg.includes('Transaction numbers') ||
+        msg.includes('Cannot use a session');
+
+      if (isSessionOrStandaloneError && !transactionRan) {
+        return await callback(null);
       }
       throw error;
     }
   } finally {
-    await session.endSession();
+    if (session) {
+      try {
+        await session.endSession();
+      } catch {}
+    }
   }
 }

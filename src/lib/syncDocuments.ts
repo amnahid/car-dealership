@@ -17,7 +17,7 @@ export async function syncPurchaseDocuments(
   carObjectId: string | mongoose.Types.ObjectId,
   purchase: PurchaseData,
   userId: string | mongoose.Types.ObjectId,
-  session?: mongoose.ClientSession
+  session?: mongoose.ClientSession | null
 ) {
   const docsToSync = [
     {

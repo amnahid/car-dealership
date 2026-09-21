@@ -60,7 +60,14 @@ TransactionSchema.index({ category: 1, date: -1 });
 
 TransactionSchema.pre('save', async function (this: ITransactionDocument) {
   if (!this.isNew || this.transactionId) return;
-  const count = await mongoose.model('Transaction').countDocuments().session(this.$session() || null);
+  const countQuery = mongoose.model('Transaction').countDocuments();
+  const sess = this.$session();
+  if (sess) {
+    try {
+      countQuery.session(sess);
+    } catch {}
+  }
+  const count = await countQuery;
   this.transactionId = `TXN-${String(count + 1).padStart(6, '0')}`;
 });
 

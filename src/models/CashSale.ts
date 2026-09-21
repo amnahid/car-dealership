@@ -101,11 +101,7 @@ CashSaleSchema.pre('save', async function (this: ICashSaleDocument) {
   this.saleId = `CSH-${String(count + 1).padStart(4, '0')}`;
 });
 
-// Force re-compilation of the model to handle schema changes in development
-if (mongoose.models.CashSale) {
-  delete mongoose.models.CashSale;
-}
-
-const CashSale: Model<ICashSaleDocument> = mongoose.model<ICashSaleDocument>('CashSale', CashSaleSchema);
+const CashSale: Model<ICashSaleDocument> =
+  mongoose.models.CashSale || mongoose.model<ICashSaleDocument>('CashSale', CashSaleSchema);
 
 export default CashSale;

@@ -9,7 +9,7 @@ import { logActivity } from '@/lib/activityLogger';
 
 import mongoose from 'mongoose';
 
-async function updateCarRepairCost(carId: string, session?: mongoose.ClientSession) {
+async function updateCarRepairCost(carId: string, session?: mongoose.ClientSession | null) {
   const result = await Repair.aggregate([
     { $match: { car: new mongoose.Types.ObjectId(carId), isDeleted: { $ne: true } } },
     { $group: { _id: null, total: { $sum: '$totalCost' } } },

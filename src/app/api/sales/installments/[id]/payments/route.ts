@@ -86,21 +86,21 @@ export async function POST(
         const hasOverdue = sale.paymentSchedule.some(p => p.status === 'Overdue');
         if (!hasOverdue && sale.status === 'Defaulted') {
           sale.status = 'Active';
-          await Car.findByIdAndUpdate(sale.car, { status: 'On Installment' }, { session });
+          await Car.findByIdAndUpdate(sale.car, { status: 'On Installment' }, session ? { session } : undefined);
         } else if (hasOverdue) {
           sale.status = 'Defaulted';
-          await Car.findByIdAndUpdate(sale.car, { status: 'Defaulted' }, { session });
+          await Car.findByIdAndUpdate(sale.car, { status: 'Defaulted' }, session ? { session } : undefined);
         }
       } else {
         sale.status = 'Completed';
         sale.nextPaymentDate = null as unknown as Date;
         sale.nextPaymentAmount = 0;
-        await Car.findByIdAndUpdate(sale.car, { status: 'Sold' }, { session });
+        await Car.findByIdAndUpdate(sale.car, { status: 'Sold' }, session ? { session } : undefined);
       }
 
       // Explicitly mark paymentSchedule as modified for Mongoose array tracking
       sale.markModified('paymentSchedule');
-      await sale.save({ session });
+      await sale.save(session ? { session } : undefined);
 
       // Create ledger transactions
       const transactions: any[] = [{
@@ -130,7 +130,7 @@ export async function POST(
       }
 
       for (const txData of transactions) {
-        await Transaction.create([txData], { session });
+        await Transaction.create([txData], session ? { session } : {});
       }
 
       await logActivity({
