@@ -15,6 +15,7 @@ interface Payment {
   paidDate?: string;
   paidAmount?: number;
   lateFee?: number;
+  notes?: string;
 }
 
 interface Sale {
@@ -87,6 +88,9 @@ export default function InstallmentSaleDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showPaymentModal, setShowModal] = useState(false);
+  const [showEditPaymentModal, setShowEditPaymentModal] = useState(false);
+  const [showEditScheduleModal, setShowEditScheduleModal] = useState(false);
+  const [showRevertPaymentModal, setShowRevertPaymentModal] = useState(false);
   const [showRevertModal, setShowRevertModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
@@ -141,6 +145,21 @@ export default function InstallmentSaleDetailPage() {
   const handleRecordPayment = (payment: Payment) => {
     setSelectedPayment(payment);
     setShowModal(true);
+  };
+
+  const handleEditPayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowEditPaymentModal(true);
+  };
+
+  const handleEditSchedule = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowEditScheduleModal(true);
+  };
+
+  const handleRevertPayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowRevertPaymentModal(true);
   };
 
   const handleCancelSale = async () => {
@@ -589,22 +608,74 @@ export default function InstallmentSaleDetailPage() {
                       {payment.paidDate ? new Date(payment.paidDate).toLocaleDateString() : '-'}
                     </td>
                     <td style={{ padding: '12px' }}>
-                      {payment.status !== 'Paid' && (
-                        <button
-                          onClick={() => handleRecordPayment(payment)}
-                          style={{
-                            padding: '6px 12px',
-                            background: '#42ca7f',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '12px',
-                          }}
-                        >
-                          Record Payment
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        {payment.status !== 'Paid' ? (
+                          <>
+                            <button
+                              onClick={() => handleRecordPayment(payment)}
+                              style={{
+                                padding: '5px 10px',
+                                background: '#42ca7f',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Record Payment
+                            </button>
+                            <button
+                              onClick={() => handleEditSchedule(payment)}
+                              style={{
+                                padding: '5px 10px',
+                                background: '#f8f9fa',
+                                color: '#525f80',
+                                border: '1px solid #ced4da',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                              }}
+                            >
+                              Edit Schedule
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEditPayment(payment)}
+                              style={{
+                                padding: '5px 10px',
+                                background: '#28aaa9',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Edit Payment
+                            </button>
+                            <button
+                              onClick={() => handleRevertPayment(payment)}
+                              style={{
+                                padding: '5px 10px',
+                                background: '#fff1f0',
+                                color: '#ec4561',
+                                border: '1px solid #ffa39e',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Revert
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -619,6 +690,39 @@ export default function InstallmentSaleDetailPage() {
         onClose={() => setShowModal(false)}
         onSave={() => {
           setShowModal(false);
+          fetchSale();
+        }}
+        saleId={sale._id}
+        payment={selectedPayment}
+      />
+
+      <EditPaymentModal
+        isOpen={showEditPaymentModal}
+        onClose={() => setShowEditPaymentModal(false)}
+        onSave={() => {
+          setShowEditPaymentModal(false);
+          fetchSale();
+        }}
+        saleId={sale._id}
+        payment={selectedPayment}
+      />
+
+      <EditScheduleModal
+        isOpen={showEditScheduleModal}
+        onClose={() => setShowEditScheduleModal(false)}
+        onSave={() => {
+          setShowEditScheduleModal(false);
+          fetchSale();
+        }}
+        saleId={sale._id}
+        payment={selectedPayment}
+      />
+
+      <RevertPaymentModal
+        isOpen={showRevertPaymentModal}
+        onClose={() => setShowRevertPaymentModal(false)}
+        onSave={() => {
+          setShowRevertPaymentModal(false);
           fetchSale();
         }}
         saleId={sale._id}
@@ -910,6 +1014,345 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
             <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
             <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: '#42ca7f', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer' }}>
               {loading ? 'Saving...' : 'Record Payment'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface EditPaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  saleId: string;
+  payment: Payment | null;
+}
+
+function EditPaymentModal({ isOpen, onClose, onSave, saleId, payment }: EditPaymentModalProps) {
+  const [amount, setAmount] = useState('');
+  const [lateFeeAmount, setLateFeeAmount] = useState('0');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [method, setMethod] = useState('Cash');
+  const [voucherNumber, setVoucherNumber] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (payment) {
+      const baseAmount = payment.paidAmount !== undefined
+        ? payment.paidAmount - (payment.lateFee || 0)
+        : payment.amount;
+      setAmount(baseAmount.toString());
+      setLateFeeAmount((payment.lateFee || 0).toString());
+      setPaymentDate(payment.paidDate ? new Date(payment.paidDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      setMethod(payment.method || 'Cash');
+      setVoucherNumber(payment.voucherNumber || '');
+      setNotes(payment.notes || '');
+      setError('');
+    }
+  }, [payment]);
+
+  if (!isOpen || !payment) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/sales/installments/${saleId}/payments`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          installmentNumber: payment.installmentNumber,
+          action: 'edit',
+          amount: parseFloat(amount),
+          lateFeeAmount: parseFloat(lateFeeAmount),
+          paymentDate,
+          method,
+          voucherNumber,
+          notes,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update payment');
+      }
+
+      onSave();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalToPay = (parseFloat(amount) || 0) + (parseFloat(lateFeeAmount) || 0);
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '420px', maxWidth: '90%' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '6px', color: '#2a3142' }}>Edit Payment - #{payment.installmentNumber}</h3>
+        <p style={{ fontSize: '13px', color: '#525f80', marginBottom: '16px' }}>
+          Update payment details. Sale totals and ledger transactions will be automatically synchronized.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Base Amount (SAR)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee Collected (SAR)</label>
+            <input
+              type="number"
+              value={lateFeeAmount}
+              onChange={(e) => setLateFeeAmount(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ marginBottom: '16px', padding: '10px', background: '#f8f9fa', borderRadius: '4px', textAlign: 'center' }}>
+            <span style={{ fontSize: '13px', color: '#525f80' }}>Total Paid: </span>
+            <span style={{ fontSize: '15px', fontWeight: 600, color: '#28aaa9' }}>SAR {totalToPay.toLocaleString()}</span>
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Payment Date</label>
+            <input
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Method</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              >
+                <option value="Cash">Cash</option>
+                <option value="Bank">Bank Transfer</option>
+                <option value="Online">Online</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Voucher #</label>
+              <input
+                value={voucherNumber}
+                onChange={(e) => setVoucherNumber(e.target.value)}
+                placeholder="V-0000"
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              />
+            </div>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes (Optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px', height: '60px', resize: 'none' }}
+            />
+          </div>
+          {error && <div style={{ color: '#ec4561', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Saving...' : 'Update Payment'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface EditScheduleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  saleId: string;
+  payment: Payment | null;
+}
+
+function EditScheduleModal({ isOpen, onClose, onSave, saleId, payment }: EditScheduleModalProps) {
+  const [amount, setAmount] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (payment) {
+      setAmount(payment.amount.toString());
+      setDueDate(payment.dueDate ? new Date(payment.dueDate).toISOString().split('T')[0] : '');
+      setNotes(payment.notes || '');
+      setError('');
+    }
+  }, [payment]);
+
+  if (!isOpen || !payment) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/sales/installments/${saleId}/payments`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          installmentNumber: payment.installmentNumber,
+          action: 'edit',
+          amount: parseFloat(amount),
+          dueDate,
+          notes,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update schedule');
+      }
+
+      onSave();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '380px', maxWidth: '90%' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '6px', color: '#2a3142' }}>Edit Schedule - #{payment.installmentNumber}</h3>
+        <p style={{ fontSize: '13px', color: '#525f80', marginBottom: '16px' }}>
+          Adjust the scheduled amount and due date for this installment.
+        </p>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Scheduled Amount (SAR)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Due Date</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              required
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+            />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Notes (Optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px', height: '60px', resize: 'none' }}
+            />
+          </div>
+          {error && <div style={{ color: '#ec4561', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Saving...' : 'Update Schedule'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface RevertPaymentModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  saleId: string;
+  payment: Payment | null;
+}
+
+function RevertPaymentModal({ isOpen, onClose, onSave, saleId, payment }: RevertPaymentModalProps) {
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  if (!isOpen || !payment) return null;
+
+  const handleRevert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/sales/installments/${saleId}/payments`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          installmentNumber: payment.installmentNumber,
+          action: 'revert',
+          notes: notes ? `[Reverted]: ${notes}` : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to revert payment');
+      }
+
+      onSave();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+      <div style={{ background: '#ffffff', padding: '24px', borderRadius: '8px', width: '420px', maxWidth: '90%' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#ec4561' }}>Revert Payment #{payment.installmentNumber}</h3>
+        <p style={{ fontSize: '14px', color: '#525f80', lineHeight: '1.5', marginBottom: '16px' }}>
+          This will change the status of installment <strong>#{payment.installmentNumber}</strong> from <strong>Paid</strong> back to <strong>Pending / Overdue</strong>.
+          <br /><br />
+          The recorded payment of <strong>SAR {(payment.paidAmount || payment.amount).toLocaleString()}</strong> will be deducted from Total Paid, the remaining balance will be restored, and related income transaction records will be cancelled.
+        </p>
+        <form onSubmit={handleRevert}>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Reason / Notes (Optional)</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Payment recorded with wrong cheque / entry error"
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px', height: '70px', resize: 'none' }}
+            />
+          </div>
+          {error && <div style={{ color: '#ec4561', fontSize: '13px', marginBottom: '16px' }}>{error}</div>}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={{ padding: '8px 16px', background: '#f8f9fa', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+            <button type="submit" disabled={loading} style={{ padding: '8px 16px', background: '#ec4561', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Reverting...' : 'Confirm Revert'}
             </button>
           </div>
         </form>

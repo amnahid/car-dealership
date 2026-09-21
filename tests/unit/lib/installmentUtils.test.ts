@@ -1,4 +1,4 @@
-import { calculateAccruedLateFee } from '../../../src/lib/installmentUtils';
+import { calculateAccruedLateFee, recalculateInstallmentTotals } from '../../../src/lib/installmentUtils';
 
 describe('installmentUtils.ts', () => {
   describe('calculateAccruedLateFee', () => {
@@ -45,10 +45,127 @@ describe('installmentUtils.ts', () => {
     });
 
     it('should handle large overdue periods', () => {
-      // 10 + (12 * 30) = 370 days (1 year overdue)
-      // 11-40 (1), 41-70 (2), 71-100 (3), 101-130 (4), 131-160 (5), 161-190 (6), 
-      // 191-220 (7), 221-250 (8), 251-280 (9), 281-310 (10), 311-340 (11), 341-370 (12)
       expect(calculateAccruedLateFee(370, monthlyFee)).toBe(2400);
     });
   });
+
+  describe('recalculateInstallmentTotals', () => {
+    const fixedNow = new Date('2026-06-15T00:00:00.000Z');
+
+    it('should correctly calculate initial unpaid schedule with Active status', () => {
+      const loanAmount = 6000;
+      const schedule = [
+        { installmentNumber: 1, dueDate: '2026-07-01', amount: 2000, status: 'Pending' },
+        { installmentNumber: 2, dueDate: '2026-08-01', amount: 2000, status: 'Pending' },
+        { installmentNumber: 3, dueDate: '2026-09-01', amount: 2000, status: 'Pending' },
+      ];
+
+      const res = recalculateInstallmentTotals(loanAmount, schedule, fixedNow);
+
+      expect(res.totalPaid).toBe(0);
+      expect(res.lateFeeCharged).toBe(0);
+      expect(res.remainingAmount).toBe(6000);
+      expect(res.saleStatus).toBe('Active');
+      expect(res.carStatus).toBe('On Installment');
+      expect(res.nextPaymentDate).toEqual(new Date('2026-07-01'));
+      expect(res.nextPaymentAmount).toBe(2000);
+    });
+
+    it('should correctly calculate totals when payments are recorded with late fees', () => {
+      const loanAmount = 6000;
+      const schedule = [
+        { installmentNumber: 1, dueDate: '2026-05-01', amount: 2000, status: 'Paid', paidAmount: 2200, lateFee: 200 },
+        { installmentNumber: 2, dueDate: '2026-07-01', amount: 2000, status: 'Pending' },
+        { installmentNumber: 3, dueDate: '2026-08-01', amount: 2000, status: 'Pending' },
+      ];
+
+      const res = recalculateInstallmentTotals(loanAmount, schedule, fixedNow);
+
+      expect(res.totalPaid).toBe(2200);
+      expect(res.lateFeeCharged).toBe(200);
+      // Principal paid = 2200 - 200 = 2000. Remaining = 6000 - 2000 = 4000.
+      expect(res.remainingAmount).toBe(4000);
+      expect(res.saleStatus).toBe('Active');
+      expect(res.carStatus).toBe('On Installment');
+      expect(res.nextPaymentDate).toEqual(new Date('2026-07-01'));
+      expect(res.nextPaymentAmount).toBe(2000);
+    });
+
+    it('should handle payment editing (adjusting paid amount and fee)', () => {
+      const loanAmount = 6000;
+      // User edited installment #1 from 2200 (200 fee) to 2000 (0 fee)
+      const schedule = [
+        { installmentNumber: 1, dueDate: '2026-05-01', amount: 2000, status: 'Paid', paidAmount: 2000, lateFee: 0 },
+        { installmentNumber: 2, dueDate: '2026-07-01', amount: 2000, status: 'Pending' },
+        { installmentNumber: 3, dueDate: '2026-08-01', amount: 2000, status: 'Pending' },
+      ];
+
+      const res = recalculateInstallmentTotals(loanAmount, schedule, fixedNow);
+
+      expect(res.totalPaid).toBe(2000);
+      expect(res.lateFeeCharged).toBe(0);
+      expect(res.remainingAmount).toBe(4000);
+      expect(res.saleStatus).toBe('Active');
+    });
+
+    it('should accurately handle payment reversion (undoing payment)', () => {
+      const loanAmount = 6000;
+      // Installment #1 was reverted back to Overdue because its dueDate 2026-05-01 is past fixedNow 2026-06-15
+      const schedule = [
+        { installmentNumber: 1, dueDate: '2026-05-01', amount: 2000, status: 'Overdue' },
+        { installmentNumber: 2, dueDate: '2026-07-01', amount: 2000, status: 'Pending' },
+        { installmentNumber: 3, dueDate: '2026-08-01', amount: 2000, status: 'Pending' },
+      ];
+
+      const res = recalculateInstallmentTotals(loanAmount, schedule, fixedNow);
+
+      expect(res.totalPaid).toBe(0);
+      expect(res.lateFeeCharged).toBe(0);
+      expect(res.remainingAmount).toBe(6000);
+      expect(res.saleStatus).toBe('Defaulted');
+      expect(res.carStatus).toBe('Defaulted');
+      expect(res.nextPaymentDate).toEqual(new Date('2026-05-01'));
+      expect(res.nextPaymentAmount).toBe(2000);
+    });
+
+    it('should mark sale and car as Completed / Sold when all installments are paid', () => {
+      const loanAmount = 6000;
+      const schedule = [
+        { installmentNumber: 1, dueDate: '2026-04-01', amount: 2000, status: 'Paid', paidAmount: 2000, lateFee: 0 },
+        { installmentNumber: 2, dueDate: '2026-05-01', amount: 2000, status: 'Paid', paidAmount: 2000, lateFee: 0 },
+        { installmentNumber: 3, dueDate: '2026-06-01', amount: 2000, status: 'Paid', paidAmount: 2100, lateFee: 100 },
+      ];
+
+      const res = recalculateInstallmentTotals(loanAmount, schedule, fixedNow);
+
+      expect(res.totalPaid).toBe(6100);
+      expect(res.lateFeeCharged).toBe(100);
+      expect(res.remainingAmount).toBe(0);
+      expect(res.saleStatus).toBe('Completed');
+      expect(res.carStatus).toBe('Sold');
+      expect(res.nextPaymentDate).toBeNull();
+      expect(res.nextPaymentAmount).toBe(0);
+    });
+
+    it('should transition from Completed back to Active / Defaulted if a payment is reverted', () => {
+      const loanAmount = 6000;
+      // 3rd installment was reverted
+      const schedule = [
+        { installmentNumber: 1, dueDate: '2026-04-01', amount: 2000, status: 'Paid', paidAmount: 2000, lateFee: 0 },
+        { installmentNumber: 2, dueDate: '2026-05-01', amount: 2000, status: 'Paid', paidAmount: 2000, lateFee: 0 },
+        { installmentNumber: 3, dueDate: '2026-07-01', amount: 2000, status: 'Pending' },
+      ];
+
+      const res = recalculateInstallmentTotals(loanAmount, schedule, fixedNow);
+
+      expect(res.totalPaid).toBe(4000);
+      expect(res.lateFeeCharged).toBe(0);
+      expect(res.remainingAmount).toBe(2000);
+      expect(res.saleStatus).toBe('Active');
+      expect(res.carStatus).toBe('On Installment');
+      expect(res.nextPaymentDate).toEqual(new Date('2026-07-01'));
+      expect(res.nextPaymentAmount).toBe(2000);
+    });
+  });
 });
+
