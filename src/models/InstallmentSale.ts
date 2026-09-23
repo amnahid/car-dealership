@@ -143,7 +143,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     guarantor: { type: Schema.Types.ObjectId, ref: 'Guarantor' },
     guarantorName: { type: String, trim: true },
     guarantorPhone: { type: String, trim: true },
-    status: { type: String, enum: ['Active', 'Completed', 'Defaulted', 'Cancelled'], default: 'Active' },
+    status: { type: String, enum: ['Active', 'Completed', 'Defaulted', 'Cancelled', 'Handed'], default: 'Active' },
     isDeleted: { type: Boolean, default: false },
     tafweedStatus: { type: String, enum: ['Active', 'Expired', 'None'], default: 'Active' },
     tafweedAuthorizedTo: { type: String, trim: true },

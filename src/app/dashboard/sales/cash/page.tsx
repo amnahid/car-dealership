@@ -7,6 +7,8 @@ import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
+import MultiSelectFilter from '@/components/MultiSelectFilter';
+import { PrintColumn, ActiveFilterItem, SummaryStatItem } from '@/lib/printUtils';
 
 interface Car {
   _id: string;
@@ -77,7 +79,7 @@ export default function CashSalesPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalSales, setTotalSales] = useState(0);
@@ -140,7 +142,7 @@ export default function CashSalesPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
-    if (statusFilter) params.set('status', statusFilter);
+    if (statusFilter.length > 0) params.set('status', statusFilter.join(','));
     if (dateRange.startDate) params.set('startDate', dateRange.startDate);
     if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
@@ -234,17 +236,65 @@ export default function CashSalesPage() {
 
   const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
 
+  const cashPrintColumns: PrintColumn[] = [
+    { header: t('saleId') || 'Sale ID', key: 'saleId', align: 'center' },
+    { header: t('customer') || 'Customer', key: 'customerName' },
+    { header: t('phone') || 'Phone', key: 'customerPhone', align: 'center' },
+    { header: t('car') || 'Car', getter: (s: Sale) => s.car ? `${s.car.brand} ${s.car.model} (${s.car.plateNumber || s.car.carId})` : s.carId },
+    { header: t('salePrice') || 'Sale Price', getter: (s: Sale) => formatCurrency(s.salePrice), align: isRtl ? 'left' : 'right' },
+    { header: t('discount') || 'Discount', getter: (s: Sale) => formatCurrency(s.discountAmount), align: isRtl ? 'left' : 'right' },
+    { header: t('finalPrice') || 'Final Price', getter: (s: Sale) => formatCurrency(s.finalPrice), align: isRtl ? 'left' : 'right' },
+    { header: t('saleDate') || 'Sale Date', getter: (s: Sale) => s.saleDate ? new Date(s.saleDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-', align: 'center' },
+    { header: t('status') || 'Status', getter: (s: Sale) => s.status || 'Active', align: 'center' },
+  ];
+
+  const activeFiltersList: ActiveFilterItem[] = [];
+  if (statusFilter.length > 0) {
+    activeFiltersList.push({
+      label: t('status') || 'Status',
+      value: statusFilter.map((s) => t(`statuses.${s.toLowerCase()}`) || s).join(', '),
+    });
+  }
+  if (debouncedSearch) activeFiltersList.push({ label: commonT('search') || 'Search', value: debouncedSearch });
+  if (dateRange.startDate || dateRange.endDate) {
+    activeFiltersList.push({
+      label: commonT('date') || 'Date Range',
+      value: `${dateRange.startDate || '...'} - ${dateRange.endDate || '...'}`
+    });
+  }
+
+  const printSummaryStats: SummaryStatItem[] = [
+    { label: t('totalSales') || 'Total Sales', value: totalSales, color: '#28aaa9' },
+    { label: t('totalRevenue') || 'Total Revenue', value: formatCurrency(totalRevenue), color: '#42ca7f' },
+  ];
+
+  const activeFiltersObj = {
+    status: statusFilter.join(','),
+    search: debouncedSearch,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  };
+
   return (
     <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('title')}</h2>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-          <DataTransferButtons entityType="cashSales" onImportSuccess={fetchSales} />
+          <DataTransferButtons
+            entityType="cashSales"
+            title={t('title')}
+            filters={activeFiltersObj}
+            columns={cashPrintColumns}
+            data={sales}
+            activeFiltersList={activeFiltersList}
+            summaryStats={printSummaryStats}
+            onImportSuccess={fetchSales}
+          />
           <button
             onClick={() => setShowModal(true)}
             style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}
           >
-            + {t('addNew')}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {t('addNew')}</span>
           </button>
         </div>
       </div>
@@ -272,11 +322,18 @@ export default function CashSalesPage() {
           onChange={(e) => handleSearch(e.target.value)}
           style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}
         />
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
-          <option value="">{t('allStatus') || 'All Status'}</option>
-          <option value="Active">{t('statuses.active') || 'Active'}</option>
-          <option value="Cancelled">{t('statuses.cancelled') || 'Cancelled'}</option>
-        </select>
+        <MultiSelectFilter
+          placeholder={t('allStatus') || 'All Status'}
+          selectedValues={statusFilter}
+          onChange={(vals) => {
+            setStatusFilter(vals);
+            setPage(1);
+          }}
+          options={[
+            { value: 'Active', label: t('statuses.active') || 'Active', color: '#28aaa9' },
+            { value: 'Cancelled', label: t('statuses.cancelled') || 'Cancelled', color: '#ec4561' },
+          ]}
+        />
         <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
 
@@ -382,7 +439,12 @@ export default function CashSalesPage() {
                         <img src={sale.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                       ) : (
                         <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca8b3" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                            <circle cx="7" cy="17" r="2" />
+                            <path d="M9 17h6" />
+                            <circle cx="17" cy="17" r="2" />
+                          </svg>
                         </div>
                       )}
                     </td>

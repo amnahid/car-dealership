@@ -48,7 +48,7 @@ export function jsonToCsv(data: Record<string, unknown>[]): string {
     csvRows.push(values.join(','));
   }
   
-  return csvRows.join('\n');
+  return '\uFEFF' + csvRows.join('\n');
 }
 
 /**

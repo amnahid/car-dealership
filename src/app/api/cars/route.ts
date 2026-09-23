@@ -43,7 +43,13 @@ export async function GET(request: NextRequest) {
     if (model) query.model = { $regex: model, $options: 'i' };
     if (year) query.year = parseInt(year);
     if (color) query.color = { $regex: color, $options: 'i' };
-    if (status) query.status = status;
+    if (status) {
+      if (status.includes(',')) {
+        query.status = { $in: status.split(',').map(s => s.trim()).filter(Boolean) };
+      } else {
+        query.status = status;
+      }
+    }
 
     if (q) {
       query.$or = [

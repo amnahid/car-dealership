@@ -33,7 +33,11 @@ export async function GET(request: NextRequest) {
       ];
     }
     if (status) {
-      query.status = status;
+      if (status.includes(',')) {
+        query.status = { $in: status.split(',').map(s => s.trim()).filter(Boolean) };
+      } else {
+        query.status = status;
+      }
     }
     if (type) {
       query.referenceType = type;

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
+import MultiSelectFilter from '@/components/MultiSelectFilter';
 
 interface Invoice {
   _id: string;
@@ -34,7 +35,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -50,7 +51,7 @@ export default function InvoicesPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
-    if (statusFilter) params.set('status', statusFilter);
+    if (statusFilter.length > 0) params.set('status', statusFilter.join(','));
     if (typeFilter) params.set('type', typeFilter);
 
     try {
@@ -223,13 +224,20 @@ export default function InvoicesPage() {
 
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <input type="text" placeholder={t('searchPlaceholder')} value={search} onChange={(e) => handleSearch(e.target.value)} style={{ width: '250px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
-          <option value="">{t('allStatus')}</option>
-          <option value="Cleared">Cleared</option>
-          <option value="Pending">Pending</option>
-          <option value="Failed">Failed</option>
-          <option value="Reported">Reported</option>
-        </select>
+        <MultiSelectFilter
+          placeholder={t('allStatus') || 'All Statuses'}
+          selectedValues={statusFilter}
+          onChange={(vals) => {
+            setStatusFilter(vals);
+            setPage(1);
+          }}
+          options={[
+            { value: 'Cleared', label: 'Cleared', color: '#2e7d32' },
+            { value: 'Reported', label: 'Reported', color: '#388e3c' },
+            { value: 'Pending', label: 'Pending', color: '#f57c00' },
+            { value: 'Failed', label: 'Failed', color: '#c62828' },
+          ]}
+        />
         <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
           <option value="">{t('allTypes')}</option>
           <option value="CashSale">{t('typeOptions.cash')}</option>

@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import ConfirmModal from '@/components/ConfirmModal';
+import Toast from '@/components/Toast';
 
 interface Payment {
   installmentNumber: number;
@@ -33,6 +35,7 @@ interface Sale {
     sequenceNumber?: string;
     color?: string;
     images?: string[];
+    status?: string;
   };
   customerName: string;
   customerPhone: string;
@@ -82,6 +85,8 @@ interface Sale {
 export default function InstallmentSaleDetailPage() {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
   
   const params = useParams();
   const [sale, setSale] = useState<Sale | null>(null);
@@ -96,6 +101,44 @@ export default function InstallmentSaleDetailPage() {
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
   const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [showDocsDropdown, setShowDocsDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDocsDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'primary' | 'danger' | 'warning' | 'success';
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+  };
 
   const handleRegenerateInvoice = async () => {
     if (!sale) return;
@@ -107,14 +150,15 @@ export default function InstallmentSaleDetailPage() {
         body: JSON.stringify({ action: 'generate-invoice' }),
       });
       if (res.ok) {
+        showToast(t('invoiceSuccess') || 'Invoice generated successfully', 'success');
         fetchSale();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to regenerate invoice');
+        showToast(data.error || 'Failed to regenerate invoice', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Network error');
+      showToast('Network error', 'error');
     } finally {
       setRegeneratingInvoice(false);
     }
@@ -162,8 +206,8 @@ export default function InstallmentSaleDetailPage() {
     setShowRevertPaymentModal(true);
   };
 
-  const handleCancelSale = async () => {
-    if (!sale || !confirm(t('cancelConfirm'))) return;
+  const executeCancelSale = async () => {
+    if (!sale) return;
     try {
       const res = await fetch(`/api/sales/installments/${sale._id}`, {
         method: 'PUT',
@@ -172,25 +216,39 @@ export default function InstallmentSaleDetailPage() {
       });
       const resData = await res.json();
       if (!res.ok) {
-        alert(resData.error || 'Failed to cancel sale');
+        showToast(resData.error || 'Failed to cancel sale', 'error');
         return;
       }
       
       if (resData.isPending) {
-        alert(resData.message || 'Cancellation request submitted for admin approval');
+        showToast(resData.message || 'Cancellation request submitted for admin approval', 'info');
       } else {
-        alert('Sale cancelled successfully');
+        showToast('Sale cancelled successfully', 'success');
       }
       fetchSale();
     } catch (err) {
       console.error(err);
-      alert('Network error');
+      showToast('Network error', 'error');
     }
   };
 
-  const handleRegenerateAgreement = async () => {
+  const handleCancelSale = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('cancelSale') || 'Cancel Sale',
+      message: t('cancelConfirm') || 'Are you sure you want to delete this installment sale?',
+      confirmText: t('cancelSale') || 'Cancel Sale',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        await executeCancelSale();
+      },
+    });
+  };
+
+  const executeRegenerateAgreement = async () => {
     const id = params?.id;
-    if (!id || !confirm('Are you sure you want to regenerate the agreement?')) return;
+    if (!id) return;
 
     setRegeneratingAgreement(true);
     try {
@@ -205,12 +263,27 @@ export default function InstallmentSaleDetailPage() {
         throw new Error(data.error || 'Failed to regenerate agreement');
       }
 
+      showToast('Agreement regenerated successfully', 'success');
       fetchSale();
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message || 'Failed to regenerate agreement', 'error');
     } finally {
       setRegeneratingAgreement(false);
     }
+  };
+
+  const handleRegenerateAgreement = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Regenerate Agreement',
+      message: 'Are you sure you want to regenerate the agreement?',
+      confirmText: 'Regenerate',
+      variant: 'primary',
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        await executeRegenerateAgreement();
+      },
+    });
   };
 
   const handleGenerateReport = async () => {
@@ -223,17 +296,93 @@ export default function InstallmentSaleDetailPage() {
         body: JSON.stringify({ action: 'generate-report' }),
       });
       if (res.ok) {
+        showToast('Report generated successfully', 'success');
         fetchSale();
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to generate report');
+        showToast(data.error || 'Failed to generate report', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Network error');
+      showToast('Network error', 'error');
     } finally {
       setGeneratingReport(false);
     }
+  };
+
+  const [handingOver, setHandingOver] = useState(false);
+  const [revertingHandover, setRevertingHandover] = useState(false);
+
+  const executeHandover = async () => {
+    if (!sale) return;
+    setHandingOver(true);
+    try {
+      const res = await fetch(`/api/sales/installments/${sale._id}/handover`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || t('handOverSuccess') || 'Car marked as Handed successfully', 'success');
+        fetchSale();
+      } else {
+        showToast(data.error || 'Failed to mark as Handed', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error', 'error');
+    } finally {
+      setHandingOver(false);
+    }
+  };
+
+  const handleHandover = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('markAsHanded') || 'Mark as Handed',
+      message: t('handOverConfirm') || 'Are you sure you want to mark this car as Handed over to the customer?',
+      confirmText: t('markAsHanded') || 'Mark as Handed',
+      variant: 'success',
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        await executeHandover();
+      },
+    });
+  };
+
+  const executeRevertHandover = async () => {
+    if (!sale) return;
+    setRevertingHandover(true);
+    try {
+      const res = await fetch(`/api/sales/installments/${sale._id}/revert-handover`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(data.message || t('revertHandoverSuccess') || 'Handover status reverted successfully', 'success');
+        fetchSale();
+      } else {
+        showToast(data.error || 'Failed to revert handover', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error', 'error');
+    } finally {
+      setRevertingHandover(false);
+    }
+  };
+
+  const handleRevertHandover = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('revertHandover') || 'Revert Handover',
+      message: t('revertHandoverConfirm') || 'Are you sure you want to revert the handover status?',
+      confirmText: t('revertHandover') || 'Revert Handover',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        await executeRevertHandover();
+      },
+    });
   };
 
   if (loading) {
@@ -254,7 +403,9 @@ export default function InstallmentSaleDetailPage() {
   const statusColors: Record<string, string> = {
     Active: '#28aaa9',
     Completed: '#42ca7f',
+    Handed: '#20c997',
     Defaulted: '#ec4561',
+    Cancelled: '#ec4561',
   };
 
   return (
@@ -265,71 +416,275 @@ export default function InstallmentSaleDetailPage() {
         </Link>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 className="page-title">Installment Sale Details</h2>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {sale.reportUrl && (
-            <a
-              href={sale.reportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#525f80', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <h2 className="page-title" style={{ margin: 0 }}>Installment Sale Details</h2>
+          {sale.status === 'Handed' ? (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                background: '#28aaa9',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
             >
-              Print Status Report
-            </a>
-          )}
-          <button
-            onClick={handleGenerateReport}
-            disabled={generatingReport}
-            className="no-print"
-            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: generatingReport ? 0.7 : 1 }}
-          >
-            {generatingReport ? (sale.reportUrl ? 'Regenerating...' : 'Generating...') : (sale.reportUrl ? 'Regenerate Report' : 'Generate Status Report')}
-          </button>
-          {sale.invoiceUrl && (
-            <a
-              href={sale.invoiceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {t(`statuses.${sale.status.toLowerCase()}`) || sale.status}
+            </span>
+          ) : (
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: '4px',
+                background: statusColors[sale.status] || '#28aaa9',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
             >
-              Download Invoice
-            </a>
+              {t(`statuses.${sale.status.toLowerCase()}`) || sale.status}
+            </span>
           )}
-          <button
-            onClick={handleRegenerateInvoice}
-            disabled={regeneratingInvoice}
-            className="no-print"
-            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingInvoice ? 0.7 : 1 }}
-          >
-            {regeneratingInvoice ? (sale.invoiceUrl ? 'Regenerating...' : 'Generating...') : (sale.invoiceUrl ? 'Regenerate Invoice' : 'Generate Invoice')}
-          </button>
-          {sale.agreementUrl && (
-            <a
-              href={sale.agreementUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
+          {sale.car?.status === 'Handed' && sale.status !== 'Handed' && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                background: '#e6f7f6',
+                color: '#28aaa9',
+                border: '1px solid #28aaa9',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}
             >
-              Download Agreement
-            </a>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {t('statuses.handed') || 'Handed'}
+            </span>
           )}
-          <button
-            onClick={handleRegenerateAgreement}
-            disabled={regeneratingAgreement}
-            className="no-print"
-            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingAgreement ? 0.7 : 1 }}
-          >
-            {regeneratingAgreement ? (sale.agreementUrl ? 'Regenerating...' : 'Generating...') : (sale.agreementUrl ? 'Regenerate Agreement' : 'Generate Agreement')}
-          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }} className="no-print">
+          {/* Mark as Handed Button (Only if not already handed and sale is not cancelled) */}
+          {sale.status !== 'Cancelled' && sale.status !== 'Handed' && sale.car?.status !== 'Handed' && (
+            <button
+              onClick={handleHandover}
+              disabled={handingOver}
+              style={{
+                padding: '8px 16px',
+                background: '#20c997',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: handingOver ? 'default' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                opacity: handingOver ? 0.7 : 1,
+              }}
+            >
+              {handingOver ? 'Updating...' : (t('markAsHanded') || 'Mark as Handed')}
+            </button>
+          )}
+
+          {/* Revert Handover Button (When sale or car is Handed) */}
+          {sale.status !== 'Cancelled' && (sale.status === 'Handed' || sale.car?.status === 'Handed') && (
+            <button
+              onClick={handleRevertHandover}
+              disabled={revertingHandover}
+              style={{
+                padding: '8px 16px',
+                background: '#ffffff',
+                color: '#f8b425',
+                border: '1px solid #f8b425',
+                borderRadius: '4px',
+                cursor: revertingHandover ? 'default' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                opacity: revertingHandover ? 0.7 : 1,
+              }}
+            >
+              {revertingHandover ? 'Reverting...' : (t('revertHandover') || 'Revert Handover')}
+            </button>
+          )}
+
+          {/* Documents & Reports Dropdown Menu */}
+          <div style={{ position: 'relative' }} ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowDocsDropdown((prev) => !prev)}
+              style={{
+                padding: '8px 16px',
+                background: '#ffffff',
+                color: '#2a3142',
+                border: '1px solid #ced4da',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span>Documents & Reports</span>
+              <span style={{ fontSize: '10px', transition: 'transform 0.2s', transform: showDocsDropdown ? 'rotate(180deg)' : 'none' }}>▼</span>
+            </button>
+
+            {showDocsDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: isRtl ? 'auto' : 0,
+                  left: isRtl ? 0 : 'auto',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                  minWidth: '300px',
+                  zIndex: 50,
+                  padding: '8px 0',
+                }}
+              >
+                {/* Status Report Section */}
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Status Report
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {sale.reportUrl ? (
+                      <>
+                        <a
+                          href={sale.reportUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, padding: '7px 12px', background: '#525f80', color: '#ffffff', borderRadius: '4px', textDecoration: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 500 }}
+                        >
+                          View / Print
+                        </a>
+                        <button
+                          onClick={handleGenerateReport}
+                          disabled={generatingReport}
+                          style={{ padding: '7px 12px', background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                          title="Regenerate Report"
+                        >
+                          {generatingReport ? '...' : 'Regenerate'}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleGenerateReport}
+                        disabled={generatingReport}
+                        style={{ width: '100%', padding: '7px 12px', background: '#525f80', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        {generatingReport ? 'Generating...' : 'Generate Status Report'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tax Invoice Section */}
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Tax Invoice (ZATCA)
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {sale.invoiceUrl ? (
+                      <>
+                        <a
+                          href={sale.invoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, padding: '7px 12px', background: '#28aaa9', color: '#ffffff', borderRadius: '4px', textDecoration: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 500 }}
+                        >
+                          Download Invoice
+                        </a>
+                        <button
+                          onClick={handleRegenerateInvoice}
+                          disabled={regeneratingInvoice}
+                          style={{ padding: '7px 12px', background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                          title="Regenerate Invoice"
+                        >
+                          {regeneratingInvoice ? '...' : 'Regenerate'}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleRegenerateInvoice}
+                        disabled={regeneratingInvoice}
+                        style={{ width: '100%', padding: '7px 12px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        {regeneratingInvoice ? 'Generating...' : 'Generate Invoice'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Sales Agreement Section */}
+                <div style={{ padding: '10px 16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Sales Agreement
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {sale.agreementUrl ? (
+                      <>
+                        <a
+                          href={sale.agreementUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, padding: '7px 12px', background: '#525f80', color: '#ffffff', borderRadius: '4px', textDecoration: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 500 }}
+                        >
+                          Download Agreement
+                        </a>
+                        <button
+                          onClick={handleRegenerateAgreement}
+                          disabled={regeneratingAgreement}
+                          style={{ padding: '7px 12px', background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                          title="Regenerate Agreement"
+                        >
+                          {regeneratingAgreement ? '...' : 'Regenerate'}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleRegenerateAgreement}
+                        disabled={regeneratingAgreement}
+                        style={{ width: '100%', padding: '7px 12px', background: '#525f80', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        {regeneratingAgreement ? 'Generating...' : 'Generate Agreement'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cancel Sale / Revert Cancellation */}
           {sale.status !== 'Cancelled' && (
             <button
               onClick={handleCancelSale}
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#ffffff', color: '#ec4561', border: '1px solid #ec4561', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
+              style={{
+                padding: '8px 16px',
+                background: '#ffffff',
+                color: '#ec4561',
+                border: '1px solid #ec4561',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+              }}
             >
               Cancel Sale
             </button>
@@ -337,24 +692,20 @@ export default function InstallmentSaleDetailPage() {
           {sale.status === 'Cancelled' && (
             <button
               onClick={() => setShowRevertModal(true)}
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#f8b425', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
+              style={{
+                padding: '8px 16px',
+                background: '#f8b425',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+              }}
             >
               Revert Cancellation
             </button>
           )}
-          <span
-            style={{
-              padding: '6px 12px',
-              borderRadius: '4px',
-              background: statusColors[sale.status] || '#28aaa9',
-              color: '#ffffff',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}
-          >
-            {sale.status}
-          </span>
         </div>
       </div>
 
@@ -738,6 +1089,25 @@ export default function InstallmentSaleDetailPage() {
         }}
         saleId={sale._id}
       />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={commonT('cancel') || 'Cancel'}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
       {sale.agreementDocument && (
         <div className="card" style={{ padding: '24px', marginTop: '24px' }}>

@@ -78,7 +78,13 @@ export default function SalesHubPage() {
       title: t('cashSales'),
       description: t('cashSalesDesc'),
       href: '/dashboard/sales/cash',
-      icon: '💵',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28aaa9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="20" height="12" x="2" y="6" rx="2" />
+          <circle cx="12" cy="12" r="2" />
+          <path d="M6 12h.01M18 12h.01" />
+        </svg>
+      ),
       color: '#28aaa9',
       stats: t('salesCount', { count: stats.cash.count }),
       amount: formatCurrency(stats.cash.revenue),
@@ -87,7 +93,12 @@ export default function SalesHubPage() {
       title: t('installmentSales'),
       description: t('installmentSalesDesc'),
       href: '/dashboard/sales/installments',
-      icon: '📅',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#42ca7f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="18" height="18" x="3" y="4" rx="2" />
+          <path d="M16 2v4M8 2v4M3 10h18" />
+        </svg>
+      ),
       color: '#42ca7f',
       stats: t('salesCount', { count: stats.installments.count }),
       amount: `${formatCurrency(stats.installments.totalPaid || 0)} ${t('paid')}`,
@@ -97,7 +108,14 @@ export default function SalesHubPage() {
       title: t('rentals'),
       description: t('rentalsDesc'),
       href: '/dashboard/sales/rentals',
-      icon: '🚗',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f5a623" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+          <circle cx="7" cy="17" r="2" />
+          <path d="M9 17h6" />
+          <circle cx="17" cy="17" r="2" />
+        </svg>
+      ),
       color: '#f5a623',
       stats: t('rentalsCount', { count: stats.rentals.count }),
       amount: formatCurrency(stats.rentals.revenue),
@@ -106,7 +124,12 @@ export default function SalesHubPage() {
       title: t('purchaseReturns'),
       description: t('purchaseReturnsDesc'),
       href: '/dashboard/sales/returns',
-      icon: '↩️',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ec4561" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="m9 14-5-5 5-5" />
+          <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
+        </svg>
+      ),
       color: '#ec4561',
       stats: t('returnsCount', { count: stats.returns.count }),
       amount: `${formatCurrency(stats.returns.totalRefunds)} ${t('refunded')}`,

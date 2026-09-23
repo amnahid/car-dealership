@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
+import MultiSelectFilter from '@/components/MultiSelectFilter';
 
 interface Sale {
   id: string;
@@ -44,7 +45,7 @@ export default function ReturnsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [stats, setStats] = useState({ totalRefunds: 0, totalPenalty: 0, count: 0 });
   const [showModal, setShowModal] = useState(false);
@@ -92,7 +93,7 @@ export default function ReturnsPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
-    if (statusFilter) params.set('status', statusFilter);
+    if (statusFilter.length > 0) params.set('status', statusFilter.join(','));
 
     try {
       const res = await fetch(`/api/sales/returns?${params}`);
@@ -200,7 +201,7 @@ export default function ReturnsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('title')}</h2>
         <button onClick={() => setShowModal(true)} style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}>
-          + {t('addNew')}
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {t('addNew')}</span>
         </button>
       </div>
 
@@ -221,13 +222,20 @@ export default function ReturnsPage() {
 
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <input type="text" placeholder={t('searchPlaceholder')} value={search} onChange={(e) => handleSearch(e.target.value)} style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
-          <option value="">{commonT('all')}</option>
-          <option value="Pending">{t('statuses.pending')}</option>
-          <option value="Approved">{t('statuses.approved')}</option>
-          <option value="Rejected">{t('statuses.rejected')}</option>
-          <option value="Completed">{t('statuses.completed')}</option>
-        </select>
+        <MultiSelectFilter
+          placeholder={commonT('allStatuses') || 'All Statuses'}
+          selectedValues={statusFilter}
+          onChange={(vals) => {
+            setStatusFilter(vals);
+            setPage(1);
+          }}
+          options={[
+            { value: 'Pending', label: t('statuses.pending'), color: '#f8b425' },
+            { value: 'Approved', label: t('statuses.approved'), color: '#28aaa9' },
+            { value: 'Rejected', label: t('statuses.rejected'), color: '#ec4561' },
+            { value: 'Completed', label: t('statuses.completed'), color: '#20c997' },
+          ]}
+        />
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -258,7 +266,12 @@ export default function ReturnsPage() {
                         <img src={ret.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                       ) : (
                         <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca8b3" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                            <circle cx="7" cy="17" r="2" />
+                            <path d="M9 17h6" />
+                            <circle cx="17" cy="17" r="2" />
+                          </svg>
                         </div>
                       )}
                     </td>

@@ -128,7 +128,7 @@ describe('installmentUtils.ts', () => {
       expect(res.nextPaymentAmount).toBe(2000);
     });
 
-    it('should mark sale and car as Completed / Sold when all installments are paid', () => {
+    it('should mark sale as Handed and car as Handed when all installments are paid', () => {
       const loanAmount = 6000;
       const schedule = [
         { installmentNumber: 1, dueDate: '2026-04-01', amount: 2000, status: 'Paid', paidAmount: 2000, lateFee: 0 },
@@ -141,8 +141,8 @@ describe('installmentUtils.ts', () => {
       expect(res.totalPaid).toBe(6100);
       expect(res.lateFeeCharged).toBe(100);
       expect(res.remainingAmount).toBe(0);
-      expect(res.saleStatus).toBe('Completed');
-      expect(res.carStatus).toBe('Sold');
+      expect(res.saleStatus).toBe('Handed');
+      expect(res.carStatus).toBe('Handed');
       expect(res.nextPaymentDate).toBeNull();
       expect(res.nextPaymentAmount).toBe(0);
     });

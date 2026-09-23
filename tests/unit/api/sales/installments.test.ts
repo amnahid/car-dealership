@@ -104,6 +104,35 @@ describe('Installment Sales API', () => {
       expect(data.sales).toHaveLength(1);
       expect(data.totalValue).toBe(100000);
     });
+
+    it('handles multi-status query with $in filter', async () => {
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'] } as any);
+      mockInstallmentSale.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              populate: jest.fn().mockReturnValue({
+                populate: jest.fn().mockReturnValue({
+                  lean: jest.fn().mockResolvedValue([{ saleId: 'INS-0001', status: 'Handed' }]),
+                }),
+              }),
+            }),
+          }),
+        }),
+      } as any);
+      mockInstallmentSale.countDocuments.mockResolvedValue(1);
+      mockInstallmentSale.aggregate.mockResolvedValue([]);
+
+      const req = new NextRequest('http://localhost/api/sales/installments?status=Active,Handed');
+      const res = await GET(req);
+
+      expect(res.status).toBe(200);
+      expect(mockInstallmentSale.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: { $in: ['Active', 'Handed'] },
+        })
+      );
+    });
   });
 
   describe('POST /api/sales/installments', () => {

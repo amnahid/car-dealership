@@ -72,7 +72,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (status) {
-      query.status = status;
+      if (status.includes(',')) {
+        query.status = { $in: status.split(',').map(s => s.trim()).filter(Boolean) };
+      } else {
+        query.status = status;
+      }
     }
 
     const skip = (page - 1) * limit;

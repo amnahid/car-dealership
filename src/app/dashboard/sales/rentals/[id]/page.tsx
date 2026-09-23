@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useLocale } from 'next-intl';
 
 interface Rental {
   _id: string;
@@ -64,6 +65,8 @@ interface Rental {
 }
 
 export default function RentalDetailPage() {
+  const locale = useLocale();
+  const isRtl = locale === 'ar';
   const params = useParams();
   const [rental, setRental] = useState<Rental | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,8 +74,22 @@ export default function RentalDetailPage() {
   const [regeneratingAgreement, setRegeneratingAgreement] = useState(false);
   const [regeneratingInvoice, setRegeneratingInvoice] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [showDocsDropdown, setShowDocsDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showRevertModal, setShowRevertModal] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDocsDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
@@ -266,79 +283,208 @@ export default function RentalDetailPage() {
         </Link>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 className="page-title">Rental Details</h2>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {rental.reportUrl && (
-            <a
-              href={rental.reportUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#525f80', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
-            >
-              Print Status Report
-            </a>
-          )}
-          <button
-            onClick={handleGenerateReport}
-            disabled={generatingReport}
-            className="no-print"
-            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: generatingReport ? 0.7 : 1 }}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <h2 className="page-title" style={{ margin: 0 }}>Rental Details</h2>
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: '4px',
+              background: statusColors[rental.status] || '#28aaa9',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
           >
-            {generatingReport ? (rental.reportUrl ? 'Regenerating...' : 'Generating...') : (rental.reportUrl ? 'Regenerate Report' : 'Generate Status Report')}
-          </button>
+            {rental.status}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }} className="no-print">
+          {/* Documents & Reports Dropdown Menu */}
+          <div style={{ position: 'relative' }} ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setShowDocsDropdown((prev) => !prev)}
+              style={{
+                padding: '8px 16px',
+                background: '#ffffff',
+                color: '#2a3142',
+                border: '1px solid #ced4da',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span>Documents & Reports</span>
+              <span style={{ fontSize: '10px', transition: 'transform 0.2s', transform: showDocsDropdown ? 'rotate(180deg)' : 'none' }}>▼</span>
+            </button>
+
+            {showDocsDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: isRtl ? 'auto' : 0,
+                  left: isRtl ? 0 : 'auto',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                  minWidth: '300px',
+                  zIndex: 50,
+                  padding: '8px 0',
+                }}
+              >
+                {/* Status Report Section */}
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Status Report
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {rental.reportUrl ? (
+                      <>
+                        <a
+                          href={rental.reportUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, padding: '7px 12px', background: '#525f80', color: '#ffffff', borderRadius: '4px', textDecoration: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 500 }}
+                        >
+                          View / Print
+                        </a>
+                        <button
+                          onClick={handleGenerateReport}
+                          disabled={generatingReport}
+                          style={{ padding: '7px 12px', background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                          title="Regenerate Report"
+                        >
+                          {generatingReport ? '...' : 'Regenerate'}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleGenerateReport}
+                        disabled={generatingReport}
+                        style={{ width: '100%', padding: '7px 12px', background: '#525f80', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        {generatingReport ? 'Generating...' : 'Generate Status Report'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tax Invoice Section */}
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Tax Invoice (ZATCA)
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {rental.invoiceUrl ? (
+                      <>
+                        <a
+                          href={rental.invoiceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, padding: '7px 12px', background: '#28aaa9', color: '#ffffff', borderRadius: '4px', textDecoration: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 500 }}
+                        >
+                          Download Invoice
+                        </a>
+                        <button
+                          onClick={handleRegenerateInvoice}
+                          disabled={regeneratingInvoice}
+                          style={{ padding: '7px 12px', background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                          title="Regenerate Invoice"
+                        >
+                          {regeneratingInvoice ? '...' : 'Regenerate'}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleRegenerateInvoice}
+                        disabled={regeneratingInvoice}
+                        style={{ width: '100%', padding: '7px 12px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        {regeneratingInvoice ? 'Generating...' : 'Generate Invoice'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Agreement Section */}
+                <div style={{ padding: '10px 16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Rental Agreement
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {rental.agreementUrl ? (
+                      <>
+                        <a
+                          href={rental.agreementUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1, padding: '7px 12px', background: '#525f80', color: '#ffffff', borderRadius: '4px', textDecoration: 'none', fontSize: '13px', textAlign: 'center', fontWeight: 500 }}
+                        >
+                          Download Agreement
+                        </a>
+                        <button
+                          onClick={handleRegenerateAgreement}
+                          disabled={regeneratingAgreement}
+                          style={{ padding: '7px 12px', background: '#f8fafc', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                          title="Regenerate Agreement"
+                        >
+                          {regeneratingAgreement ? '...' : 'Regenerate'}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleRegenerateAgreement}
+                        disabled={regeneratingAgreement}
+                        style={{ width: '100%', padding: '7px 12px', background: '#525f80', color: '#ffffff', border: 'none', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        {regeneratingAgreement ? 'Generating...' : 'Generate Agreement'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cancel Rental */}
           {rental.status !== 'Cancelled' && rental.status !== 'Completed' && (
             <button
               onClick={handleCancelRental}
-              style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}
+              style={{
+                padding: '8px 16px',
+                fontSize: '14px',
+                border: '1px solid #ec4561',
+                borderRadius: '4px',
+                background: '#ffffff',
+                color: '#ec4561',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
             >
               Cancel Rental
             </button>
           )}
-          {rental.invoiceUrl && (
-            <a
-              href={rental.invoiceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#28aaa9', color: '#ffffff', border: 'none', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
-            >
-              Download Invoice
-            </a>
-          )}
-          <button
-            onClick={handleRegenerateInvoice}
-            disabled={regeneratingInvoice}
-            className="no-print"
-            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingInvoice ? 0.7 : 1 }}
-          >
-            {regeneratingInvoice ? (rental.invoiceUrl ? 'Regenerating...' : 'Generating...') : (rental.invoiceUrl ? 'Regenerate Invoice' : 'Generate Invoice')}
-          </button>
-          {rental.agreementUrl && (
-            <a
-              href={rental.agreementUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}
-            >
-              Download Agreement
-            </a>
-          )}
-          <button
-            onClick={handleRegenerateAgreement}
-            disabled={regeneratingAgreement}
-            className="no-print"
-            style={{ padding: '8px 16px', background: '#ffffff', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500, opacity: regeneratingAgreement ? 0.7 : 1 }}
-          >
-            {regeneratingAgreement ? (rental.agreementUrl ? 'Regenerating...' : 'Generating...') : (rental.agreementUrl ? 'Regenerate Agreement' : 'Generate Agreement')}
-          </button>
           {rental.status === 'Cancelled' && (
             <button
               onClick={() => setShowRevertModal(true)}
-              className="no-print"
-              style={{ padding: '8px 16px', background: '#f8b425', color: '#ffffff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
+              style={{
+                padding: '8px 16px',
+                background: '#f8b425',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+              }}
             >
               Revert Cancellation
             </button>

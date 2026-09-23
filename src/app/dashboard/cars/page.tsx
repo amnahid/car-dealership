@@ -7,6 +7,8 @@ import DataTransferButtons from '@/components/DataTransferButtons';
 import { useDebounce } from '@/hooks/useDebounce';
 import { CarStatus } from '@/types';
 import { useTranslations, useLocale } from 'next-intl';
+import MultiSelectFilter from '@/components/MultiSelectFilter';
+import { PrintColumn, ActiveFilterItem, SummaryStatItem } from '@/lib/printUtils';
 
 interface Purchase {
   supplierName: string;
@@ -55,7 +57,7 @@ export default function CarsPage() {
   type Tab = typeof TABS[number];
 
   const [cars, setCars] = useState<Car[]>([]);
-  const [stats, setStats] = useState({ inStock: 0, sold: 0, underRepair: 0, rented: 0, reserved: 0, onInstallment: 0, defaulted: 0, totalPurchaseValue: 0, totalRepairCost: 0, totalCost: 0 });
+  const [stats, setStats] = useState({ inStock: 0, sold: 0, underRepair: 0, rented: 0, reserved: 0, onInstallment: 0, defaulted: 0, handed: 0, totalPurchaseValue: 0, totalRepairCost: 0, totalCost: 0 });
   const [stockReport, setStockReport] = useState<{ brand: string; count: number; value: number; models: Record<string, number> }[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>(TABS[0]);
@@ -65,7 +67,7 @@ export default function CarsPage() {
   const debouncedSearch = useDebounce(search, 300);
   const debouncedPlateSearch = useDebounce(plateSearch, 300);
   const debouncedQuery = useDebounce(query, 300);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [modelFilter, setModelFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [colorFilter, setColorFilter] = useState('');
@@ -156,6 +158,7 @@ export default function CarsPage() {
         reserved: data.statusCounts?.reserved || 0,
         onInstallment: data.statusCounts?.onInstallment || 0,
         defaulted: data.statusCounts?.defaulted || 0,
+        handed: data.statusCounts?.handed || 0,
         totalPurchaseValue: data.inStockStats?.totalPurchaseValue || 0,
         totalRepairCost: data.inStockStats?.totalRepairCost || 0,
         totalCost: data.inStockStats?.totalCost || 0,
@@ -186,7 +189,7 @@ export default function CarsPage() {
     if (debouncedQuery) params.set('q', debouncedQuery);
     if (debouncedSearch) params.set('brand', debouncedSearch);
     if (debouncedPlateSearch) params.set('plateNumber', debouncedPlateSearch);
-    if (statusFilter) params.set('status', statusFilter);
+    if (statusFilter.length > 0) params.set('status', statusFilter.join(','));
     if (modelFilter) params.set('model', modelFilter);
     if (yearFilter) params.set('year', yearFilter);
     if (colorFilter) params.set('color', colorFilter);
@@ -223,6 +226,46 @@ export default function CarsPage() {
 
   const filteredCars = cars;
 
+  const carPrintColumns: PrintColumn[] = [
+    { header: t('carId') || 'Car ID / Plate', getter: (c: Car) => c.plateNumber || c.carId, align: 'center' },
+    { header: t('brand') || 'Brand', getter: (c: Car) => `${c.brand} ${c.model}` },
+    { header: t('year') || 'Year', key: 'year', align: 'center' },
+    { header: t('color') || 'Color', key: 'color', align: 'center' },
+    { header: t('status') || 'Status', getter: (c: Car) => statusT(c.status) || c.status, align: 'center' },
+    { header: t('purchasePrice') || 'Purchase Price', getter: (c: Car) => c.purchase?.purchasePrice ? formatCurrency(c.purchase.purchasePrice, locale) : '-', align: isRtl ? 'left' : 'right' },
+    { header: t('repairCost') || 'Repair Cost', getter: (c: Car) => formatCurrency(c.totalRepairCost || 0, locale), align: isRtl ? 'left' : 'right' },
+    { header: t('totalCost') || 'Total Cost', getter: (c: Car) => formatCurrency((c.purchase?.purchasePrice || 0) + (c.totalRepairCost || 0), locale), align: isRtl ? 'left' : 'right' },
+  ];
+
+  const activeFiltersList: ActiveFilterItem[] = [];
+  if (statusFilter.length > 0) {
+    activeFiltersList.push({
+      label: t('status') || 'Status',
+      value: statusFilter.map((s) => statusT(s.replace(/\s+/g, '').charAt(0).toLowerCase() + s.replace(/\s+/g, '').slice(1)) || s).join(', '),
+    });
+  }
+  if (modelFilter) activeFiltersList.push({ label: t('model') || 'Model', value: modelFilter });
+  if (yearFilter) activeFiltersList.push({ label: t('year') || 'Year', value: yearFilter });
+  if (colorFilter) activeFiltersList.push({ label: t('color') || 'Color', value: colorFilter });
+  if (debouncedSearch) activeFiltersList.push({ label: commonT('search') || 'Search', value: debouncedSearch });
+  if (debouncedPlateSearch) activeFiltersList.push({ label: commonT('plateNo') || 'Plate No', value: debouncedPlateSearch });
+
+  const printSummaryStats: SummaryStatItem[] = [
+    { label: statusT('inStock') || 'In Stock', value: stats.inStock, color: '#16a34a' },
+    { label: statusT('sold') || 'Sold', value: stats.sold, color: '#2563eb' },
+    { label: statusT('underRepair') || 'Under Repair', value: stats.underRepair, color: '#ea580c' },
+    { label: t('totalCost') || 'Total Inventory Value', value: formatCurrency(stats.totalCost, locale), color: '#0f172a' },
+  ];
+
+  const activeFiltersObj = {
+    status: statusFilter.join(','),
+    model: modelFilter,
+    year: yearFilter,
+    color: colorFilter,
+    q: debouncedSearch,
+    plateNumber: debouncedPlateSearch
+  };
+
   return (
     <div style={{ marginBottom: '24px' }}>
       <div
@@ -236,7 +279,16 @@ export default function CarsPage() {
       >
         <h2 className="page-title">{t('inventory')}</h2>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-          <DataTransferButtons entityType="cars" onImportSuccess={fetchCars} />
+          <DataTransferButtons
+            entityType="cars"
+            title={t('inventory')}
+            filters={activeFiltersObj}
+            columns={carPrintColumns}
+            data={cars}
+            activeFiltersList={activeFiltersList}
+            summaryStats={printSummaryStats}
+            onImportSuccess={fetchCars}
+          />
           <Link
             href="/dashboard/cars/new"
             style={{
@@ -248,9 +300,13 @@ export default function CarsPage() {
               borderRadius: '3px',
               textDecoration: 'none',
               border: '1px solid #28aaa9',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            + {t('addNew')}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            {t('addNew')}
           </Link>
         </div>
       </div>
@@ -264,6 +320,7 @@ export default function CarsPage() {
           { label: statusT('sold'), value: stats.sold, color: '#42ca7f', key: 'Sold' },
           { label: statusT('rented'), value: stats.rented, color: '#8b5cf6', key: 'Rented' },
           { label: statusT('defaulted'), value: stats.defaulted, color: '#ec4561', key: 'Defaulted' },
+          { label: statusT('handed'), value: stats.handed, color: '#20c997', key: 'Handed' },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -509,30 +566,18 @@ export default function CarsPage() {
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
+            <MultiSelectFilter
+              placeholder={t('allStatuses')}
+              selectedValues={statusFilter}
+              onChange={(vals) => {
+                setStatusFilter(vals);
                 setPage(1);
               }}
-              style={{
-                width: '140px',
-                height: '40px',
-                fontSize: '14px',
-                borderRadius: '0',
-                padding: '0 12px',
-                border: '1px solid #ced4da',
-                background: '#ffffff',
-                textAlign: isRtl ? 'right' : 'left'
-              }}
-            >
-              <option value="">{t('allStatuses')}</option>
-              {['In Stock', 'Under Repair', 'Reserved', 'On Installment', 'Sold', 'Rented', 'Defaulted'].map((s) => (
-                <option key={s} value={s}>
-                  {statusT(s.replace(' ', '').charAt(0).toLowerCase() + s.replace(' ', '').slice(1))}
-                </option>
-              ))}
-            </select>
+              options={['In Stock', 'Under Repair', 'Reserved', 'On Installment', 'Sold', 'Rented', 'Defaulted', 'Handed'].map((s) => ({
+                value: s,
+                label: statusT(s.replace(/\s+/g, '').charAt(0).toLowerCase() + s.replace(/\s+/g, '').slice(1)),
+              }))}
+            />
           </div>
 
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -586,7 +631,12 @@ export default function CarsPage() {
                               <img src={car.images[0]} alt={car.carId} style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                             ) : (
                               <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <span style={{ fontSize: '12px' }}>🚗</span>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca8b3" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                                  <circle cx="7" cy="17" r="2" />
+                                  <path d="M9 17h6" />
+                                  <circle cx="17" cy="17" r="2" />
+                                </svg>
                               </div>
                             )}
                           </td>

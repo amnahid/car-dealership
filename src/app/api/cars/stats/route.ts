@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
         reserved: statusMap['Reserved'] || 0,
         onInstallment: statusMap['On Installment'] || 0,
         defaulted: statusMap['Defaulted'] || 0,
+        handed: statusMap['Handed'] || 0,
       },
       inStockStats: {
         totalPurchaseValue: inStockStats.totalPurchaseValue,

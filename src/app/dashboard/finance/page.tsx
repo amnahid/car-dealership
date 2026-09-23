@@ -5,6 +5,7 @@ import Link from 'next/link';
 import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useTranslations, useLocale } from 'next-intl';
+import { PrintColumn, ActiveFilterItem, SummaryStatItem } from '@/lib/printUtils';
 
 interface Transaction {
   _id: string;
@@ -233,14 +234,53 @@ export default function FinancePage() {
     } catch (err) { console.error(err); }
   };
 
+  const txnPrintColumns: PrintColumn[] = [
+    { header: commonT('date') || 'Date', getter: (txn: Transaction) => new Date(txn.date).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US'), align: 'center' },
+    { header: commonT('type') || 'Type', getter: (txn: Transaction) => txn.type === 'Income' ? t('income') : t('expense'), align: 'center' },
+    { header: t('category') || 'Category', getter: (txn: Transaction) => getCategoryLabel(txn.category) },
+    { header: t('description') || 'Description', key: 'description' },
+    { header: commonT('amount') || 'Amount', getter: (txn: Transaction) => `${txn.type === 'Income' ? '+' : '-'}${formatCurrency(txn.amount)}`, align: isRtl ? 'left' : 'right' },
+  ];
+
+  const activeFiltersList: ActiveFilterItem[] = [];
+  if (typeFilter && typeFilter !== 'all') activeFiltersList.push({ label: commonT('type') || 'Type', value: typeFilter === 'Income' ? t('income') : t('expense') });
+  if (categoryFilter && categoryFilter !== 'all') activeFiltersList.push({ label: t('category') || 'Category', value: getCategoryLabel(categoryFilter) });
+  if (dateRange.startDate || dateRange.endDate) {
+    activeFiltersList.push({
+      label: commonT('date') || 'Date Range',
+      value: `${dateRange.startDate || '...'} - ${dateRange.endDate || '...'}`
+    });
+  }
+
+  const printSummaryStats: SummaryStatItem[] = [
+    { label: t('incomeThisMonth') || 'This Month Income', value: formatCurrency(summary.thisMonthIncome), color: '#42ca7f' },
+    { label: t('expensesThisMonth') || 'This Month Expenses', value: formatCurrency(summary.thisMonthExpense), color: '#ec4561' },
+    { label: t('netProfit') || 'Net Profit', value: formatCurrency(summary.thisMonthProfit), color: '#28aaa9' },
+    { label: t('profitMargin') || 'Profit Margin', value: `${profitMargin}%`, color: '#f5a623' },
+  ];
+
+  const activeFiltersObj = {
+    typeFilter,
+    category: categoryFilter,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  };
+
   return (
     <div style={{ marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('transactions')}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-          <button onClick={handlePrint} style={{ background: '#5b6be7', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('export.print') || 'Print'}</button>
-          <button onClick={handleExportCSV} style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', border: 'none', cursor: 'pointer', fontSize: '14px' }}>{commonT('export.csv') || 'Export CSV'}</button>
-          <DataTransferButtons entityType="transactions" onImportSuccess={fetchTransactions} showExport={false} />
+          <DataTransferButtons
+            entityType="transactions"
+            title={t('transactions')}
+            filters={activeFiltersObj}
+            columns={txnPrintColumns}
+            data={transactions}
+            activeFiltersList={activeFiltersList}
+            summaryStats={printSummaryStats}
+            onImportSuccess={fetchTransactions}
+          />
           <Link href="/dashboard/finance/reports" style={{ background: '#f5a623', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('reports')}</Link>
           <Link href="/dashboard/finance/expenses" style={{ background: '#ec4561', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('expenses')}</Link>
           <Link href="/dashboard/finance/incomes" style={{ background: '#42ca7f', color: '#fff', padding: '8px 16px', borderRadius: '3px', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>{t('incomes')}</Link>

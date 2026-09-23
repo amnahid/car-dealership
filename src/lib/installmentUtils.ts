@@ -28,8 +28,8 @@ export interface RecalculatedInstallmentState {
   remainingAmount: number;
   nextPaymentDate: Date | null;
   nextPaymentAmount: number;
-  saleStatus: 'Active' | 'Completed' | 'Defaulted';
-  carStatus: 'On Installment' | 'Sold' | 'Defaulted';
+  saleStatus: 'Active' | 'Completed' | 'Defaulted' | 'Cancelled' | 'Handed';
+  carStatus: 'On Installment' | 'Sold' | 'Defaulted' | 'Handed';
 }
 
 export interface InstallmentScheduleItem {
@@ -84,14 +84,14 @@ export function recalculateInstallmentTotals(
   const principalPaid = Math.max(0, totalPaid - lateFeeCharged);
   const remainingAmount = Math.max(0, loanAmount - principalPaid);
 
-  let saleStatus: 'Active' | 'Completed' | 'Defaulted' = 'Active';
-  let carStatus: 'On Installment' | 'Sold' | 'Defaulted' = 'On Installment';
+  let saleStatus: 'Active' | 'Completed' | 'Defaulted' | 'Cancelled' | 'Handed' = 'Active';
+  let carStatus: 'On Installment' | 'Sold' | 'Defaulted' | 'Handed' = 'On Installment';
   let nextPaymentDate: Date | null = null;
   let nextPaymentAmount = 0;
 
-  if (allPaid || remainingAmount === 0) {
-    saleStatus = 'Completed';
-    carStatus = 'Sold';
+  if (allPaid || remainingAmount <= 0) {
+    saleStatus = 'Handed';
+    carStatus = 'Handed';
   } else if (hasOverdue) {
     saleStatus = 'Defaulted';
     carStatus = 'Defaulted';

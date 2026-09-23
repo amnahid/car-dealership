@@ -34,36 +34,252 @@ export async function GET(request: NextRequest) {
     const fileName = `export-${type}-${new Date().toISOString().split('T')[0]}.csv`;
 
     switch (type) {
-      case 'cars':
-        data = await Car.find({ isDeleted: { $ne: true } }).lean();
+      case 'cars': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const status = searchParams.get('status');
+        const brand = searchParams.get('brand');
+        const model = searchParams.get('model');
+        const year = searchParams.get('year');
+        const color = searchParams.get('color');
+        const plateNumber = searchParams.get('plateNumber');
+        const q = searchParams.get('q') || searchParams.get('search');
+
+        if (status) query.status = status;
+        if (brand) query.brand = { $regex: brand, $options: 'i' };
+        if (model) query.model = { $regex: model, $options: 'i' };
+        if (year) query.year = parseInt(year);
+        if (color) query.color = { $regex: color, $options: 'i' };
+        if (plateNumber) query.plateNumber = { $regex: plateNumber, $options: 'i' };
+        if (q) {
+          query.$or = [
+            { carId: { $regex: q, $options: 'i' } },
+            { brand: { $regex: q, $options: 'i' } },
+            { model: { $regex: q, $options: 'i' } },
+            { plateNumber: { $regex: q, $options: 'i' } },
+            { chassisNumber: { $regex: q, $options: 'i' } },
+            { sequenceNumber: { $regex: q, $options: 'i' } },
+          ];
+        }
+        data = await Car.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'customers':
-        data = await Customer.find({ isDeleted: { $ne: true } }).lean();
+      }
+      case 'customers': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const q = searchParams.get('q') || searchParams.get('search');
+        if (q) {
+          query.$or = [
+            { fullName: { $regex: q, $options: 'i' } },
+            { phone: { $regex: q, $options: 'i' } },
+            { nationalId: { $regex: q, $options: 'i' } },
+            { passportNumber: { $regex: q, $options: 'i' } },
+          ];
+        }
+        data = await Customer.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'employees':
-        data = await Employee.find({ isActive: true }).lean();
+      }
+      case 'employees': {
+        const query: Record<string, any> = { isActive: true };
+        const q = searchParams.get('q') || searchParams.get('search');
+        if (q) {
+          query.$or = [
+            { name: { $regex: q, $options: 'i' } },
+            { email: { $regex: q, $options: 'i' } },
+            { phone: { $regex: q, $options: 'i' } },
+          ];
+        }
+        data = await Employee.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'suppliers':
-        data = await Supplier.find({ isDeleted: { $ne: true } }).lean();
+      }
+      case 'suppliers': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const q = searchParams.get('q') || searchParams.get('search');
+        if (q) {
+          query.$or = [
+            { companyName: { $regex: q, $options: 'i' } },
+            { contactPerson: { $regex: q, $options: 'i' } },
+            { phone: { $regex: q, $options: 'i' } },
+            { email: { $regex: q, $options: 'i' } },
+          ];
+        }
+        data = await Supplier.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'repairs':
-        data = await Repair.find({ isDeleted: { $ne: true } }).lean();
+      }
+      case 'repairs': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const status = searchParams.get('status');
+        const q = searchParams.get('q') || searchParams.get('search');
+        if (status) query.status = status;
+        if (q) {
+          query.$or = [
+            { repairId: { $regex: q, $options: 'i' } },
+            { garageName: { $regex: q, $options: 'i' } },
+            { description: { $regex: q, $options: 'i' } },
+          ];
+        }
+        data = await Repair.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'cashSales':
-        data = await CashSale.find({ status: { $ne: 'Cancelled' } }).lean();
+      }
+      case 'cashSales': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const status = searchParams.get('status');
+        const customerId = searchParams.get('customer') || searchParams.get('customerId');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const search = searchParams.get('search') || searchParams.get('q');
+
+        if (status) {
+          query.status = status;
+        } else if (!search) {
+          query.status = { $ne: 'Cancelled' };
+        }
+
+        if (customerId) query.customer = customerId;
+        if (startDate || endDate) {
+          const dateQuery: any = {};
+          if (startDate) dateQuery.$gte = new Date(startDate);
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            dateQuery.$lte = end;
+          }
+          query.saleDate = dateQuery;
+        }
+
+        if (search) {
+          const matchingCars = await Car.find({ plateNumber: { $regex: search, $options: 'i' } }).select('_id').lean();
+          const matchingCarIds = matchingCars.map(c => c._id);
+          query.$or = [
+            { customerName: { $regex: search, $options: 'i' } },
+            { carId: { $regex: search, $options: 'i' } },
+            { saleId: { $regex: search, $options: 'i' } },
+            { car: { $in: matchingCarIds } },
+          ];
+        }
+
+        data = await CashSale.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'installmentSales':
-        data = await InstallmentSale.find({ status: { $ne: 'Cancelled' } }).lean();
+      }
+      case 'installmentSales': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const status = searchParams.get('status');
+        const customerId = searchParams.get('customer') || searchParams.get('customerId');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const search = searchParams.get('search') || searchParams.get('q');
+
+        if (status) {
+          query.status = status;
+        } else if (!search) {
+          query.status = { $ne: 'Cancelled' };
+        }
+
+        if (customerId) query.customer = customerId;
+        if (startDate || endDate) {
+          const dateQuery: any = {};
+          if (startDate) dateQuery.$gte = new Date(startDate);
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            dateQuery.$lte = end;
+          }
+          query.startDate = dateQuery;
+        }
+
+        if (search) {
+          const matchingCars = await Car.find({ plateNumber: { $regex: search, $options: 'i' } }).select('_id').lean();
+          const matchingCarIds = matchingCars.map(c => c._id);
+          query.$or = [
+            { customerName: { $regex: search, $options: 'i' } },
+            { carId: { $regex: search, $options: 'i' } },
+            { saleId: { $regex: search, $options: 'i' } },
+            { car: { $in: matchingCarIds } },
+          ];
+        }
+
+        data = await InstallmentSale.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'rentals':
-        data = await Rental.find({ status: { $ne: 'Cancelled' } }).lean();
+      }
+      case 'rentals': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const status = searchParams.get('status');
+        const customerId = searchParams.get('customer') || searchParams.get('customerId');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const search = searchParams.get('search') || searchParams.get('q');
+
+        if (status) {
+          query.status = status;
+        } else if (!search) {
+          query.status = { $ne: 'Cancelled' };
+        }
+
+        if (customerId) query.customer = customerId;
+        if (startDate || endDate) {
+          const dateQuery: any = {};
+          if (startDate) dateQuery.$gte = new Date(startDate);
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            dateQuery.$lte = end;
+          }
+          query.startDate = dateQuery;
+        }
+
+        if (search) {
+          const matchingCars = await Car.find({ plateNumber: { $regex: search, $options: 'i' } }).select('_id').lean();
+          const matchingCarIds = matchingCars.map(c => c._id);
+          query.$or = [
+            { customerName: { $regex: search, $options: 'i' } },
+            { carId: { $regex: search, $options: 'i' } },
+            { rentalId: { $regex: search, $options: 'i' } },
+            { car: { $in: matchingCarIds } },
+          ];
+        }
+
+        data = await Rental.find(query).sort({ createdAt: -1 }).lean();
         break;
-      case 'transactions':
-        data = await Transaction.find({ isDeleted: { $ne: true } }).lean();
+      }
+      case 'transactions': {
+        const query: Record<string, any> = { isDeleted: { $ne: true } };
+        const typeFilter = searchParams.get('typeFilter') || searchParams.get('transactionType');
+        const category = searchParams.get('category');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+        const q = searchParams.get('q') || searchParams.get('search');
+
+        if (typeFilter && typeFilter !== 'all') query.type = typeFilter;
+        if (category && category !== 'all') query.category = category;
+        if (startDate || endDate) {
+          const dateQuery: any = {};
+          if (startDate) dateQuery.$gte = new Date(startDate);
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            dateQuery.$lte = end;
+          }
+          query.date = dateQuery;
+        }
+        if (q) {
+          query.$or = [
+            { description: { $regex: q, $options: 'i' } },
+            { reference: { $regex: q, $options: 'i' } },
+          ];
+        }
+
+        data = await Transaction.find(query).sort({ date: -1 }).lean();
         break;
-      case 'salaryPayments':
-        data = await SalaryPayment.find({ status: { $ne: 'Cancelled' } }).lean();
+      }
+      case 'salaryPayments': {
+        const query: Record<string, any> = { status: { $ne: 'Cancelled' } };
+        const month = searchParams.get('month');
+        const year = searchParams.get('year');
+        const employeeId = searchParams.get('employeeId');
+        if (month) query.month = parseInt(month);
+        if (year) query.year = parseInt(year);
+        if (employeeId) query.employee = employeeId;
+        data = await SalaryPayment.find(query).sort({ paymentDate: -1 }).lean();
         break;
+      }
       case 'users':
         data = await User.find({}).select('-password -resetToken -resetTokenExpiry').lean();
         break;

@@ -118,7 +118,7 @@ export interface IActivityLog {
   createdAt: Date;
 }
 
-export type CarStatus = 'In Stock' | 'Under Repair' | 'Reserved' | 'On Installment' | 'Sold' | 'Rented' | 'Defaulted';
+export type CarStatus = 'In Stock' | 'Under Repair' | 'Reserved' | 'On Installment' | 'Sold' | 'Rented' | 'Defaulted' | 'Handed';
 export type DocumentType = 'Insurance' | 'Road Permit' | 'Registration Card';
 export type RepairStatus = 'Pending' | 'In Progress' | 'Completed';
 export type SaleType = 'Cash' | 'Installment' | 'Rental';
@@ -231,7 +231,7 @@ export interface IInstallmentSale {
   nextPaymentAmount: number;
   totalPaid: number;
   remainingAmount: number;
-  status: 'Active' | 'Completed' | 'Defaulted';
+  status: 'Active' | 'Completed' | 'Defaulted' | 'Cancelled' | 'Handed';
   notes?: string;
   createdBy: Types.ObjectId;
   createdAt: Date;

@@ -31,7 +31,7 @@ export async function GET(
     await connectDB();
 
     const sale = await InstallmentSale.findById(id)
-      .populate('car', 'carId brand model year plateNumber chassisNumber engineNumber sequenceNumber color images')
+      .populate('car', 'carId brand model year plateNumber chassisNumber engineNumber sequenceNumber color images status')
       .populate('customer', 'fullName phone email passportNumber buildingNumber streetName district city postalCode otherId otherIdType vatRegistrationNumber')
       .populate('guarantor', 'fullName phone passportNumber employer salary buildingNumber streetName district city postalCode documents profilePhoto')
       .lean();

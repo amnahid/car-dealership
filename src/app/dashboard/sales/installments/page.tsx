@@ -9,6 +9,10 @@ import DataTransferButtons from '@/components/DataTransferButtons';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useTranslations, useLocale } from 'next-intl';
+import ConfirmModal from '@/components/ConfirmModal';
+import Toast from '@/components/Toast';
+import MultiSelectFilter from '@/components/MultiSelectFilter';
+import { PrintColumn, ActiveFilterItem, SummaryStatItem } from '@/lib/printUtils';
 
 interface Customer {
   _id: string;
@@ -48,7 +52,7 @@ interface Sale {
   tenureMonths: number;
   totalPaid: number;
   remainingAmount: number;
-  status: 'Active' | 'Completed' | 'Defaulted' | 'Cancelled';
+  status: 'Active' | 'Completed' | 'Defaulted' | 'Cancelled' | 'Handed';
   currentInstallmentStatus?: string;
   nextPaymentDate: string;
   notes?: string;
@@ -58,7 +62,7 @@ interface Sale {
   agentCommission?: number;
   agentCommissionType?: 'percentage' | 'flat';
   agentCommissionValue?: number;
-  car?: { _id: string; carId: string; brand: string; model: string; images: string[]; plateNumber?: string };
+  car?: { _id: string; carId: string; brand: string; model: string; images: string[]; plateNumber?: string; status?: string };
   customer?: Customer;
   zatcaStatus?: 'Pending' | 'Cleared' | 'Reported' | 'Failed' | 'NotRequired';
   invoiceType?: 'Standard' | 'Simplified';
@@ -85,7 +89,7 @@ export default function InstallmentsPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalSales, setTotalSales] = useState(0);
@@ -94,6 +98,30 @@ export default function InstallmentsPage() {
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: 'primary' | 'danger' | 'warning' | 'success';
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+  };
 
   const toggleSelectAll = () => {
     const activeSales = sales.filter(s => s.status === 'Active');
@@ -114,30 +142,38 @@ export default function InstallmentsPage() {
     setSelectedIds(next);
   };
 
-  const handleBulkCancel = async () => {
-    if (!confirm(t('cancelConfirm'))) return;
+  const handleBulkCancel = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('cancelSale') || 'Cancel Sales',
+      message: t('cancelConfirm') || 'Are you sure you want to cancel the selected sales?',
+      confirmText: t('cancelSale') || 'Cancel Sales',
+      variant: 'danger',
+      onConfirm: async () => {
+        setBulkActionLoading(true);
+        try {
+          const res = await fetch('/api/sales/installments/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'cancel', ids: Array.from(selectedIds) }),
+          });
 
-    setBulkActionLoading(true);
-    try {
-      const res = await fetch('/api/sales/installments/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel', ids: Array.from(selectedIds) }),
-      });
-
-      if (res.ok) {
-        setSelectedIds(new Set());
-        fetchSales();
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Bulk cancel failed');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Network error');
-    } finally {
-      setBulkActionLoading(false);
-    }
+          if (res.ok) {
+            setSelectedIds(new Set());
+            showToast(t('bulkCancelSuccess') || 'Sales cancelled successfully', 'success');
+            fetchSales();
+          } else {
+            const data = await res.json();
+            showToast(data.error || 'Bulk cancel failed', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Network error', 'error');
+        } finally {
+          setBulkActionLoading(false);
+        }
+      },
+    });
   };
 
   const [cars, setCars] = useState<Car[]>([]);
@@ -149,7 +185,7 @@ export default function InstallmentsPage() {
     setLoading(true);
     const params = new URLSearchParams({ page: page.toString(), limit: '15' });
     if (debouncedSearch) params.set('search', debouncedSearch);
-    if (statusFilter) params.set('status', statusFilter);
+    if (statusFilter.length > 0) params.set('status', statusFilter.join(','));
     if (dateRange.startDate) params.set('startDate', dateRange.startDate);
     if (dateRange.endDate) params.set('endDate', dateRange.endDate);
 
@@ -219,17 +255,89 @@ export default function InstallmentsPage() {
     setPage(1);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('cancelConfirm'))) return;
-    try {
-      const res = await fetch(`/api/sales/installments/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Cancelled' }),
-      });
-      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
-      fetchSales();
-    } catch (err) { console.error(err); }
+  const handleDelete = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('cancelSale') || 'Cancel Sale',
+      message: t('cancelConfirm') || 'Are you sure you want to cancel this sale?',
+      confirmText: t('cancelSale') || 'Cancel Sale',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/sales/installments/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'Cancelled' }),
+          });
+          if (!res.ok) {
+            const data = await res.json();
+            showToast(data.error || 'Failed', 'error');
+            return;
+          }
+          showToast(t('saleCancelled') || 'Sale cancelled successfully', 'success');
+          fetchSales();
+        } catch (err) {
+          console.error(err);
+          showToast('Network error', 'error');
+        }
+      },
+    });
+  };
+
+  const handleHandover = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('markHanded') || 'Mark as Handed',
+      message: t('handOverConfirm') || 'Are you sure you want to mark this car as Handed over to the customer?',
+      confirmText: t('markHanded') || 'Mark Handed',
+      variant: 'success',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/sales/installments/${id}/handover`, {
+            method: 'POST',
+          });
+          const data = await res.json();
+          if (res.ok) {
+            showToast(data.message || t('handOverSuccess') || 'Car marked as Handed successfully', 'success');
+            fetchSales();
+            setEditingSale(null);
+          } else {
+            showToast(data.error || 'Failed to mark as Handed', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Network error', 'error');
+        }
+      },
+    });
+  };
+
+  const handleRevertHandover = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: t('revertHandover') || 'Revert Handover',
+      message: t('revertHandoverConfirm') || 'Are you sure you want to revert the handover status?',
+      confirmText: t('revertHandover') || 'Revert Handover',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/sales/installments/${id}/revert-handover`, {
+            method: 'POST',
+          });
+          const data = await res.json();
+          if (res.ok) {
+            showToast(data.message || t('revertHandoverSuccess') || 'Handover status reverted successfully', 'success');
+            fetchSales();
+            setEditingSale(null);
+          } else {
+            showToast(data.error || 'Failed to revert handover', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showToast('Network error', 'error');
+        }
+      },
+    });
   };
 
   const handleUpdateSale = async (id: string, data: Partial<Sale>) => {
@@ -240,15 +348,23 @@ export default function InstallmentsPage() {
         body: JSON.stringify(data),
       });
       const resData = await res.json();
-      if (!res.ok) { alert(resData.error || 'Failed'); return; }
+      if (!res.ok) {
+        showToast(resData.error || 'Failed', 'error');
+        return;
+      }
       
       if (resData.isPending) {
-        alert(resData.message || 'Edit request submitted for admin approval');
+        showToast(resData.message || 'Edit request submitted for admin approval', 'info');
+      } else {
+        showToast(commonT('saved') || 'Saved successfully', 'success');
       }
       
       setEditingSale(null);
       fetchSales();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error', 'error');
+    }
   };
 
   const getStatusLabel = (status: string) => {
@@ -260,6 +376,7 @@ export default function InstallmentsPage() {
     switch (status) {
       case 'Active': return '#28aaa9';
       case 'Completed': return '#42ca7f';
+      case 'Handed': return '#20c997';
       case 'Defaulted': return '#ec4561';
       case 'Cancelled': return '#9ca8b3';
       default: return '#9ca8b3';
@@ -268,14 +385,66 @@ export default function InstallmentsPage() {
 
   const formatCurrency = (val: number | undefined | null) => `SAR ${(val || 0).toLocaleString(locale === 'ar' ? 'ar-SA' : 'en-US')}`;
 
+  const installmentPrintColumns: PrintColumn[] = [
+    { header: t('saleId') || 'Sale ID', key: 'saleId', align: 'center' },
+    { header: t('customer') || 'Customer', key: 'customerName' },
+    { header: t('phone') || 'Phone', key: 'customerPhone', align: 'center' },
+    { header: t('car') || 'Car', getter: (s: Sale) => s.car ? `${s.car.brand} ${s.car.model} (${s.car.plateNumber || s.car.carId})` : s.carId },
+    { header: t('totalPrice') || 'Total Price', getter: (s: Sale) => formatCurrency(s.totalPrice), align: isRtl ? 'left' : 'right' },
+    { header: t('downPayment') || 'Down Payment', getter: (s: Sale) => formatCurrency(s.downPayment), align: isRtl ? 'left' : 'right' },
+    { header: t('monthlyPayment') || 'Monthly', getter: (s: Sale) => formatCurrency(s.monthlyPayment), align: isRtl ? 'left' : 'right' },
+    { header: t('totalPaid') || 'Total Paid', getter: (s: Sale) => formatCurrency(s.totalPaid), align: isRtl ? 'left' : 'right' },
+    { header: t('remaining') || 'Remaining', getter: (s: Sale) => formatCurrency(s.remainingAmount), align: isRtl ? 'left' : 'right' },
+    { header: t('status') || 'Status', getter: (s: Sale) => getStatusLabel(s.status) || s.status, align: 'center' },
+    { header: t('nextPayment') || 'Next Payment', getter: (s: Sale) => s.nextPaymentDate ? new Date(s.nextPaymentDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-', align: 'center' },
+  ];
+
+  const activeFiltersList: ActiveFilterItem[] = [];
+  if (statusFilter.length > 0) {
+    activeFiltersList.push({
+      label: t('status') || 'Status',
+      value: statusFilter.map((s) => getStatusLabel(s) || s).join(', '),
+    });
+  }
+  if (debouncedSearch) activeFiltersList.push({ label: commonT('search') || 'Search', value: debouncedSearch });
+  if (dateRange.startDate || dateRange.endDate) {
+    activeFiltersList.push({
+      label: commonT('date') || 'Date Range',
+      value: `${dateRange.startDate || '...'} - ${dateRange.endDate || '...'}`
+    });
+  }
+
+  const printSummaryStats: SummaryStatItem[] = [
+    { label: cashT('totalSales') || 'Total Sales', value: totalSales, color: '#28aaa9' },
+    { label: t('totalValue') || 'Total Value', value: formatCurrency(stats.totalValue), color: '#42ca7f' },
+    { label: t('totalPaid') || 'Total Paid', value: formatCurrency(stats.totalPaid), color: '#f5a623' },
+    { label: t('remaining') || 'Remaining Balance', value: formatCurrency(stats.totalRemaining), color: '#ec4561' },
+  ];
+
+  const activeFiltersObj = {
+    status: statusFilter.join(','),
+    search: debouncedSearch,
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  };
+
   return (
     <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('title')}</h2>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-          <DataTransferButtons entityType="installmentSales" onImportSuccess={fetchSales} />
+          <DataTransferButtons
+            entityType="installmentSales"
+            title={t('title')}
+            filters={activeFiltersObj}
+            columns={installmentPrintColumns}
+            data={sales}
+            activeFiltersList={activeFiltersList}
+            summaryStats={printSummaryStats}
+            onImportSuccess={fetchSales}
+          />
           <button onClick={() => setShowModal(true)} style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}>
-            + {t('addNew')}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {t('addNew')}</span>
           </button>
         </div>
       </div>
@@ -301,13 +470,21 @@ export default function InstallmentsPage() {
 
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <input type="text" placeholder={t('searchPlaceholder')} value={search} onChange={(e) => handleSearch(e.target.value)} style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} style={{ height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }}>
-          <option value="">{cashT('allStatus')}</option>
-          <option value="Active">{t('statuses.active')}</option>
-          <option value="Completed">{t('statuses.completed')}</option>
-          <option value="Defaulted">{t('statuses.defaulted')}</option>
-          <option value="Cancelled">{t('statuses.cancelled')}</option>
-        </select>
+        <MultiSelectFilter
+          placeholder={cashT('allStatus') || 'All Statuses'}
+          selectedValues={statusFilter}
+          onChange={(vals) => {
+            setStatusFilter(vals);
+            setPage(1);
+          }}
+          options={[
+            { value: 'Active', label: t('statuses.active'), color: '#28aaa9' },
+            { value: 'Completed', label: t('statuses.completed'), color: '#20c997' },
+            { value: 'Handed', label: t('statuses.handed'), color: '#17a2b8' },
+            { value: 'Defaulted', label: t('statuses.defaulted'), color: '#f8b425' },
+            { value: 'Cancelled', label: t('statuses.cancelled'), color: '#ec4561' },
+          ]}
+        />
         <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
 
@@ -417,7 +594,12 @@ export default function InstallmentsPage() {
                         <img src={sale.car.images[0]} alt="" style={{ width: '50px', height: '50px', objectFit: 'contain', background: '#f8f9fa', borderRadius: '4px' }} />
                       ) : (
                         <div style={{ width: '50px', height: '50px', background: '#f0f0f0', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: '10px', color: '#9ca8b3' }}>🚗</span>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9ca8b3" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                            <circle cx="7" cy="17" r="2" />
+                            <path d="M9 17h6" />
+                            <circle cx="17" cy="17" r="2" />
+                          </svg>
                         </div>
                       )}
                     </td>
@@ -456,13 +638,36 @@ export default function InstallmentsPage() {
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(sale.status) + '20', color: getStatusColor(sale.status) }}>{getStatusLabel(sale.status)}</span>
+                      {sale.status === 'Handed' ? (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '3px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            background: '#28aaa9',
+                            color: '#ffffff',
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                          {getStatusLabel(sale.status)}
+                        </span>
+                      ) : (
+                        <span style={{ padding: '4px 8px', borderRadius: '3px', fontSize: '12px', fontWeight: 500, background: getStatusColor(sale.status) + '20', color: getStatusColor(sale.status) }}>
+                          {getStatusLabel(sale.status)}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} saleType="InstallmentSale" />
                     </td>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         <a href={`/dashboard/sales/installments/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</a>
                         <button onClick={() => setEditingSale(sale)} style={{ color: '#f8b425', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '14px' }}>{commonT('edit')}</button>
                         {sale.status !== 'Cancelled' && (
@@ -495,6 +700,7 @@ export default function InstallmentsPage() {
           fetchCustomers={fetchCustomers} 
           fetchSalesAgents={fetchSalesAgents}
           fetchGuarantors={fetchGuarantors}
+          showToast={showToast}
           onClose={() => setShowModal(false)} 
           onSave={() => { setShowModal(false); fetchSales(); }} 
         />
@@ -507,14 +713,41 @@ export default function InstallmentsPage() {
           guarantors={guarantors}
           fetchSalesAgents={fetchSalesAgents}
           fetchGuarantors={fetchGuarantors}
+          showToast={showToast}
+          onCancelSale={handleDelete}
+          onHandover={handleHandover}
+          onRevertHandover={handleRevertHandover}
           onClose={() => setEditingSale(null)} 
           onSave={handleUpdateSale} 
-        />      )}
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
+        variant={confirmModal.variant}
+        onConfirm={async () => {
+          await confirmModal.onConfirm();
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
 
-function InstallmentModal({ cars, customers, salesAgents, guarantors, fetchCustomers, fetchSalesAgents, fetchGuarantors, onClose, onSave }: { cars: Car[]; customers: Customer[]; salesAgents: SalesAgent[]; guarantors: Guarantor[]; fetchCustomers: () => void; fetchSalesAgents: () => void; fetchGuarantors: () => void; onClose: () => void; onSave: () => void }) {
+function InstallmentModal({ cars, customers, salesAgents, guarantors, fetchCustomers, fetchSalesAgents, fetchGuarantors, showToast, onClose, onSave }: { cars: Car[]; customers: Customer[]; salesAgents: SalesAgent[]; guarantors: Guarantor[]; fetchCustomers: () => void; fetchSalesAgents: () => void; fetchGuarantors: () => void; showToast?: (msg: string, type?: 'success' | 'error' | 'info') => void; onClose: () => void; onSave: () => void }) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
@@ -603,7 +836,7 @@ function InstallmentModal({ cars, customers, salesAgents, guarantors, fetchCusto
 
   const handleAddCustomer = async () => {
     if (!newCustomer.fullName || !newCustomer.phone || !newCustomer.passportNumber || !newCustomer.passportExpiryDate) {
-      alert(commonT('fillRequired'));
+      if (showToast) showToast(commonT('fillRequired'), 'error');
       return;
     }
     setLoading(true);
@@ -613,19 +846,29 @@ function InstallmentModal({ cars, customers, salesAgents, guarantors, fetchCusto
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCustomer),
       });
-      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      if (!res.ok) {
+        const data = await res.json();
+        if (showToast) showToast(data.error || 'Failed', 'error');
+        return;
+      }
       const data = await res.json();
       const created = data.customer || data;
       setForm({ ...form, customer: created._id, customerName: newCustomer.fullName, customerPhone: newCustomer.phone, invoiceType: 'Simplified', buyerTrn: '' });
       setShowCustomerModal(false);
       setNewCustomer({ fullName: '', phone: '', email: '', passportNumber: '', passportExpiryDate: '', buildingNumber: '', streetName: '', district: '', city: '', postalCode: '', countryCode: 'SA' });
       fetchCustomers();
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+      if (showToast) showToast('Network error', 'error');
+    } finally { setLoading(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.car) { alert('Please select a car'); return; }
+    if (!form.car) {
+      if (showToast) showToast('Please select a car', 'error');
+      return;
+    }
     setLoading(true);
     try {
       const price = parseFloat(form.totalPrice) || 0;
@@ -646,9 +889,16 @@ function InstallmentModal({ cars, customers, salesAgents, guarantors, fetchCusto
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) { const data = await res.json(); alert(data.error || 'Failed'); return; }
+      if (!res.ok) {
+        const data = await res.json();
+        if (showToast) showToast(data.error || 'Failed', 'error');
+        return;
+      }
       onSave();
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) {
+      console.error(err);
+      if (showToast) showToast('Network error', 'error');
+    } finally { setLoading(false); }
   };
 
   const inputStyle: React.CSSProperties = {
@@ -976,13 +1226,38 @@ function InstallmentModal({ cars, customers, salesAgents, guarantors, fetchCusto
   );
 }
 
-function EditInstallmentModal({ sale, salesAgents, guarantors, fetchSalesAgents, fetchGuarantors, onClose, onSave }: { sale: Sale; salesAgents: SalesAgent[]; guarantors: Guarantor[]; fetchSalesAgents: () => void; fetchGuarantors: () => void; onClose: () => void; onSave: (id: string, data: Partial<Sale>) => void }) {
+function EditInstallmentModal({ 
+  sale, 
+  salesAgents, 
+  guarantors, 
+  fetchSalesAgents, 
+  fetchGuarantors, 
+  showToast, 
+  onCancelSale, 
+  onHandover,
+  onRevertHandover,
+  onClose, 
+  onSave 
+}: { 
+  sale: Sale; 
+  salesAgents: SalesAgent[]; 
+  guarantors: Guarantor[]; 
+  fetchSalesAgents: () => void; 
+  fetchGuarantors: () => void; 
+  showToast?: (msg: string, type?: 'success' | 'error' | 'info') => void; 
+  onCancelSale?: (id: string) => void; 
+  onHandover?: (id: string) => void;
+  onRevertHandover?: (id: string) => void;
+  onClose: () => void; 
+  onSave: (id: string, data: Partial<Sale>) => void 
+}) {
   const t = useTranslations('InstallmentSales');
   const commonT = useTranslations('Common');
   const cashT = useTranslations('CashSales');
   const guarantorsT = useTranslations('Guarantors');
   const locale = useLocale();
   const isRtl = locale === 'ar';
+  const isHanded = sale.status === 'Handed' || (sale as any).handoverStatus === 'Handed';
 
   const [form, setForm] = useState({
     downPayment: sale.downPayment.toString(),
@@ -1081,13 +1356,48 @@ function EditInstallmentModal({ sale, salesAgents, guarantors, fetchSalesAgents,
         background: '#ffffff', 
         padding: '24px', 
         borderRadius: '8px', 
-        width: '500px', 
+        width: '520px', 
         maxWidth: '90%', 
         maxHeight: '90vh', 
         overflowY: 'auto', 
         textAlign: isRtl ? 'right' : 'left' 
       }}>
-        <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#2a3142' }}>{t('editSale', { id: sale.saleId })}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
+          <h3 style={{ margin: 0, color: '#2a3142' }}>{t('editSale', { id: sale.saleId })}</h3>
+          {isHanded ? (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 8px',
+                borderRadius: '3px',
+                fontSize: '12px',
+                fontWeight: 600,
+                background: '#28aaa9',
+                color: '#ffffff',
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              {t('statuses.handed')}
+            </span>
+          ) : (
+            <span
+              style={{
+                padding: '4px 8px',
+                borderRadius: '3px',
+                fontSize: '12px',
+                fontWeight: 500,
+                background: sale.status === 'Active' ? '#28aaa920' : '#f8b42520',
+                color: sale.status === 'Active' ? '#28aaa9' : '#f8b425',
+              }}
+            >
+              {sale.status === 'Active' ? t('statuses.active') : sale.status}
+            </span>
+          )}
+        </div>
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
             <div>
@@ -1222,12 +1532,133 @@ function EditInstallmentModal({ sale, salesAgents, guarantors, fetchSalesAgents,
                 />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '16px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-            {sale.status !== 'Cancelled' && (
-              <button type="button" onClick={async () => { if (confirm(t('cancelConfirm'))) { await onSave(sale._id, { status: 'Cancelled' } as any); onClose(); } }} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ec4561', borderRadius: '3px', background: '#ffffff', color: '#ec4561', cursor: 'pointer' }}>{t('cancelSale')}</button>
-            )}
-            <button type="button" onClick={onClose} style={{ padding: '10px 20px', fontSize: '14px', border: '1px solid #ced4da', borderRadius: '3px', background: '#ffffff', cursor: 'pointer' }}>{commonT('close')}</button>
-            <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontSize: '14px', border: 'none', borderRadius: '3px', background: '#28aaa9', color: '#ffffff', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>{loading ? commonT('loading') : commonT('save')}</button>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            marginTop: '20px', 
+            paddingTop: '16px', 
+            borderTop: '1px solid #edf2f7',
+            flexDirection: isRtl ? 'row-reverse' : 'row',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {sale.status !== 'Cancelled' && (
+                <>
+                  {isHanded ? (
+                    onRevertHandover && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onRevertHandover(sale._id);
+                        }}
+                        style={{
+                          padding: '8px 14px',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          border: '1px solid #f8b425',
+                          borderRadius: '3px',
+                          background: '#fffbf0',
+                          color: '#b7791f',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        {t('revertHandover')}
+                      </button>
+                    )
+                  ) : (
+                    onHandover && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onHandover(sale._id);
+                        }}
+                        style={{
+                          padding: '8px 14px',
+                          fontSize: '13px',
+                          fontWeight: 500,
+                          border: '1px solid #28aaa9',
+                          borderRadius: '3px',
+                          background: '#28aaa9',
+                          color: '#ffffff',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        {t('markHanded')}
+                      </button>
+                    )
+                  )}
+                  {onCancelSale && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onCancelSale(sale._id);
+                      }}
+                      style={{ 
+                        padding: '8px 14px', 
+                        fontSize: '13px', 
+                        fontWeight: 500,
+                        border: '1px solid #ec4561', 
+                        borderRadius: '3px', 
+                        background: '#ffffff', 
+                        color: '#ec4561', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      {t('cancelSale')}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button 
+                type="button" 
+                onClick={onClose} 
+                style={{ 
+                  padding: '8px 16px', 
+                  fontSize: '14px', 
+                  border: '1px solid #ced4da', 
+                  borderRadius: '3px', 
+                  background: '#ffffff', 
+                  color: '#525f80',
+                  cursor: 'pointer' 
+                }}
+              >
+                {commonT('close')}
+              </button>
+              <button 
+                type="submit" 
+                disabled={loading} 
+                style={{ 
+                  padding: '8px 20px', 
+                  fontSize: '14px', 
+                  fontWeight: 500,
+                  border: 'none', 
+                  borderRadius: '3px', 
+                  background: '#28aaa9', 
+                  color: '#ffffff', 
+                  cursor: loading ? 'not-allowed' : 'pointer', 
+                  opacity: loading ? 0.6 : 1 
+                }}
+              >
+                {loading ? commonT('loading') : commonT('save')}
+              </button>
+            </div>
           </div>
         </form>
       </div>
