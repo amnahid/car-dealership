@@ -48,6 +48,25 @@ describe('whatsapp.ts', () => {
     });
   });
 
+  describe('formatPhoneNumber', () => {
+    it('should format Saudi 10-digit numbers starting with 05', async () => {
+      const { formatPhoneNumber } = await import('../../../src/lib/whatsapp');
+      expect(formatPhoneNumber('0512345678')).toBe('966512345678');
+      expect(formatPhoneNumber('+966 51 234 5678')).toBe('966512345678');
+      expect(formatPhoneNumber('00966512345678')).toBe('966512345678');
+    });
+
+    it('should format Saudi 9-digit numbers starting with 5', async () => {
+      const { formatPhoneNumber } = await import('../../../src/lib/whatsapp');
+      expect(formatPhoneNumber('512345678')).toBe('966512345678');
+    });
+
+    it('should preserve standard international numbers', async () => {
+      const { formatPhoneNumber } = await import('../../../src/lib/whatsapp');
+      expect(formatPhoneNumber('+1 (987) 654-3210')).toBe('19876543210');
+    });
+  });
+
   describe('formatExpiryWhatsApp', () => {
     it('should format WhatsApp message with URGENT for <= 7 days', async () => {
       const { formatExpiryWhatsApp } = await import('../../../src/lib/whatsapp');

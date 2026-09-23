@@ -53,8 +53,22 @@ export async function isWhatsAppServiceConfigured(): Promise<boolean> {
 /**
  * Formats a phone number for Meta WhatsApp Cloud API (E.164 without '+' prefix)
  */
-function formatPhoneNumber(phone: string): string {
-  return phone.replace(/\D/g, '');
+export function formatPhoneNumber(phone: string, defaultCountryCode = '966'): string {
+  if (!phone) return '';
+  let cleaned = phone.replace(/\D/g, '');
+
+  if (cleaned.startsWith('00')) {
+    cleaned = cleaned.replace(/^0+/, '');
+  }
+
+  // Saudi local format (05XXXXXXXX -> 9665XXXXXXXX, 5XXXXXXXX -> 9665XXXXXXXX)
+  if (cleaned.startsWith('05') && cleaned.length === 10) {
+    cleaned = `${defaultCountryCode}${cleaned.slice(1)}`;
+  } else if (cleaned.startsWith('5') && cleaned.length === 9) {
+    cleaned = `${defaultCountryCode}${cleaned}`;
+  }
+
+  return cleaned;
 }
 
 export async function sendWhatsAppMessage(to: string, message: string): Promise<WhatsAppResult> {
