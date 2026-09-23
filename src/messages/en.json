@@ -451,11 +451,13 @@
       "last90Days": "Last 90 days",
       "lastYear": "Last year",
       "allTime": "All time",
+      "custom": "Custom Range",
       "to": "to"
     }
   },
   "Dashboard": {
     "title": "Dashboard Overview",
+    "to": "to",
     "loading": "Loading dashboard...",
     "failed": "Failed to load dashboard data. Make sure the database is connected.",
     "expiringDocs": "{count} {count, plural, one {document} other {documents}} expiring within 30 days.",
