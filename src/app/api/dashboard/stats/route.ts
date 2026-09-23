@@ -26,6 +26,24 @@ export async function GET(request: NextRequest) {
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+    const startDateParam = request.nextUrl.searchParams.get('startDate');
+    const endDateParam = request.nextUrl.searchParams.get('endDate');
+
+    let dateFilter: { $gte?: Date; $lte?: Date } | null = null;
+    if (startDateParam || endDateParam) {
+      dateFilter = {};
+      if (startDateParam) {
+        const start = new Date(startDateParam);
+        start.setHours(0, 0, 0, 0);
+        dateFilter.$gte = start;
+      }
+      if (endDateParam) {
+        const end = new Date(endDateParam);
+        end.setHours(23, 59, 59, 999);
+        dateFilter.$lte = end;
+      }
+    }
+
     const quick = request.nextUrl.searchParams.get('quick') === 'true';
 
     if (quick) {
@@ -45,16 +63,16 @@ export async function GET(request: NextRequest) {
         Car.countDocuments({ status: 'Reserved', isDeleted: { $ne: true } }),
         Car.countDocuments({ status: 'On Installment', isDeleted: { $ne: true } }),
         Car.countDocuments({ status: 'Defaulted', isDeleted: { $ne: true } }),
-        CashSale.countDocuments({ status: { $ne: 'Cancelled' } }),
-        InstallmentSale.countDocuments({ status: { $ne: 'Cancelled' } }),
-        Rental.countDocuments({ status: { $ne: 'Cancelled' } }),
+        CashSale.countDocuments({ status: { $ne: 'Cancelled' }, ...(dateFilter ? { saleDate: dateFilter } : {}) }),
+        InstallmentSale.countDocuments({ status: { $ne: 'Cancelled' }, ...(dateFilter ? { startDate: dateFilter } : {}) }),
+        Rental.countDocuments({ status: { $ne: 'Cancelled' }, ...(dateFilter ? { startDate: dateFilter } : {}) }),
         VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
         Transaction.aggregate([
-          { $match: { type: 'Income', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+          { $match: { type: 'Income', isDeleted: { $ne: true }, ...(dateFilter ? { date: dateFilter } : { date: { $gte: startOfMonth } }) } },
           { $group: { _id: null, total: { $sum: '$amount' } } },
         ]),
         Transaction.aggregate([
-          { $match: { type: 'Expense', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+          { $match: { type: 'Expense', isDeleted: { $ne: true }, ...(dateFilter ? { date: dateFilter } : { date: { $gte: startOfMonth } }) } },
           { $group: { _id: null, total: { $sum: '$amount' } } },
         ]),
         InstallmentSale.aggregate([
@@ -135,31 +153,36 @@ export async function GET(request: NextRequest) {
         { $match: { isDeleted: { $ne: true } } },
         { $group: { _id: null, total: { $sum: '$totalRepairCost' } } },
       ]),
-      CashSale.countDocuments({ status: { $ne: 'Cancelled' } }),
-      InstallmentSale.countDocuments({ status: { $ne: 'Cancelled' } }),
-      Rental.countDocuments({ status: { $ne: 'Cancelled' } }),
+      CashSale.countDocuments({ status: { $ne: 'Cancelled' }, ...(dateFilter ? { saleDate: dateFilter } : {}) }),
+      InstallmentSale.countDocuments({ status: { $ne: 'Cancelled' }, ...(dateFilter ? { startDate: dateFilter } : {}) }),
+      Rental.countDocuments({ status: { $ne: 'Cancelled' }, ...(dateFilter ? { startDate: dateFilter } : {}) }),
       CashSale.aggregate([
-        { $match: { status: { $ne: 'Cancelled' } } },
+        { $match: { status: { $ne: 'Cancelled' }, ...(dateFilter ? { saleDate: dateFilter } : {}) } },
         { $group: { _id: null, total: { $sum: '$finalPrice' } } },
       ]),
       InstallmentSale.aggregate([
-        { $match: { status: { $ne: 'Cancelled' } } },
+        { $match: { status: { $ne: 'Cancelled' }, ...(dateFilter ? { startDate: dateFilter } : {}) } },
         { $group: { _id: null, total: { $sum: '$totalPaid' } } },
       ]),
       Rental.aggregate([
-        { $match: { status: { $ne: 'Cancelled' } } },
+        { $match: { status: { $ne: 'Cancelled' }, ...(dateFilter ? { startDate: dateFilter } : {}) } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]),
       Transaction.aggregate([
-        { $match: { type: 'Income', isDeleted: { $ne: true } } },
+        { $match: { type: 'Income', isDeleted: { $ne: true }, ...(dateFilter ? { date: dateFilter } : {}) } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       Transaction.aggregate([
-        { $match: { type: 'Expense', isDeleted: { $ne: true } } },
+        { $match: { type: 'Expense', isDeleted: { $ne: true }, ...(dateFilter ? { date: dateFilter } : {}) } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       CashSale.aggregate([
-        { $match: { saleDate: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }, status: { $ne: 'Cancelled' } } },
+        {
+          $match: {
+            status: { $ne: 'Cancelled' },
+            ...(dateFilter ? { saleDate: dateFilter } : { saleDate: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) } })
+          }
+        },
         {
           $group: {
             _id: { $dateToString: { format: '%Y-%m', date: '$saleDate' } },
@@ -190,21 +213,32 @@ export async function GET(request: NextRequest) {
       ]),
       VehicleDocument.countDocuments({ expiryDate: { $gte: now, $lte: thirtyDaysFromNow } }),
       Transaction.aggregate([
-        { $match: { type: 'Income', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+        { $match: { type: 'Income', isDeleted: { $ne: true }, ...(dateFilter ? { date: dateFilter } : { date: { $gte: startOfMonth } }) } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       Transaction.aggregate([
-        { $match: { type: 'Expense', date: { $gte: startOfMonth }, isDeleted: { $ne: true } } },
+        { $match: { type: 'Expense', isDeleted: { $ne: true }, ...(dateFilter ? { date: dateFilter } : { date: { $gte: startOfMonth } }) } },
         { $group: { _id: null, total: { $sum: '$amount' } } }
       ]),
       ActivityLog.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name').lean(),
       Transaction.aggregate([
-        { $match: { type: 'Expense', isDeleted: { $ne: true } } },
+        { $match: { type: 'Expense', isDeleted: { $ne: true }, ...(dateFilter ? { date: dateFilter } : {}) } },
         { $group: { _id: '$category', total: { $sum: '$amount' } } }
       ]),
       Transaction.aggregate([
-        { $match: { date: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) }, isDeleted: { $ne: true } } },
-        { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$date' } }, income: { $sum: { $cond: [{ $eq: ['$type', 'Income'] }, '$amount', 0] } }, expenses: { $sum: { $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0] } } } },
+        {
+          $match: {
+            isDeleted: { $ne: true },
+            ...(dateFilter ? { date: dateFilter } : { date: { $gte: new Date(now.getFullYear() - 1, now.getMonth(), 1) } })
+          }
+        },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m', date: '$date' } },
+            income: { $sum: { $cond: [{ $eq: ['$type', 'Income'] }, '$amount', 0] } },
+            expenses: { $sum: { $cond: [{ $eq: ['$type', 'Expense'] }, '$amount', 0] } }
+          }
+        },
         { $sort: { _id: 1 } }
       ]),
     ]);

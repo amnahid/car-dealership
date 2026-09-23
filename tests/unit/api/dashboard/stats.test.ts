@@ -171,4 +171,42 @@ describe('Dashboard Stats API', () => {
     expect(data.carsDefaulted).toBe(1);
     expect(data.totalCars).toBe(10);
   });
+
+  it('filters stats by startDate and endDate properly', async () => {
+    mockGetAuthPayload.mockResolvedValue({ userId: '123', email: 'test@test.com', normalizedRoles: ['Admin'] } as any);
+    
+    (Car.countDocuments as jest.Mock).mockResolvedValue(5);
+    (Car.aggregate as jest.Mock).mockResolvedValue([{ total: 100 }]);
+    (CashSale.countDocuments as jest.Mock).mockResolvedValue(2);
+    (InstallmentSale.countDocuments as jest.Mock).mockResolvedValue(1);
+    (Rental.countDocuments as jest.Mock).mockResolvedValue(1);
+    (CashSale.aggregate as jest.Mock).mockResolvedValue([{ total: 3000 }]);
+    (InstallmentSale.aggregate as jest.Mock).mockResolvedValue([{ total: 1500 }]);
+    (Rental.aggregate as jest.Mock).mockResolvedValue([{ total: 800 }]);
+    (Transaction.aggregate as jest.Mock).mockResolvedValue([{ total: 5300 }]);
+    (VehicleDocument.countDocuments as jest.Mock).mockResolvedValue(0);
+    (ActivityLog.find as jest.Mock).mockReturnValue({
+      sort: jest.fn().mockReturnValue({
+        limit: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            lean: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      }),
+    });
+
+    const req = new NextRequest('http://localhost/api/dashboard/stats?startDate=2026-09-01&endDate=2026-09-23');
+    const res = await GET(req);
+    expect(res.status).toBe(200);
+
+    // Verify CashSale count called with date query
+    expect(CashSale.countDocuments).toHaveBeenCalledWith(
+      expect.objectContaining({
+        saleDate: expect.objectContaining({
+          $gte: expect.any(Date),
+          $lte: expect.any(Date),
+        }),
+      })
+    );
+  });
 });

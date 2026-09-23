@@ -204,6 +204,7 @@ export default function DashboardPage() {
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
 
   useEffect(() => {
+    setChartsLoading(true);
     const params = new URLSearchParams();
     if (dateRange.startDate) params.append('startDate', dateRange.startDate);
     if (dateRange.endDate) params.append('endDate', dateRange.endDate);
@@ -228,7 +229,7 @@ export default function DashboardPage() {
         console.error('Failed to load dashboard charts:', err);
       })
       .finally(() => setChartsLoading(false));
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '80px 20px', color: '#9ca8b3' }}>{t('loading')}</div>;
@@ -343,10 +344,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Financial Stats - All Time */}
+      {/* Financial Stats */}
       <div style={{ marginBottom: '32px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
-          {t('financialOverview')}
+          {dateRange.startDate && dateRange.endDate
+            ? `${t('financialOverview')} (${dateRange.startDate} ${t('to') || 'to'} ${dateRange.endDate})`
+            : t('financialOverview')}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
           <FinancialCard label={t('totalRevenue')} value={stats.totalRevenue} subValue={`Cash: SAR ${formatCurrency(stats.cashRevenue, locale)} | Install: SAR ${formatCurrency(stats.installmentPaid, locale)} | Rental: SAR ${formatCurrency(stats.rentalRevenue, locale)}`} colorKey="primary" icon="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z" />
@@ -356,10 +359,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Financial Stats - This Month */}
+      {/* Performance Card */}
       <div style={{ marginBottom: '32px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px', textAlign: isRtl ? 'right' : 'left' }}>
-          {t('thisMonthPerformance')}
+          {dateRange.startDate && dateRange.endDate
+            ? `${t('revenue')} (${dateRange.startDate} ${t('to') || 'to'} ${dateRange.endDate})`
+            : t('thisMonthPerformance')}
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
           <StatCard 
