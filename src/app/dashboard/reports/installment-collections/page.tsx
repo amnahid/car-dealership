@@ -92,9 +92,9 @@ export default function InstallmentCollectionsPage() {
     { header: t('carInfo'), key: 'carId' },
     { header: t('instal'), getter: (r) => r.amount?.toString() || '' },
     { header: t('cash'), getter: (r) => r.cashAmount?.toString() || '' },
-    { header: t('date'), getter: (r) => r.paidDate ? new Date(r.paidDate).toLocaleDateString(locale) : '' },
     { header: t('bank'), getter: (r) => r.bankAmount?.toString() || '' },
     { header: t('voucherNo'), key: 'voucherNumber' },
+    { header: t('date'), getter: (r) => r.paidDate ? new Date(r.paidDate).toLocaleDateString(locale) : '' },
   ];
 
   return (
@@ -156,9 +156,9 @@ export default function InstallmentCollectionsPage() {
                   <th style={{ padding: '12px 8px', width: '130px' }}>{t('carInfo')}</th>
                   <th style={{ padding: '12px 8px', width: '100px' }}>{t('instal')}</th>
                   <th style={{ padding: '12px 8px', width: '100px' }}>{t('cash')}</th>
-                  <th style={{ padding: '12px 8px', width: '110px' }}>{t('date')}</th>
                   <th style={{ padding: '12px 8px', width: '100px' }}>{t('bank')}</th>
                   <th style={{ padding: '12px 8px', width: '120px' }}>{t('voucherNo')}</th>
+                  <th style={{ padding: '12px 8px', width: '110px' }}>{t('date')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -171,20 +171,19 @@ export default function InstallmentCollectionsPage() {
                     <td style={{ padding: '12px 8px' }}>{row.carId}</td>
                     <td style={{ padding: '12px 8px', fontWeight: 500 }}>{row.amount || ''}</td>
                     <td style={{ padding: '12px 8px' }}>{row.cashAmount || ''}</td>
+                    <td style={{ padding: '12px 8px' }}>{row.bankAmount || ''}</td>
+                    <td style={{ padding: '12px 8px' }}>{row.voucherNumber}</td>
                     <td style={{ padding: '12px 8px' }}>
                       {row.paidDate && (row.cashAmount || row.bankAmount) ? new Date(row.paidDate).toLocaleDateString(locale) : ''}
                     </td>
-                    <td style={{ padding: '12px 8px' }}>{row.bankAmount || ''}</td>
-                    <td style={{ padding: '12px 8px' }}>{row.voucherNumber}</td>
                   </tr>
                 ))}
                 <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
                   <td colSpan={5} style={{ padding: '12px 8px', textAlign: isRtl ? 'left' : 'right' }}>{commonT('total')}</td>
                   <td style={{ padding: '12px 8px' }}>{totalExpected}</td>
                   <td style={{ padding: '12px 8px' }}>{totalCash}</td>
-                  <td></td>
                   <td style={{ padding: '12px 8px' }}>{totalBank}</td>
-                  <td colSpan={1}></td>
+                  <td colSpan={2}></td>
                 </tr>
               </tbody>
             </table>
