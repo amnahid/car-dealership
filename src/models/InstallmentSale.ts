@@ -16,6 +16,7 @@ export interface IInstallmentPayment {
   paidAmount?: number;
   lateFee?: number;
   notes?: string;
+  whatsappNotified?: boolean;
 }
 
 export interface IInstallmentSaleDocument extends Document {
@@ -107,6 +108,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
       paidAmount: { type: Number },
       lateFee: { type: Number, default: 0 },
       notes: { type: String },
+      whatsappNotified: { type: Boolean, default: false },
     }],
     nextPaymentDate: { type: Date, required: true },
     nextPaymentAmount: { type: Number, required: true, min: 0 },

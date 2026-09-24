@@ -49,7 +49,8 @@ const navItems: MenuItem[] = [
       { href: '/dashboard/sales/installments', labelKey: 'installments', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/sales/rentals', labelKey: 'rentals', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/sales/returns', labelKey: 'purchaseReturns', icon: '', roles: ['Admin', 'Sales Person'] },
-      { href: '/dashboard/sales/invoices', labelKey: 'invoiceManager', icon: '', roles: ['Admin', 'Sales Person'] },
+            { href: '/dashboard/sales/invoices', labelKey: 'invoiceManager', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/reports/installment-collections', labelKey: 'collections', icon: '', roles: ['Admin', 'Sales Person', 'Finance Manager', 'Accountant'] },
     ]
   },
   {

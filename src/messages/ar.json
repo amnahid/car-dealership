@@ -1,5 +1,28 @@
 {
-  "Reports": {
+
+  "InstallmentCollections": {
+    "title": "التحصيلات الشهرية",
+    "subtitle": "تقرير تحصيل الأقساط الشهري",
+    "monthPlaceholder": "اختر الشهر",
+    "slNo": "الرقم",
+    "sysId": "معرف النظام",
+    "customer": "اسم العميل",
+    "phone": "الجوال",
+    "carInfo": "رقم السيارة",
+    "instal": "القسط",
+    "cash": "نقدي",
+    "insu": "تأمين",
+    "date": "التاريخ",
+    "bank": "بنك",
+    "bankRef": "مرجع البنك",
+    "voucherNo": "رقم السند",
+    "whatsapp": "واتساب",
+    "totalExpected": "الإجمالي المتوقع",
+    "totalCollected": "الإجمالي المحصل",
+    "totalInsurance": "إجمالي التأمين",
+    "noData": "لا توجد تحصيلات لهذا الشهر."
+  },
+"Reports": {
     "title": "التقارير المالية",
     "totalIncome": "إجمالي الإيرادات",
     "totalExpenses": "إجمالي المصاريف",

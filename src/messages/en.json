@@ -1,5 +1,28 @@
 {
-  "Reports": {
+
+  "InstallmentCollections": {
+    "title": "Monthly Collections",
+    "subtitle": "Monthly Installment Collection Report",
+    "monthPlaceholder": "Select Month",
+    "slNo": "SL NO",
+    "sysId": "SYS.ID",
+    "customer": "Customer Name",
+    "phone": "Phone",
+    "carInfo": "NUMBER",
+    "instal": "INSTAL",
+    "cash": "CASH",
+    "insu": "INSU",
+    "date": "DATE",
+    "bank": "BANK",
+    "bankRef": "BANK REF",
+    "voucherNo": "VOUCHER NO",
+    "whatsapp": "WHATSAPP",
+    "totalExpected": "Total Expected",
+    "totalCollected": "Total Collected",
+    "totalInsurance": "Total Insurance",
+    "noData": "No collections found for this month."
+  },
+"Reports": {
     "title": "Financial Reports",
     "totalIncome": "Total Income",
     "totalExpenses": "Total Expenses",
@@ -535,6 +558,7 @@
     "rentals": "Rentals",
     "purchaseReturns": "Purchase Returns",
     "invoiceManager": "Invoice Manager",
+    "collections": "Monthly Collections",
     "finance": "Finance",
     "transactions": "Transactions",
     "expenses": "Expenses",

@@ -52,6 +52,7 @@ const DASHBOARD_ACCESS_RULES: AccessRule[] = [
   { prefix: '/dashboard/crm/notification-logs', roles: SALES_ROLES },
   { prefix: '/dashboard/finance/reports', roles: FINANCE_REPORT_ROLES },
   { prefix: '/dashboard/finance', roles: FINANCE_ROLES },
+  { prefix: '/dashboard/reports/installment-collections', roles: ['Admin', 'Sales Person', 'Finance Manager', 'Accountant'] },
   { prefix: '/dashboard/salary-payments', roles: FINANCE_ROLES },
   { prefix: '/dashboard/employees', roles: FINANCE_ROLES },
 ];
@@ -96,6 +97,7 @@ const API_ACCESS_RULES: AccessRule[] = [
   { prefix: '/api/reports/profit-per-car', roles: FINANCE_REPORT_ROLES },
   { prefix: '/api/reports/expenses', roles: FINANCE_ROLES },
   { prefix: '/api/reports/incomes', roles: FINANCE_ROLES },
+  { prefix: '/api/reports/installment-collections', roles: ['Admin', 'Sales Person', 'Finance Manager', 'Accountant'] },
   { prefix: '/api/reports', roles: FINANCE_REPORT_ROLES },
   { prefix: '/api/salary-payments', roles: FINANCE_ROLES },
 
