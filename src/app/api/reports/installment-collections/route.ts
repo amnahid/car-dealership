@@ -45,21 +45,28 @@ export async function GET(request: NextRequest) {
     ]);
 
     installments.forEach(doc => {
-      const method = doc.paymentSchedule.method || '';
-      const isBank = /bank|online|transfer/i.test(method);
-      const isCash = /cash/i.test(method);
+      const p = doc.paymentSchedule;
+      const method = p.method || '';
+      const isPaid = p.status === 'Paid' || (p.paidAmount && p.paidAmount > 0);
+      const isBank = /bank|online|transfer|card/i.test(method);
+      const isCash = /cash/i.test(method) || (isPaid && !isBank);
       
+      const paidAmt = p.paidAmount || (isPaid ? p.amount : 0);
+      const cashAmt = isCash && isPaid ? paidAmt : 0;
+      const bankAmt = isBank && isPaid ? paidAmt : 0;
+
       results.push({
         saleId: doc.saleId,
         customerName: doc.customerName,
         customerPhone: doc.customerPhone,
         carId: doc.carDetails?.plateNumber || doc.carId,
-        amount: doc.paymentSchedule.amount,
-        cashAmount: isCash ? doc.paymentSchedule.paidAmount : 0,
-        bankAmount: isBank ? doc.paymentSchedule.paidAmount : 0,
-        voucherNumber: doc.paymentSchedule.voucherNumber || '',
-        paidDate: doc.paymentSchedule.paidDate || doc.paymentSchedule.dueDate,
-
+        amount: p.amount || 0,
+        cashAmount: cashAmt,
+        bankAmount: bankAmt,
+        voucherNumber: p.voucherNumber || '',
+        paidDate: p.paidDate || p.dueDate,
+        dueDate: p.dueDate,
+        status: p.status,
       });
     });
 

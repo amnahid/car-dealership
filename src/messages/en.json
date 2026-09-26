@@ -19,6 +19,9 @@
     "whatsapp": "WHATSAPP",
     "totalExpected": "Total Expected",
     "totalCollected": "Total Collected",
+    "totalCash": "Total Cash",
+    "totalBank": "Total Bank",
+    "totalRemaining": "Total Remaining",
     "totalInsurance": "Total Insurance",
     "noData": "No collections found for this month."
   },

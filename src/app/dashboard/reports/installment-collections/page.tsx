@@ -83,6 +83,15 @@ export default function InstallmentCollectionsPage() {
   const totalCash = filteredData.reduce((acc, curr) => acc + (curr.cashAmount || 0), 0);
   const totalBank = filteredData.reduce((acc, curr) => acc + (curr.bankAmount || 0), 0);
   const totalCollected = totalCash + totalBank;
+  const totalRemaining = Math.max(0, totalExpected - totalCollected);
+
+  const printSummaryStats: SummaryStatItem[] = [
+    { label: t('totalExpected'), value: formatCurrency(totalExpected, locale) },
+    { label: t('totalCollected'), value: formatCurrency(totalCollected, locale) },
+    { label: t('totalCash'), value: formatCurrency(totalCash, locale) },
+    { label: t('totalBank'), value: formatCurrency(totalBank, locale) },
+    { label: t('totalRemaining'), value: formatCurrency(totalRemaining, locale) },
+  ];
 
   const printColumns: PrintColumn[] = [
     { header: t('slNo'), getter: (r, i) => String(i + 1), align: 'center' },
@@ -90,15 +99,15 @@ export default function InstallmentCollectionsPage() {
     { header: t('customer'), key: 'customerName' },
     { header: t('phone'), key: 'customerPhone' },
     { header: t('carInfo'), key: 'carId' },
-    { header: t('instal'), getter: (r) => r.amount?.toString() || '' },
-    { header: t('cash'), getter: (r) => r.cashAmount?.toString() || '' },
-    { header: t('bank'), getter: (r) => r.bankAmount?.toString() || '' },
+    { header: t('instal'), getter: (r) => formatCurrency(r.amount, locale) },
+    { header: t('cash'), getter: (r) => r.cashAmount ? formatCurrency(r.cashAmount, locale) : '-' },
+    { header: t('bank'), getter: (r) => r.bankAmount ? formatCurrency(r.bankAmount, locale) : '-' },
     { header: t('voucherNo'), key: 'voucherNumber' },
     { header: t('date'), getter: (r) => r.paidDate ? new Date(r.paidDate).toLocaleDateString(locale) : '' },
   ];
 
   return (
-    <div>
+    <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <h2 className="page-title">{t('title')}</h2>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
@@ -124,18 +133,31 @@ export default function InstallmentCollectionsPage() {
             showImport={false}
             columns={printColumns}
             data={filteredData}
+            summaryStats={printSummaryStats}
           />
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-        <div className="ic-card-head flex-1" style={{ margin: 0, padding: '20px' }}>
-          <h4 style={{ color: '#64748b', fontSize: '14px', marginBottom: '8px' }}>{t('totalExpected')}</h4>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#0f172a' }}>{formatCurrency(totalExpected, locale)}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #28aaa9', borderRight: isRtl ? '4px solid #28aaa9' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase', marginBottom: '6px' }}>{t('totalExpected')}</p>
+          <p style={{ fontSize: '22px', fontWeight: 700, color: '#28aaa9', margin: 0 }}>{formatCurrency(totalExpected, locale)}</p>
         </div>
-        <div className="ic-card-head flex-1 success" style={{ margin: 0, padding: '20px' }}>
-          <h4 style={{ color: '#64748b', fontSize: '14px', marginBottom: '8px' }}>{t('totalCollected')}</h4>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#16a34a' }}>{formatCurrency(totalCollected, locale)}</div>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #42ca7f', borderRight: isRtl ? '4px solid #42ca7f' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase', marginBottom: '6px' }}>{t('totalCollected')}</p>
+          <p style={{ fontSize: '22px', fontWeight: 700, color: '#42ca7f', margin: 0 }}>{formatCurrency(totalCollected, locale)}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #38a4f8', borderRight: isRtl ? '4px solid #38a4f8' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase', marginBottom: '6px' }}>{t('totalCash')}</p>
+          <p style={{ fontSize: '22px', fontWeight: 700, color: '#38a4f8', margin: 0 }}>{formatCurrency(totalCash, locale)}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #f8b425', borderRight: isRtl ? '4px solid #f8b425' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase', marginBottom: '6px' }}>{t('totalBank')}</p>
+          <p style={{ fontSize: '22px', fontWeight: 700, color: '#f8b425', margin: 0 }}>{formatCurrency(totalBank, locale)}</p>
+        </div>
+        <div className="card" style={{ padding: '20px', borderLeft: isRtl ? 'none' : '4px solid #ec4561', borderRight: isRtl ? '4px solid #ec4561' : 'none' }}>
+          <p style={{ fontSize: '12px', color: '#9ca8b3', textTransform: 'uppercase', marginBottom: '6px' }}>{t('totalRemaining')}</p>
+          <p style={{ fontSize: '22px', fontWeight: 700, color: '#ec4561', margin: 0 }}>{formatCurrency(totalRemaining, locale)}</p>
         </div>
       </div>
 
@@ -154,9 +176,9 @@ export default function InstallmentCollectionsPage() {
                   <th style={{ padding: '12px 8px', width: '180px' }}>{t('customer')}</th>
                   <th style={{ padding: '12px 8px', width: '120px' }}>{t('phone')}</th>
                   <th style={{ padding: '12px 8px', width: '130px' }}>{t('carInfo')}</th>
-                  <th style={{ padding: '12px 8px', width: '100px' }}>{t('instal')}</th>
-                  <th style={{ padding: '12px 8px', width: '100px' }}>{t('cash')}</th>
-                  <th style={{ padding: '12px 8px', width: '100px' }}>{t('bank')}</th>
+                  <th style={{ padding: '12px 8px', width: '110px' }}>{t('instal')}</th>
+                  <th style={{ padding: '12px 8px', width: '110px' }}>{t('cash')}</th>
+                  <th style={{ padding: '12px 8px', width: '110px' }}>{t('bank')}</th>
                   <th style={{ padding: '12px 8px', width: '120px' }}>{t('voucherNo')}</th>
                   <th style={{ padding: '12px 8px', width: '110px' }}>{t('date')}</th>
                 </tr>
@@ -169,20 +191,20 @@ export default function InstallmentCollectionsPage() {
                     <td style={{ padding: '12px 8px', fontWeight: 500 }}>{row.customerName}</td>
                     <td style={{ padding: '12px 8px' }}>{row.customerPhone}</td>
                     <td style={{ padding: '12px 8px' }}>{row.carId}</td>
-                    <td style={{ padding: '12px 8px', fontWeight: 500 }}>{row.amount || ''}</td>
-                    <td style={{ padding: '12px 8px' }}>{row.cashAmount || ''}</td>
-                    <td style={{ padding: '12px 8px' }}>{row.bankAmount || ''}</td>
-                    <td style={{ padding: '12px 8px' }}>{row.voucherNumber}</td>
+                    <td style={{ padding: '12px 8px', fontWeight: 500 }}>{formatCurrency(row.amount, locale)}</td>
+                    <td style={{ padding: '12px 8px' }}>{row.cashAmount ? formatCurrency(row.cashAmount, locale) : '-'}</td>
+                    <td style={{ padding: '12px 8px' }}>{row.bankAmount ? formatCurrency(row.bankAmount, locale) : '-'}</td>
+                    <td style={{ padding: '12px 8px' }}>{row.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px 8px' }}>
-                      {row.paidDate && (row.cashAmount || row.bankAmount) ? new Date(row.paidDate).toLocaleDateString(locale) : ''}
+                      {row.paidDate ? new Date(row.paidDate).toLocaleDateString(locale) : '-'}
                     </td>
                   </tr>
                 ))}
                 <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
                   <td colSpan={5} style={{ padding: '12px 8px', textAlign: isRtl ? 'left' : 'right' }}>{commonT('total')}</td>
-                  <td style={{ padding: '12px 8px' }}>{totalExpected}</td>
-                  <td style={{ padding: '12px 8px' }}>{totalCash}</td>
-                  <td style={{ padding: '12px 8px' }}>{totalBank}</td>
+                  <td style={{ padding: '12px 8px' }}>{formatCurrency(totalExpected, locale)}</td>
+                  <td style={{ padding: '12px 8px' }}>{formatCurrency(totalCash, locale)}</td>
+                  <td style={{ padding: '12px 8px' }}>{formatCurrency(totalBank, locale)}</td>
                   <td colSpan={2}></td>
                 </tr>
               </tbody>

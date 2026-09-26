@@ -19,6 +19,9 @@
     "whatsapp": "واتساب",
     "totalExpected": "الإجمالي المتوقع",
     "totalCollected": "الإجمالي المحصل",
+    "totalCash": "إجمالي النقدي",
+    "totalBank": "إجمالي البنكي",
+    "totalRemaining": "إجمالي المتبقي",
     "totalInsurance": "إجمالي التأمين",
     "noData": "لا توجد تحصيلات لهذا الشهر."
   },
