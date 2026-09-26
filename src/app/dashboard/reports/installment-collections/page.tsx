@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import DataTransferButtons from '@/components/DataTransferButtons';
-import { PrintColumn } from '@/lib/printUtils';
+import { PrintColumn, SummaryStatItem } from '@/lib/printUtils';
 
 function formatCurrency(value: number | undefined | null, locale: string): string {
   if (value === null || value === undefined) return '';
