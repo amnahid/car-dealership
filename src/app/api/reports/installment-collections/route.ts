@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
 
     const results: any[] = [];
 
-    // 1. Fetch Installment Payments
+    // 1. Fetch Installment Payments (excluding deleted and cancelled sales)
     const installments = await InstallmentSale.aggregate([
-      { $match: { isDeleted: false } },
+      { $match: { isDeleted: { $ne: true }, status: { $ne: 'Cancelled' } } },
       { $unwind: '$paymentSchedule' },
       { 
         $match: {

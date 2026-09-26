@@ -297,7 +297,8 @@ export async function GET(request: NextRequest) {
         }
 
         const matchStage: any = {
-          isDeleted: false,
+          isDeleted: { $ne: true },
+          status: { $ne: 'Cancelled' },
         };
 
         const installments = await InstallmentSale.aggregate([
