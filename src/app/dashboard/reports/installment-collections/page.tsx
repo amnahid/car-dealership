@@ -133,6 +133,7 @@ export default function InstallmentCollectionsPage() {
             showImport={false}
             columns={printColumns}
             data={filteredData}
+            filters={{ month, search }}
             summaryStats={printSummaryStats}
           />
         </div>

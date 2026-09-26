@@ -280,6 +280,75 @@ export async function GET(request: NextRequest) {
         data = await SalaryPayment.find(query).sort({ paymentDate: -1 }).lean();
         break;
       }
+      case 'collections':
+      case 'installmentCollections': {
+        const month = searchParams.get('month');
+        const q = searchParams.get('q') || searchParams.get('search');
+        let startDate, endDate;
+        if (month) {
+          const [yearStr, monthStr] = month.split('-');
+          const year = parseInt(yearStr);
+          const monthIndex = parseInt(monthStr) - 1;
+          startDate = new Date(Date.UTC(year, monthIndex, 1));
+          endDate = new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999));
+        } else {
+          startDate = new Date(0);
+          endDate = new Date(3000, 0, 1);
+        }
+
+        const matchStage: any = {
+          isDeleted: false,
+        };
+
+        const installments = await InstallmentSale.aggregate([
+          { $match: matchStage },
+          { $unwind: '$paymentSchedule' },
+          { 
+            $match: {
+              $or: [
+                { 'paymentSchedule.dueDate': { $gte: startDate, $lte: endDate } },
+                { 'paymentSchedule.paidDate': { $gte: startDate, $lte: endDate } }
+              ]
+            }
+          },
+          { $lookup: { from: 'cars', localField: 'car', foreignField: '_id', as: 'carDetails' } },
+          { $unwind: { path: '$carDetails', preserveNullAndEmptyArrays: true } }
+        ]);
+
+        data = installments.map((doc, idx) => {
+          const p = doc.paymentSchedule;
+          const method = p.method || '';
+          const isPaid = p.status === 'Paid' || (p.paidAmount && p.paidAmount > 0);
+          const isBank = /bank|online|transfer|card/i.test(method);
+          const isCash = /cash/i.test(method) || (isPaid && !isBank);
+          const paidAmt = p.paidAmount || (isPaid ? p.amount : 0);
+
+          return {
+            'SL NO': idx + 1,
+            'Sale ID': doc.saleId,
+            'Customer Name': doc.customerName,
+            'Customer Phone': doc.customerPhone,
+            'Car Plate / ID': doc.carDetails?.plateNumber || doc.carId,
+            'Installment Amount': p.amount || 0,
+            'Cash Amount': isCash && isPaid ? paidAmt : 0,
+            'Bank Amount': isBank && isPaid ? paidAmt : 0,
+            'Voucher Number': p.voucherNumber || '',
+            'Due Date': p.dueDate ? new Date(p.dueDate).toISOString().split('T')[0] : '',
+            'Paid Date': p.paidDate ? new Date(p.paidDate).toISOString().split('T')[0] : '',
+            'Status': p.status || (isPaid ? 'Paid' : 'Pending')
+          };
+        });
+
+        if (q) {
+          const queryLower = q.toLowerCase();
+          data = data.filter((item: any) => 
+            (item['Customer Name'] || '').toLowerCase().includes(queryLower) ||
+            (item['Sale ID'] || '').toLowerCase().includes(queryLower) ||
+            (item['Car Plate / ID'] || '').toLowerCase().includes(queryLower)
+          );
+        }
+        break;
+      }
       case 'users':
         data = await User.find({}).select('-password -resetToken -resetTokenExpiry').lean();
         break;

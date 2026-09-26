@@ -106,7 +106,7 @@ const API_ACCESS_RULES: AccessRule[] = [
 
   { prefix: '/api/dashboard/stats', roles: ALL_ROLES },
   { prefix: '/api/upload', roles: ALL_ROLES },
-  { prefix: '/api/export', roles: ['Admin', 'Finance Manager'] },
+  { prefix: '/api/export', roles: ALL_ROLES },
   { prefix: '/api/import', roles: ['Admin', 'Finance Manager'] },
 ];
 
