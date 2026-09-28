@@ -15,6 +15,7 @@ export interface IInstallmentPayment {
   paidDate?: Date;
   paidAmount?: number;
   lateFee?: number;
+  otherFee?: number;
   notes?: string;
   whatsappNotified?: boolean;
 }
@@ -41,6 +42,7 @@ export interface IInstallmentSaleDocument extends Document {
   deliveryThresholdPercent: number;
   monthlyLateFee: number;
   lateFeeCharged: number;
+  otherFeeCharged?: number;
   applyVat: boolean;
   vatRate: number;
   vatAmount: number;
@@ -107,6 +109,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
       paidDate: { type: Date },
       paidAmount: { type: Number },
       lateFee: { type: Number, default: 0 },
+      otherFee: { type: Number, default: 0 },
       notes: { type: String },
       whatsappNotified: { type: Boolean, default: false },
     }],
@@ -117,6 +120,7 @@ const InstallmentSaleSchema = new Schema<IInstallmentSaleDocument>(
     deliveryThresholdPercent: { type: Number, default: 30, min: 0, max: 100 },
     monthlyLateFee: { type: Number, default: 200, min: 0 },
     lateFeeCharged: { type: Number, default: 0, min: 0 },
+    otherFeeCharged: { type: Number, default: 0, min: 0 },
     applyVat: { type: Boolean, default: true },
     vatRate: { type: Number, default: 15, min: 0 },
     vatAmount: { type: Number, default: 0, min: 0 },
@@ -170,7 +174,7 @@ InstallmentSaleSchema.index({ 'paymentSchedule.status': 1 });
 InstallmentSaleSchema.pre('save', async function (this: IInstallmentSaleDocument) {
   // Recalculate remaining amount whenever loan or paid amount changes
   if (this.loanAmount !== undefined || this.totalPaid !== undefined) {
-    const principalPaid = Math.max(0, (this.totalPaid || 0) - (this.lateFeeCharged || 0));
+    const principalPaid = Math.max(0, (this.totalPaid || 0) - (this.lateFeeCharged || 0) - (this.otherFeeCharged || 0));
     this.remainingAmount = Math.max(0, (this.loanAmount || 0) - principalPaid);
   }
 

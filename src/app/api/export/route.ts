@@ -14,6 +14,7 @@ import Transaction from '@/models/Transaction';
 import SalaryPayment from '@/models/SalaryPayment';
 import User from '@/models/User';
 import ActivityLog from '@/models/ActivityLog';
+import { calculateAccruedLateFee } from '@/lib/installmentUtils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -322,7 +323,19 @@ export async function GET(request: NextRequest) {
           const isPaid = p.status === 'Paid' || (p.paidAmount && p.paidAmount > 0);
           const isBank = /bank|online|transfer|card/i.test(method);
           const isCash = /cash/i.test(method) || (isPaid && !isBank);
-          const paidAmt = p.paidAmount || (isPaid ? p.amount : 0);
+
+          let lateFee = Number(p.lateFee) || 0;
+          const otherFee = Number(p.otherFee) || 0;
+          if (!isPaid && !lateFee && p.dueDate) {
+            const dueDateObj = new Date(p.dueDate);
+            const now = new Date();
+            if (dueDateObj < now) {
+              const daysOverdue = Math.floor((now.getTime() - dueDateObj.getTime()) / (1000 * 60 * 60 * 24));
+              lateFee = calculateAccruedLateFee(daysOverdue, doc.monthlyLateFee || 200);
+            }
+          }
+
+          const paidAmt = p.paidAmount || (isPaid ? (p.amount + (p.lateFee || 0) + (p.otherFee || 0)) : 0);
 
           return {
             'SL NO': idx + 1,
@@ -331,6 +344,8 @@ export async function GET(request: NextRequest) {
             'Customer Phone': doc.customerPhone,
             'Car Plate / ID': doc.carDetails?.plateNumber || doc.carId,
             'Installment Amount': p.amount || 0,
+            'Late Fee': lateFee,
+            'Other Fee': otherFee,
             'Cash Amount': isCash && isPaid ? paidAmt : 0,
             'Bank Amount': isBank && isPaid ? paidAmt : 0,
             'Voucher Number': p.voucherNumber || '',

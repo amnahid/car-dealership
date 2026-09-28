@@ -3,6 +3,8 @@ import { connectDB } from '@/lib/db';
 import InstallmentSale from '@/models/InstallmentSale';
 import { getAuthPayload } from '@/lib/apiAuth';
 
+import { calculateAccruedLateFee } from '@/lib/installmentUtils';
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthPayload(request);
@@ -51,7 +53,18 @@ export async function GET(request: NextRequest) {
       const isBank = /bank|online|transfer|card/i.test(method);
       const isCash = /cash/i.test(method) || (isPaid && !isBank);
       
-      const paidAmt = p.paidAmount || (isPaid ? p.amount : 0);
+      let lateFee = Number(p.lateFee) || 0;
+      const otherFee = Number(p.otherFee) || 0;
+      if (!isPaid && !lateFee && p.dueDate) {
+        const dueDateObj = new Date(p.dueDate);
+        const now = new Date();
+        if (dueDateObj < now) {
+          const daysOverdue = Math.floor((now.getTime() - dueDateObj.getTime()) / (1000 * 60 * 60 * 24));
+          lateFee = calculateAccruedLateFee(daysOverdue, doc.monthlyLateFee || 200);
+        }
+      }
+
+      const paidAmt = p.paidAmount || (isPaid ? (p.amount + (p.lateFee || 0) + (p.otherFee || 0)) : 0);
       const cashAmt = isCash && isPaid ? paidAmt : 0;
       const bankAmt = isBank && isPaid ? paidAmt : 0;
 
@@ -61,6 +74,8 @@ export async function GET(request: NextRequest) {
         customerPhone: doc.customerPhone,
         carId: doc.carDetails?.plateNumber || doc.carId,
         amount: p.amount || 0,
+        lateFee: lateFee,
+        otherFee: otherFee,
         cashAmount: cashAmt,
         bankAmount: bankAmt,
         voucherNumber: p.voucherNumber || '',

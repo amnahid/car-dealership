@@ -25,6 +25,7 @@ export function calculateAccruedLateFee(daysOverdue: number, monthlyLateFee: num
 export interface RecalculatedInstallmentState {
   totalPaid: number;
   lateFeeCharged: number;
+  otherFeeCharged: number;
   remainingAmount: number;
   nextPaymentDate: Date | null;
   nextPaymentAmount: number;
@@ -39,6 +40,7 @@ export interface InstallmentScheduleItem {
   status: string;
   paidAmount?: number;
   lateFee?: number;
+  otherFee?: number;
   paidDate?: Date | string;
   method?: string;
   voucherNumber?: string;
@@ -46,7 +48,7 @@ export interface InstallmentScheduleItem {
 }
 
 /**
- * Pure calculation function that recalculates totalPaid, lateFeeCharged, remainingAmount,
+ * Pure calculation function that recalculates totalPaid, lateFeeCharged, otherFeeCharged, remainingAmount,
  * nextPaymentDate, nextPaymentAmount, saleStatus, and carStatus strictly from the current
  * paymentSchedule without relying on previous counters.
  */
@@ -57,18 +59,21 @@ export function recalculateInstallmentTotals(
 ): RecalculatedInstallmentState {
   let totalPaid = 0;
   let lateFeeCharged = 0;
+  let otherFeeCharged = 0;
   let hasOverdue = false;
   let nextUnpaid: InstallmentScheduleItem | null = null;
   let allPaid = true;
 
   for (const p of paymentSchedule) {
     if (p.status === 'Paid') {
-      const fee = Number(p.lateFee) || 0;
+      const late = Number(p.lateFee) || 0;
+      const other = Number(p.otherFee) || 0;
       const paid = Number(p.paidAmount) !== undefined && !isNaN(Number(p.paidAmount))
         ? Number(p.paidAmount)
-        : (Number(p.amount) + fee);
+        : (Number(p.amount) + late + other);
       totalPaid += paid;
-      lateFeeCharged += fee;
+      lateFeeCharged += late;
+      otherFeeCharged += other;
     } else {
       allPaid = false;
       if (!nextUnpaid) {
@@ -81,7 +86,7 @@ export function recalculateInstallmentTotals(
     }
   }
 
-  const principalPaid = Math.max(0, totalPaid - lateFeeCharged);
+  const principalPaid = Math.max(0, totalPaid - lateFeeCharged - otherFeeCharged);
   const remainingAmount = Math.max(0, loanAmount - principalPaid);
 
   let saleStatus: 'Active' | 'Completed' | 'Defaulted' | 'Cancelled' | 'Handed' = 'Active';
@@ -111,6 +116,7 @@ export function recalculateInstallmentTotals(
   return {
     totalPaid,
     lateFeeCharged,
+    otherFeeCharged,
     remainingAmount,
     nextPaymentDate,
     nextPaymentAmount,

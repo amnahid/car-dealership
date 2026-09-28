@@ -132,11 +132,62 @@ describe('Installment Payments API', () => {
       // Verify recalculations
       expect(mockSale.totalPaid).toBe(2050);
       expect(mockSale.lateFeeCharged).toBe(50);
+      expect(mockSale.otherFeeCharged).toBe(0);
       expect(mockSale.remainingAmount).toBe(4000);
       expect(mockSale.paymentSchedule[0].status).toBe('Paid');
 
       // Transactions created
       expect(mockTransaction.create).toHaveBeenCalledTimes(2);
+    });
+
+    it('successfully records payment with late fee and other fee and syncs all transactions', async () => {
+      const saleId = new mongoose.Types.ObjectId().toString();
+      mockGetAuthPayload.mockResolvedValue({ 
+        userId: 'user1', 
+        name: 'Test User', 
+        normalizedRoles: ['Admin'] 
+      } as any);
+
+      mockRunInTransaction.mockImplementation(async (callback) => {
+        return callback({ hasEnded: false } as any);
+      });
+
+      const mockSale = createMockSale(saleId);
+
+      mockInstallmentSale.findById.mockReturnValue({
+        session: jest.fn().mockResolvedValue(mockSale)
+      });
+
+      mockTransaction.findOneAndUpdate.mockResolvedValue(null);
+      mockTransaction.create.mockResolvedValue([]);
+
+      const paymentData = {
+        installmentNumber: 1,
+        amount: 2000,
+        lateFeeAmount: 50,
+        otherFeeAmount: 30,
+        paymentDate: '2026-07-05',
+        notes: 'Monthly payment with other fee'
+      };
+
+      const req = new NextRequest(`http://localhost/api/sales/installments/${saleId}/payments`, {
+        method: 'POST',
+        body: JSON.stringify(paymentData),
+      });
+
+      const res = await POST(req, { params: Promise.resolve({ id: saleId }) });
+      expect(res.status).toBe(200);
+
+      // Verify recalculations
+      expect(mockSale.totalPaid).toBe(2080);
+      expect(mockSale.lateFeeCharged).toBe(50);
+      expect(mockSale.otherFeeCharged).toBe(30);
+      expect(mockSale.remainingAmount).toBe(4000);
+      expect(mockSale.paymentSchedule[0].status).toBe('Paid');
+      expect(mockSale.paymentSchedule[0].otherFee).toBe(30);
+
+      // Transactions created: Base (2000), Late Fee (50), Other Fee (30)
+      expect(mockTransaction.create).toHaveBeenCalledTimes(3);
     });
 
     it('returns 403 if user lacks required role', async () => {

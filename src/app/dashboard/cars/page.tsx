@@ -228,13 +228,8 @@ export default function CarsPage() {
 
   const carPrintColumns: PrintColumn[] = [
     { header: t('carId') || 'Car ID / Plate', getter: (c: Car) => c.plateNumber || c.carId, align: 'center' },
-    { header: t('brand') || 'Brand', getter: (c: Car) => `${c.brand} ${c.model}` },
-    { header: t('year') || 'Year', key: 'year', align: 'center' },
-    { header: t('color') || 'Color', key: 'color', align: 'center' },
+    { header: commonT('car') || 'Car', getter: (c: Car) => `${c.brand} - ${c.model} - ${c.year}` },
     { header: t('status') || 'Status', getter: (c: Car) => statusT(c.status) || c.status, align: 'center' },
-    { header: t('purchasePrice') || 'Purchase Price', getter: (c: Car) => c.purchase?.purchasePrice ? formatCurrency(c.purchase.purchasePrice, locale) : '-', align: isRtl ? 'left' : 'right' },
-    { header: t('repairCost') || 'Repair Cost', getter: (c: Car) => formatCurrency(c.totalRepairCost || 0, locale), align: isRtl ? 'left' : 'right' },
-    { header: t('totalCost') || 'Total Cost', getter: (c: Car) => formatCurrency((c.purchase?.purchasePrice || 0) + (c.totalRepairCost || 0), locale), align: isRtl ? 'left' : 'right' },
   ];
 
   const activeFiltersList: ActiveFilterItem[] = [];
@@ -605,13 +600,7 @@ export default function CarsPage() {
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('image')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('id')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('plateNumber')}</th>
-                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('brand')}</th>
-                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('model')}</th>
-                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('year')}</th>
-                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('color')}</th>
-                      <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('purchasePrice')}</th>
-                      <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('repairCost')}</th>
-                      <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('totalCost')}</th>
+                      <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('car')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('status')}</th>
                       <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                     </tr>
@@ -646,17 +635,7 @@ export default function CarsPage() {
                           <td style={{ padding: '12px', fontWeight: 500, color: '#2a3142' }}>
                             {car.plateNumber || '-'}
                           </td>
-                          <td style={{ padding: '12px' }}>{car.brand}</td>
-                          <td style={{ padding: '12px' }}>{car.model}</td>
-                          <td style={{ padding: '12px' }}>{car.year}</td>
-                          <td style={{ padding: '12px' }}>{car.color}</td>
-                          <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(car.purchase?.purchasePrice || 0, locale)}</td>
-                          <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', color: car.totalRepairCost > 0 ? '#f5a623' : '#525f80' }}>
-                            {car.totalRepairCost > 0 ? formatCurrency(car.totalRepairCost, locale) : '-'}
-                          </td>
-                          <td style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontWeight: 600, color: '#28aaa9' }}>
-                            {formatCurrency((car.purchase?.purchasePrice || 0) + (car.totalRepairCost || 0), locale)}
-                          </td>
+                          <td style={{ padding: '12px' }}>{car.brand} - {car.model} - {car.year}</td>
                           <td style={{ padding: '12px' }}>
                             <StatusBadge status={car.status} />
                           </td>

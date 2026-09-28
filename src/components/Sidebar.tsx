@@ -47,6 +47,7 @@ const navItems: MenuItem[] = [
       { href: '/dashboard/sales', labelKey: 'allSales', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/sales/cash', labelKey: 'cashSales', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/sales/installments', labelKey: 'installments', icon: '', roles: ['Admin', 'Sales Person'] },
+      { href: '/dashboard/sales/installments/handed', labelKey: 'handedInstallments', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/sales/rentals', labelKey: 'rentals', icon: '', roles: ['Admin', 'Sales Person'] },
       { href: '/dashboard/sales/returns', labelKey: 'purchaseReturns', icon: '', roles: ['Admin', 'Sales Person'] },
             { href: '/dashboard/sales/invoices', labelKey: 'invoiceManager', icon: '', roles: ['Admin', 'Sales Person'] },
@@ -172,7 +173,7 @@ function isPathActive(href: string | undefined, pathname: string): boolean {
       
       // List of specific sub-segments that have their own menu items
       // This is a bit of a heuristic but works for most Next.js dashboard structures
-      const siblingSubPaths = ['cash', 'installments', 'rentals', 'returns', 'invoices', 'suppliers', 'purchases', 'stock', 'expenses', 'incomes', 'reports'];
+      const siblingSubPaths = ['cash', 'installments', 'rentals', 'returns', 'invoices', 'suppliers', 'purchases', 'stock', 'expenses', 'incomes', 'reports', 'handed'];
       
       const firstSegment = subPath.split('/')[0];
       if (siblingSubPaths.includes(firstSegment)) {

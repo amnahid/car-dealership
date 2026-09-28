@@ -147,6 +147,27 @@ describe('installmentUtils.ts', () => {
       expect(res.nextPaymentAmount).toBe(0);
     });
 
+    it('should correctly calculate totals when payments are recorded with late fees and other fees', () => {
+      const loanAmount = 6000;
+      const schedule = [
+        { installmentNumber: 1, dueDate: '2026-05-01', amount: 2000, status: 'Paid', paidAmount: 2250, lateFee: 200, otherFee: 50 },
+        { installmentNumber: 2, dueDate: '2026-07-01', amount: 2000, status: 'Pending' },
+        { installmentNumber: 3, dueDate: '2026-08-01', amount: 2000, status: 'Pending' },
+      ];
+
+      const res = recalculateInstallmentTotals(loanAmount, schedule, fixedNow);
+
+      expect(res.totalPaid).toBe(2250);
+      expect(res.lateFeeCharged).toBe(200);
+      expect(res.otherFeeCharged).toBe(50);
+      // Principal paid = 2250 - 200 - 50 = 2000. Remaining = 6000 - 2000 = 4000.
+      expect(res.remainingAmount).toBe(4000);
+      expect(res.saleStatus).toBe('Active');
+      expect(res.carStatus).toBe('On Installment');
+      expect(res.nextPaymentDate).toEqual(new Date('2026-07-01'));
+      expect(res.nextPaymentAmount).toBe(2000);
+    });
+
     it('should transition from Completed back to Active / Defaulted if a payment is reverted', () => {
       const loanAmount = 6000;
       // 3rd installment was reverted
@@ -160,6 +181,7 @@ describe('installmentUtils.ts', () => {
 
       expect(res.totalPaid).toBe(4000);
       expect(res.lateFeeCharged).toBe(0);
+      expect(res.otherFeeCharged).toBe(0);
       expect(res.remainingAmount).toBe(2000);
       expect(res.saleStatus).toBe('Active');
       expect(res.carStatus).toBe('On Installment');

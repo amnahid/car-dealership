@@ -123,7 +123,7 @@ export default function StockPage() {
             <table style={{ width: '100%', fontSize: '14px', minWidth: '900px' }}>
               <thead style={{ background: '#f8f9fa', borderBottom: '1px solid #eee' }}>
                 <tr>
-                  {['Image', 'Car ID', 'Brand', 'Model', 'Year', 'Color', 'Purchase Price', 'Repair Cost', 'Total Cost', 'Supplier', 'Status', 'Actions'].map((h) => (
+                  {['Image', 'Car ID', 'Car', 'Status', 'Actions'].map((h) => (
                     <th key={h} style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>
                       {h}
                     </th>
@@ -148,18 +148,8 @@ export default function StockPage() {
                       )}
                     </td>
                     <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 500, color: '#28aaa9' }}>{car.carId}</td>
-                    <td style={{ padding: '12px' }}>{car.brand}</td>
-                    <td style={{ padding: '12px' }}>{car.model}</td>
-                    <td style={{ padding: '12px' }}>{car.year}</td>
-                    <td style={{ padding: '12px' }}>{car.color}</td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>{formatCurrency(car.purchase?.purchasePrice || 0)}</td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: car.totalRepairCost > 0 ? '#f5a623' : '#525f80' }}>
-                      {car.totalRepairCost > 0 ? formatCurrency(car.totalRepairCost) : '-'}
-                    </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, color: '#28aaa9' }}>
-                      {formatCurrency((car.purchase?.purchasePrice || 0) + (car.totalRepairCost || 0))}
-                    </td>
-                    <td style={{ padding: '12px', color: '#525f80' }}>{car.purchase?.supplierName || '-'}</td>
+                    <td style={{ padding: '12px' }}>{car.brand} - {car.model} - {car.year}</td>
+
                     <td style={{ padding: '12px' }}><StatusBadge status={car.status as any} /></td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '12px' }}>

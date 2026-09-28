@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { PdfUpload } from '@/components/ImageUpload';
 import SearchableSelect from '@/components/SearchableSelect';
 import SalesAgentModal, { SalesAgent } from '@/components/forms/SalesAgentModal';
@@ -84,12 +85,15 @@ export default function InstallmentsPage() {
   const locale = useLocale();
   const isRtl = locale === 'ar';
 
+  const pathname = usePathname();
+  const isHandedPage = pathname?.includes('/handed');
+
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>(isHandedPage ? ['Handed'] : []);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalSales, setTotalSales] = useState(0);
@@ -393,7 +397,6 @@ export default function InstallmentsPage() {
     { header: t('totalPrice') || 'Total Price', getter: (s: Sale) => formatCurrency(s.totalPrice), align: isRtl ? 'left' : 'right' },
     { header: t('downPayment') || 'Down Payment', getter: (s: Sale) => formatCurrency(s.downPayment), align: isRtl ? 'left' : 'right' },
     { header: t('monthlyPayment') || 'Monthly', getter: (s: Sale) => formatCurrency(s.monthlyPayment), align: isRtl ? 'left' : 'right' },
-    { header: t('totalPaid') || 'Total Paid', getter: (s: Sale) => formatCurrency(s.totalPaid), align: isRtl ? 'left' : 'right' },
     { header: t('remaining') || 'Remaining', getter: (s: Sale) => formatCurrency(s.remainingAmount), align: isRtl ? 'left' : 'right' },
     { header: t('status') || 'Status', getter: (s: Sale) => getStatusLabel(s.status) || s.status, align: 'center' },
     { header: t('nextPayment') || 'Next Payment', getter: (s: Sale) => s.nextPaymentDate ? new Date(s.nextPaymentDate).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US') : '-', align: 'center' },
@@ -431,11 +434,11 @@ export default function InstallmentsPage() {
   return (
     <div dir={isRtl ? 'rtl' : 'ltr'} className={isRtl ? 'text-right' : 'text-left'}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-        <h2 className="page-title">{t('title')}</h2>
+        <h2 className="page-title">{isHandedPage ? t('statuses.handed') + ' ' + t('title') : t('title')}</h2>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
           <DataTransferButtons
             entityType="installmentSales"
-            title={t('title')}
+            title={isHandedPage ? t('statuses.handed') + ' ' + t('title') : t('title')}
             filters={activeFiltersObj}
             columns={installmentPrintColumns}
             data={sales}
@@ -443,9 +446,11 @@ export default function InstallmentsPage() {
             summaryStats={printSummaryStats}
             onImportSuccess={fetchSales}
           />
-          <button onClick={() => setShowModal(true)} style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {t('addNew')}</span>
-          </button>
+          {!isHandedPage && (
+            <button onClick={() => setShowModal(true)} style={{ background: '#28aaa9', color: '#ffffff', fontSize: '14px', fontWeight: 500, padding: '10px 16px', borderRadius: '3px', border: '1px solid #28aaa9', cursor: 'pointer' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> {t('addNew')}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -470,21 +475,22 @@ export default function InstallmentsPage() {
 
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <input type="text" placeholder={t('searchPlaceholder')} value={search} onChange={(e) => handleSearch(e.target.value)} style={{ width: '300px', height: '40px', fontSize: '14px', borderRadius: '0', padding: '0 12px', border: '1px solid #ced4da', textAlign: isRtl ? 'right' : 'left' }} />
-        <MultiSelectFilter
-          placeholder={cashT('allStatus') || 'All Statuses'}
-          selectedValues={statusFilter}
-          onChange={(vals) => {
-            setStatusFilter(vals);
-            setPage(1);
-          }}
-          options={[
-            { value: 'Active', label: t('statuses.active'), color: '#28aaa9' },
-            { value: 'Completed', label: t('statuses.completed'), color: '#20c997' },
-            { value: 'Handed', label: t('statuses.handed'), color: '#17a2b8' },
-            { value: 'Defaulted', label: t('statuses.defaulted'), color: '#f8b425' },
-            { value: 'Cancelled', label: t('statuses.cancelled'), color: '#ec4561' },
-          ]}
-        />
+        {!isHandedPage && (
+          <MultiSelectFilter
+            placeholder={cashT('allStatus') || 'All Statuses'}
+            selectedValues={statusFilter}
+            onChange={(vals) => {
+              setStatusFilter(vals);
+              setPage(1);
+            }}
+            options={[
+              { value: 'Active', label: t('statuses.active'), color: '#28aaa9' },
+              { value: 'Completed', label: t('statuses.completed'), color: '#20c997' },
+              { value: 'Defaulted', label: t('statuses.defaulted'), color: '#f8b425' },
+              { value: 'Cancelled', label: t('statuses.cancelled'), color: '#ec4561' },
+            ]}
+          />
+        )}
         <DateRangeFilter onChange={(start, end) => setDateRange({ startDate: start, endDate: end })} />
       </div>
 
@@ -569,11 +575,7 @@ export default function InstallmentsPage() {
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('voucherNumber')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('customer')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('total')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('paid')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'left' : 'right', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('lateFee') || 'Late Fee'}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('installmentStatus')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('status')}</th>
-                  <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{t('zatca')}</th>
                   <th style={{ padding: '12px', textAlign: isRtl ? 'right' : 'left', fontSize: '12px', fontWeight: 600, color: '#525f80', textTransform: 'uppercase' }}>{commonT('actions')}</th>
                 </tr>
               </thead>
@@ -622,21 +624,7 @@ export default function InstallmentsPage() {
                       </div>
                     </td>
                     <td style={{ padding: '12px', fontWeight: 600, textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.totalPrice)}</td>
-                    <td style={{ padding: '12px', color: '#42ca7f', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.totalPaid)}</td>
-                    <td style={{ padding: '12px', color: (sale.lateFeeCharged || 0) > 0 ? '#ec4561' : '#9ca8b3', textAlign: isRtl ? 'left' : 'right' }}>{formatCurrency(sale.lateFeeCharged || 0)}</td>
-                    <td style={{ padding: '12px' }}>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: '3px', 
-                        fontSize: '11px', 
-                        fontWeight: 600, 
-                        background: sale.currentInstallmentStatus === 'Overdue' ? '#fdecea' : sale.currentInstallmentStatus === 'Paid' ? '#e6f4ea' : '#fff8e1', 
-                        color: sale.currentInstallmentStatus === 'Overdue' ? '#ec4561' : sale.currentInstallmentStatus === 'Paid' ? '#42ca7f' : '#f5a623',
-                        border: `1px solid ${sale.currentInstallmentStatus === 'Overdue' ? '#ec456130' : sale.currentInstallmentStatus === 'Paid' ? '#42ca7f30' : '#f5a62330'}`
-                      }}>
-                        {sale.currentInstallmentStatus === 'Overdue' ? commonT('overdue') : sale.currentInstallmentStatus === 'Paid' ? commonT('paid') : commonT('pending')}
-                      </span>
-                    </td>
+
                     <td style={{ padding: '12px' }}>
                       {sale.status === 'Handed' ? (
                         <span
@@ -663,9 +651,7 @@ export default function InstallmentsPage() {
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: '12px' }}>
-                      <ZatcaStatusBadge status={sale.zatcaStatus} saleId={sale._id} saleType="InstallmentSale" />
-                    </td>
+
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
                         <a href={`/dashboard/sales/installments/${sale._id}`} style={{ color: '#28aaa9', textDecoration: 'none' }}>{commonT('view')}</a>
@@ -1696,41 +1682,4 @@ function EditInstallmentModal({
   );
 }
 
-function ZatcaStatusBadge({ status, saleId, saleType }: { status?: string; saleId: string; saleType: string }) {
-  const [retrying, setRetrying] = useState(false);
-  
-  const ZATCA_BADGE_COLORS: Record<string, { bg: string; color: string; label: string }> = {
-    Cleared:     { bg: '#e6f4ea', color: '#2e7d32', label: 'Cleared' },
-    Reported:    { bg: '#e8f5e9', color: '#388e3c', label: 'Reported' },
-    Pending:     { bg: '#fff8e1', color: '#f57c00', label: 'Pending' },
-    Failed:      { bg: '#fce4ec', color: '#c62828', label: 'Failed' },
-    NotRequired: { bg: '#f5f5f5', color: '#757575', label: 'N/A' },
-  };
-  
-  const s = status ? (ZATCA_BADGE_COLORS[status] || ZATCA_BADGE_COLORS['NotRequired']) : ZATCA_BADGE_COLORS['NotRequired'];
 
-  const handleRetry = async () => {
-    setRetrying(true);
-    try {
-      await fetch('/api/zatca/retry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ referenceId: saleId, referenceType: saleType }),
-      });
-      window.location.reload();
-    } catch { /* silent */ } finally { setRetrying(false); }
-  };
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600, background: s.bg, color: s.color }}>
-        {s.label}
-      </span>
-      {(status === 'Failed' || status === 'Pending') && (
-        <button onClick={handleRetry} disabled={retrying} style={{ fontSize: '11px', color: '#28aaa9', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-          {retrying ? 'Retrying...' : '↺ Retry'}
-        </button>
-      )}
-    </div>
-  );
-}

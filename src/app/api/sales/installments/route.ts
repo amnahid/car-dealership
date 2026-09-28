@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
 
     const query: Record<string, any> = { isDeleted: { $ne: true } };
 
-    // Default: Hide cancelled sales unless specifically requested or searching
+    // Default: Hide cancelled and handed sales unless specifically requested or searching
     if (!status && !search) {
-      query.status = { $ne: 'Cancelled' };
+      query.status = { $nin: ['Cancelled', 'Handed'] };
     }
 
     if (customerId) {
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         .lean(),
       InstallmentSale.countDocuments(query),
       InstallmentSale.aggregate([
-        { $match: { ...query, status: { $ne: 'Cancelled' } } },
+        { $match: { status: { $ne: 'Cancelled' }, ...query } },
         {
           $group: {
             _id: null,

@@ -17,6 +17,7 @@ interface Payment {
   paidDate?: string;
   paidAmount?: number;
   lateFee?: number;
+  otherFee?: number;
   notes?: string;
 }
 
@@ -60,6 +61,7 @@ interface Sale {
   paymentReference?: string;
   monthlyLateFee?: number;
   lateFeeCharged?: number;
+  otherFeeCharged?: number;
   otherFees?: number;
   agreementDocument?: string;
   agreementUrl?: string;
@@ -914,6 +916,12 @@ export default function InstallmentSaleDetailPage() {
                 <span style={{ color: '#ec4561', fontWeight: 600 }}>SAR {(sale.lateFeeCharged || 0).toLocaleString()}</span>
               </div>
             )}
+            {sale.otherFeeCharged !== undefined && sale.otherFeeCharged > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#9ca8b3' }}>Total Other Fees</span>
+                <span style={{ color: '#28aaa9', fontWeight: 600 }}>SAR {(sale.otherFeeCharged || 0).toLocaleString()}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -931,6 +939,7 @@ export default function InstallmentSaleDetailPage() {
                     <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Method</th>
                     <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Voucher #</th>
                     <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Late Fee</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Other Fee</th>
                     <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Paid Date</th>
                     <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: '#525f80' }}>Actions</th>
                   </tr>
@@ -943,7 +952,7 @@ export default function InstallmentSaleDetailPage() {
                     <td style={{ padding: '12px' }}>{payment.installmentNumber}</td>
                     <td style={{ padding: '12px' }}>{new Date(payment.dueDate).toLocaleDateString()}</td>
                     <td style={{ padding: '12px' }}>
-                      SAR {(payment.status === 'Paid' ? ((payment.paidAmount || 0) - (payment.lateFee || 0)) : (payment.amount || 0)).toLocaleString()}
+                      SAR {(payment.status === 'Paid' ? ((payment.paidAmount || 0) - (payment.lateFee || 0) - (payment.otherFee || 0)) : (payment.amount || 0)).toLocaleString()}
                     </td>
                     <td style={{ padding: '12px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '4px', background: statusColor, color: '#ffffff', fontSize: '12px' }}>
@@ -954,6 +963,9 @@ export default function InstallmentSaleDetailPage() {
                     <td style={{ padding: '12px', color: '#525f80' }}>{payment.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px', color: payment.lateFee && payment.lateFee > 0 ? '#ec4561' : '#9ca8b3' }}>
                       {payment.lateFee && payment.lateFee > 0 ? `SAR ${(payment.lateFee || 0).toLocaleString()}` : '-'}
+                    </td>
+                    <td style={{ padding: '12px', color: payment.otherFee && payment.otherFee > 0 ? '#28aaa9' : '#9ca8b3' }}>
+                      {payment.otherFee && payment.otherFee > 0 ? `SAR ${(payment.otherFee || 0).toLocaleString()}` : '-'}
                     </td>
                     <td style={{ padding: '12px', color: '#9ca8b3' }}>
                       {payment.paidDate ? new Date(payment.paidDate).toLocaleDateString() : '-'}
@@ -1253,6 +1265,7 @@ interface RecordPaymentModalProps {
 function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: RecordPaymentModalProps) {
   const [amount, setAmount] = useState('');
   const [lateFeeAmount, setLateFeeAmount] = useState('0');
+  const [otherFeeAmount, setOtherFeeAmount] = useState('0');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [method, setMethod] = useState('Cash');
   const [voucherNumber, setVoucherNumber] = useState('');
@@ -1264,6 +1277,7 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
     if (payment) {
       setAmount(payment.amount.toString());
       setLateFeeAmount((payment.lateFee || 0).toString());
+      setOtherFeeAmount((payment.otherFee || 0).toString());
       setPaymentDate(new Date().toISOString().split('T')[0]);
       setMethod(payment.method || 'Cash');
       setVoucherNumber(payment.voucherNumber || '');
@@ -1287,6 +1301,7 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
           installmentNumber: payment.installmentNumber,
           amount: parseFloat(amount),
           lateFeeAmount: parseFloat(lateFeeAmount),
+          otherFeeAmount: parseFloat(otherFeeAmount) || 0,
           paymentDate,
           method,
           voucherNumber,
@@ -1307,7 +1322,7 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
     }
   };
 
-  const totalToPay = (parseFloat(amount) || 0) + (parseFloat(lateFeeAmount) || 0);
+  const totalToPay = (parseFloat(amount) || 0) + (parseFloat(lateFeeAmount) || 0) + (parseFloat(otherFeeAmount) || 0);
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
@@ -1324,15 +1339,26 @@ function RecordPaymentModal({ isOpen, onClose, onSave, saleId, payment }: Record
               style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
             />
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee Collected (SAR)</label>
-            <input
-              type="number"
-              value={lateFeeAmount}
-              onChange={(e) => setLateFeeAmount(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee (SAR)</label>
+              <input
+                type="number"
+                value={lateFeeAmount}
+                onChange={(e) => setLateFeeAmount(e.target.value)}
+                required
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Other Fee (SAR)</label>
+              <input
+                type="number"
+                value={otherFeeAmount}
+                onChange={(e) => setOtherFeeAmount(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              />
+            </div>
           </div>
           <div style={{ marginBottom: '20px', padding: '10px', background: '#f8f9fa', borderRadius: '4px', textAlign: 'center' }}>
             <span style={{ fontSize: '14px', color: '#525f80' }}>Total to Collect: </span>
@@ -1403,6 +1429,7 @@ interface EditPaymentModalProps {
 function EditPaymentModal({ isOpen, onClose, onSave, saleId, payment }: EditPaymentModalProps) {
   const [amount, setAmount] = useState('');
   const [lateFeeAmount, setLateFeeAmount] = useState('0');
+  const [otherFeeAmount, setOtherFeeAmount] = useState('0');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [method, setMethod] = useState('Cash');
   const [voucherNumber, setVoucherNumber] = useState('');
@@ -1413,10 +1440,11 @@ function EditPaymentModal({ isOpen, onClose, onSave, saleId, payment }: EditPaym
   useEffect(() => {
     if (payment) {
       const baseAmount = payment.paidAmount !== undefined
-        ? payment.paidAmount - (payment.lateFee || 0)
+        ? payment.paidAmount - (payment.lateFee || 0) - (payment.otherFee || 0)
         : payment.amount;
       setAmount(baseAmount.toString());
       setLateFeeAmount((payment.lateFee || 0).toString());
+      setOtherFeeAmount((payment.otherFee || 0).toString());
       setPaymentDate(payment.paidDate ? new Date(payment.paidDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
       setMethod(payment.method || 'Cash');
       setVoucherNumber(payment.voucherNumber || '');
@@ -1441,6 +1469,7 @@ function EditPaymentModal({ isOpen, onClose, onSave, saleId, payment }: EditPaym
           action: 'edit',
           amount: parseFloat(amount),
           lateFeeAmount: parseFloat(lateFeeAmount),
+          otherFeeAmount: parseFloat(otherFeeAmount) || 0,
           paymentDate,
           method,
           voucherNumber,
@@ -1461,7 +1490,7 @@ function EditPaymentModal({ isOpen, onClose, onSave, saleId, payment }: EditPaym
     }
   };
 
-  const totalToPay = (parseFloat(amount) || 0) + (parseFloat(lateFeeAmount) || 0);
+  const totalToPay = (parseFloat(amount) || 0) + (parseFloat(lateFeeAmount) || 0) + (parseFloat(otherFeeAmount) || 0);
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
@@ -1481,15 +1510,26 @@ function EditPaymentModal({ isOpen, onClose, onSave, saleId, payment }: EditPaym
               style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
             />
           </div>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee Collected (SAR)</label>
-            <input
-              type="number"
-              value={lateFeeAmount}
-              onChange={(e) => setLateFeeAmount(e.target.value)}
-              required
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Late Fee (SAR)</label>
+              <input
+                type="number"
+                value={lateFeeAmount}
+                onChange={(e) => setLateFeeAmount(e.target.value)}
+                required
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '4px' }}>Other Fee (SAR)</label>
+              <input
+                type="number"
+                value={otherFeeAmount}
+                onChange={(e) => setOtherFeeAmount(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #ced4da', borderRadius: '4px' }}
+              />
+            </div>
           </div>
           <div style={{ marginBottom: '16px', padding: '10px', background: '#f8f9fa', borderRadius: '4px', textAlign: 'center' }}>
             <span style={{ fontSize: '13px', color: '#525f80' }}>Total Paid: </span>
