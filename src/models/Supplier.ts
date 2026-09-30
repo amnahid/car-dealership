@@ -16,6 +16,8 @@ export interface ISupplierDocument extends Document {
   email?: string;
   phone: string;
   address?: string;
+  documentUrl?: string;
+  documentName?: string;
   salesAgent?: ISupplierSalesAgent;
   status: 'active' | 'inactive';
   notes?: string;
@@ -40,6 +42,8 @@ const SupplierSchema = new Schema<ISupplierDocument>(
     email: { type: String, trim: true },
     phone: { type: String, required: true, trim: true },
     address: { type: String, trim: true },
+    documentUrl: { type: String },
+    documentName: { type: String },
     salesAgent: { type: SupplierSalesAgentSchema },
     status: {
       type: String,

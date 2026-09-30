@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ImageUpload from '@/components/ImageUpload';
+import { uploadFile, deleteFile } from '@/lib/uploadClient';
 
 interface Supplier {
   _id: string;
@@ -13,6 +14,8 @@ interface Supplier {
   email?: string;
   phone: string;
   address?: string;
+  documentUrl?: string;
+  documentName?: string;
   salesAgent?: {
     name: string;
     phone: string;
@@ -29,6 +32,7 @@ export default function EditSupplierPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
@@ -38,6 +42,8 @@ export default function EditSupplierPage() {
     email: '',
     phone: '',
     address: '',
+    documentUrl: '',
+    documentName: '',
     status: 'active',
     notes: '',
     salesAgent: {
@@ -62,6 +68,8 @@ export default function EditSupplierPage() {
             email: data.supplier.email || '',
             phone: data.supplier.phone || '',
             address: data.supplier.address || '',
+            documentUrl: data.supplier.documentUrl || '',
+            documentName: data.supplier.documentName || '',
             status: data.supplier.status || 'active',
             notes: data.supplier.notes || '',
             salesAgent: data.supplier.salesAgent || {
@@ -105,6 +113,34 @@ export default function EditSupplierPage() {
       ...prev,
       salesAgent: { ...prev.salesAgent, photo: url },
     }));
+  };
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingDoc(true);
+    try {
+      const res = await uploadFile(file, 'suppliers/documents');
+      if (res.url) {
+        setFormData(prev => ({
+          ...prev,
+          documentUrl: res.url || '',
+          documentName: file.name,
+        }));
+      } else {
+        alert(res.error || 'Failed to upload document');
+      }
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleRemoveDocument = async () => {
+    if (formData.documentUrl.startsWith('/uploads/')) {
+      await deleteFile(formData.documentUrl);
+    }
+    setFormData(prev => ({ ...prev, documentUrl: '', documentName: '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -361,6 +397,62 @@ export default function EditSupplierPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '32px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#2b2d5d', marginBottom: '16px', paddingBottom: '8px', borderBottom: '1px solid #eee' }}>
+              Supplier Documents & Trade License
+            </h3>
+            
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500, color: '#2b2d5d' }}>
+                Trade License / Commercial Registration / Contract (PDF or Image)
+              </label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleDocumentUpload}
+                disabled={uploadingDoc}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: '1px dashed #dee2e6',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  background: '#f8f9fa',
+                  cursor: 'pointer',
+                }}
+              />
+              {uploadingDoc && (
+                <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#28aaa9' }}>Uploading document...</p>
+              )}
+              {formData.documentUrl && (
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#f0fdf4', border: '1px solid #42ca7f', borderRadius: '6px' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#42ca7f" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  <span style={{ flex: 1, fontSize: '14px', color: '#2b2d5d', fontWeight: 500 }}>
+                    {formData.documentName || 'Supplier Document'}
+                  </span>
+                  <a
+                    href={formData.documentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: '13px', color: '#28aaa9', textDecoration: 'none', fontWeight: 500 }}
+                  >
+                    View
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleRemoveDocument}
+                    style={{ background: '#ec4561', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

@@ -13,6 +13,8 @@ interface Supplier {
   email?: string;
   phone: string;
   address?: string;
+  documentUrl?: string;
+  documentName?: string;
   salesAgent?: {
     name: string;
     phone: string;
@@ -208,6 +210,37 @@ export default function SupplierDetailPage() {
           </div>
         </div>
       </div>
+
+      {supplier.documentUrl && (
+        <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#2b2d5d', marginBottom: '12px' }}>Supplier Document / Trade License</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: '#f8f9fa', border: '1px solid #eee', borderRadius: '6px' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#28aaa9" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span style={{ flex: 1, fontSize: '14px', fontWeight: 500, color: '#2b2d5d' }}>
+              {supplier.documentName || 'Supplier Document'}
+            </span>
+            <a
+              href={supplier.documentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '6px 14px',
+                background: '#28aaa9',
+                color: '#fff',
+                borderRadius: '4px',
+                fontSize: '13px',
+                textDecoration: 'none',
+                fontWeight: 500
+              }}
+            >
+              View Document
+            </a>
+          </div>
+        </div>
+      )}
 
       {supplier.notes && (
         <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
