@@ -59,7 +59,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     if (body.documents && Array.isArray(body.documents)) {
-      console.log('Creating bulk documents:', body.documents);
+      if (body.documents.length === 0) {
+        return NextResponse.json({ error: 'No documents provided' }, { status: 400 });
+      }
+
+      for (const doc of body.documents) {
+        if (!doc.car) {
+          return NextResponse.json({ error: 'Car ID is required for all documents' }, { status: 400 });
+        }
+        if (!doc.issueDate || !doc.expiryDate) {
+          return NextResponse.json({ error: `Issue date and expiry date are required for ${doc.documentType || 'documents'}` }, { status: 400 });
+        }
+      }
+
       const docs = await VehicleDocument.insertMany(
         body.documents.map((doc: Record<string, unknown>) => ({
           ...doc,
@@ -79,6 +91,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ documents: docs }, { status: 201 });
     }
 
+    if (!body.car || !body.issueDate || !body.expiryDate) {
+      return NextResponse.json({ error: 'Car, issue date, and expiry date are required' }, { status: 400 });
+    }
+
     const document = await VehicleDocument.create({ ...body, createdBy: auth.userId });
 
     await logActivity({
@@ -91,8 +107,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ document }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create document error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    if (error?.name === 'ValidationError') {
+      const messages = Object.values(error.errors || {}).map((e: any) => e.message).join(', ');
+      return NextResponse.json({ error: messages || error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }

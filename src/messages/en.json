@@ -745,7 +745,9 @@
     "saveDocuments": "Save Documents",
     "errors": {
       "selectCar": "Please select a car",
-      "addAtLeastOne": "Please add at least one document with file or dates"
+      "addAtLeastOne": "Please add at least one document with file or dates",
+      "datesRequired": "Please provide both Issue Date and Expiry Date for {type}",
+      "invalidDateRange": "Expiry Date must be after Issue Date for {type}"
     },
     "types": {
       "Insurance": "Insurance",

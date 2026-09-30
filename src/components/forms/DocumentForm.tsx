@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { uploadPdf, deleteFile } from '@/lib/uploadClient';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useTranslations, useLocale } from 'next-intl';
@@ -30,7 +30,7 @@ const DOCUMENT_TYPES = ['Insurance', 'Road Permit', 'Registration Card'];
 const DEFAULT_EXPIRY_MONTHS: Record<string, number> = {
   'Insurance': 12,
   'Road Permit': 12,
-  'Registration Card': 0,
+  'Registration Card': 36,
 };
 
 interface DocumentFormProps {
@@ -44,13 +44,18 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
   const isRtl = locale === 'ar';
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const carIdParam = searchParams?.get('carId');
+
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [cars, setCars] = useState<CarOption[]>([]);
   const [selectedCar, setSelectedCar] = useState('');
   const [autoFill, setAutoFill] = useState(true);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    'Insurance': true,
+  });
 
   const [docs, setDocs] = useState<Record<string, DocSection>>({
     'Insurance': { documentType: 'Insurance', issueDate: '', expiryDate: '', fileUrl: '', fileName: '', enabled: true },
@@ -61,9 +66,18 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
   useEffect(() => {
     fetch('/api/cars?limit=100')
       .then(r => r.json())
-      .then(data => setCars(data.cars || []))
+      .then(data => {
+        const carList: CarOption[] = data.cars || [];
+        setCars(carList);
+        if (carIdParam && carList.length > 0) {
+          const found = carList.find(c => c._id === carIdParam || c.carId === carIdParam);
+          if (found) {
+            setSelectedCar(found._id);
+          }
+        }
+      })
       .catch(console.error);
-  }, []);
+  }, [carIdParam]);
 
   useEffect(() => {
     if (autoFill && selectedCar) {
@@ -71,14 +85,15 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
       const updated = { ...docs };
       
       Object.keys(updated).forEach(type => {
-        const months = DEFAULT_EXPIRY_MONTHS[type];
-        if (months > 0) {
+        const months = DEFAULT_EXPIRY_MONTHS[type] || 12;
+        if (!updated[type].issueDate || !updated[type].expiryDate) {
           const issueDate = today.toISOString().split('T')[0];
-          const expDate = new Date(today.setMonth(today.getMonth() + months));
+          const expDate = new Date(today);
+          expDate.setMonth(expDate.getMonth() + months);
           updated[type] = {
             ...updated[type],
-            issueDate,
-            expiryDate: expDate.toISOString().split('T')[0],
+            issueDate: updated[type].issueDate || issueDate,
+            expiryDate: updated[type].expiryDate || expDate.toISOString().split('T')[0],
           };
         }
       });
@@ -103,10 +118,32 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
     const result = await uploadPdf(file, 'documents');
     
     if (result.url) {
-      setDocs(prev => ({
-        ...prev,
-        [type]: { ...prev[type], fileUrl: result.url!, fileName: file.name },
-      }));
+      setDocs(prev => {
+        const current = prev[type];
+        let newIssueDate = current.issueDate;
+        let newExpiryDate = current.expiryDate;
+        
+        if (autoFill && (!newIssueDate || !newExpiryDate)) {
+          const today = new Date();
+          const months = DEFAULT_EXPIRY_MONTHS[type] || 12;
+          newIssueDate = newIssueDate || today.toISOString().split('T')[0];
+          const expDate = new Date(today);
+          expDate.setMonth(expDate.getMonth() + months);
+          newExpiryDate = newExpiryDate || expDate.toISOString().split('T')[0];
+        }
+
+        return {
+          ...prev,
+          [type]: {
+            ...current,
+            fileUrl: result.url!,
+            fileName: file.name,
+            issueDate: newIssueDate,
+            expiryDate: newExpiryDate,
+          },
+        };
+      });
+      setExpandedSections(prev => ({ ...prev, [type]: true }));
     }
     
     setUploading(null);
@@ -132,12 +169,29 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
       return;
     }
 
+    // A document is active if it has a file uploaded OR if the user expanded and interacted with it
     const docsWithData = Object.values(docs).filter(d => 
-      d.enabled && (d.fileUrl || (d.issueDate && d.expiryDate))
+      d.enabled && (d.fileUrl || expandedSections[d.documentType])
     );
+
     if (docsWithData.length === 0) {
       setError(t('errors.addAtLeastOne'));
       return;
+    }
+
+    // Validate that each document has valid issueDate and expiryDate
+    for (const doc of docsWithData) {
+      if (!doc.issueDate || !doc.expiryDate) {
+        setError(t('errors.datesRequired', { type: t(`types.${doc.documentType}`) }));
+        setExpandedSections(prev => ({ ...prev, [doc.documentType]: true }));
+        return;
+      }
+
+      if (new Date(doc.expiryDate) < new Date(doc.issueDate)) {
+        setError(t('errors.invalidDateRange', { type: t(`types.${doc.documentType}`) }));
+        setExpandedSections(prev => ({ ...prev, [doc.documentType]: true }));
+        return;
+      }
     }
 
     setLoading(true);
@@ -147,7 +201,7 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
       
       const documents = docsWithData.map(doc => ({
         car: selectedCar,
-        carId: car?.carId,
+        carId: car?.carId || '',
         documentType: doc.documentType,
         issueDate: doc.issueDate,
         expiryDate: doc.expiryDate,
