@@ -27,12 +27,6 @@ interface DocSection {
 
 const DOCUMENT_TYPES = ['Insurance', 'Road Permit', 'Registration Card'];
 
-const DEFAULT_EXPIRY_MONTHS: Record<string, number> = {
-  'Insurance': 12,
-  'Road Permit': 12,
-  'Registration Card': 36,
-};
-
 interface DocumentFormProps {
   mode: 'create' | 'edit';
 }
@@ -52,7 +46,6 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
   const [error, setError] = useState('');
   const [cars, setCars] = useState<CarOption[]>([]);
   const [selectedCar, setSelectedCar] = useState('');
-  const [autoFill, setAutoFill] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     'Insurance': true,
   });
@@ -79,34 +72,12 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
       .catch(console.error);
   }, [carIdParam]);
 
-  useEffect(() => {
-    if (autoFill && selectedCar) {
-      const today = new Date();
-      const updated = { ...docs };
-      
-      Object.keys(updated).forEach(type => {
-        const months = DEFAULT_EXPIRY_MONTHS[type] || 12;
-        if (!updated[type].issueDate || !updated[type].expiryDate) {
-          const issueDate = today.toISOString().split('T')[0];
-          const expDate = new Date(today);
-          expDate.setMonth(expDate.getMonth() + months);
-          updated[type] = {
-            ...updated[type],
-            issueDate: updated[type].issueDate || issueDate,
-            expiryDate: updated[type].expiryDate || expDate.toISOString().split('T')[0],
-          };
-        }
-      });
-      
-      setDocs(updated);
-    }
-  }, [autoFill, selectedCar]);
-
   const updateDoc = (type: string, field: keyof DocSection, value: string | boolean) => {
     setDocs(prev => ({
       ...prev,
       [type]: { ...prev[type], [field]: value },
     }));
+    if (error) setError('');
   };
 
   const handleFileUpload = async (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,35 +85,19 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
     if (!file) return;
 
     setUploading(type);
+    if (error) setError('');
     
     const result = await uploadPdf(file, 'documents');
     
     if (result.url) {
-      setDocs(prev => {
-        const current = prev[type];
-        let newIssueDate = current.issueDate;
-        let newExpiryDate = current.expiryDate;
-        
-        if (autoFill && (!newIssueDate || !newExpiryDate)) {
-          const today = new Date();
-          const months = DEFAULT_EXPIRY_MONTHS[type] || 12;
-          newIssueDate = newIssueDate || today.toISOString().split('T')[0];
-          const expDate = new Date(today);
-          expDate.setMonth(expDate.getMonth() + months);
-          newExpiryDate = newExpiryDate || expDate.toISOString().split('T')[0];
-        }
-
-        return {
-          ...prev,
-          [type]: {
-            ...current,
-            fileUrl: result.url!,
-            fileName: file.name,
-            issueDate: newIssueDate,
-            expiryDate: newExpiryDate,
-          },
-        };
-      });
+      setDocs(prev => ({
+        ...prev,
+        [type]: {
+          ...prev[type],
+          fileUrl: result.url!,
+          fileName: file.name,
+        },
+      }));
       setExpandedSections(prev => ({ ...prev, [type]: true }));
     }
     
@@ -166,30 +121,34 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
 
     if (!selectedCar) {
       setError(t('errors.selectCar'));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    // A document is active if it has a file uploaded OR if the user expanded and interacted with it
+    // A document is active if it has a file uploaded or if any dates were provided
     const docsWithData = Object.values(docs).filter(d => 
-      d.enabled && (d.fileUrl || expandedSections[d.documentType])
+      d.enabled && (d.fileUrl || d.issueDate || d.expiryDate)
     );
 
     if (docsWithData.length === 0) {
       setError(t('errors.addAtLeastOne'));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
-    // Validate that each document has valid issueDate and expiryDate
+    // Validate that each document being submitted has both valid issueDate and expiryDate
     for (const doc of docsWithData) {
       if (!doc.issueDate || !doc.expiryDate) {
         setError(t('errors.datesRequired', { type: t(`types.${doc.documentType}`) }));
         setExpandedSections(prev => ({ ...prev, [doc.documentType]: true }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
       if (new Date(doc.expiryDate) < new Date(doc.issueDate)) {
         setError(t('errors.invalidDateRange', { type: t(`types.${doc.documentType}`) }));
         setExpandedSections(prev => ({ ...prev, [doc.documentType]: true }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
     }
@@ -254,32 +213,44 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
   return (
     <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
       {error && (
-        <div style={{ background: 'rgba(236, 69, 97, 0.1)', border: '1px solid #ec4561', borderRadius: '3px', padding: '12px', marginBottom: '20px', textAlign: isRtl ? 'right' : 'left' }}>
-          <p style={{ color: '#ec4561', fontSize: '14px', margin: 0 }}>{error}</p>
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #f87171',
+          borderRadius: '6px',
+          padding: '14px 16px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          direction: isRtl ? 'rtl' : 'ltr',
+          textAlign: isRtl ? 'right' : 'left',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+        }}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0, color: '#dc2626' }}>
+            <path fillRule="evenodd" clipRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" fill="currentColor" />
+          </svg>
+          <div style={{ flex: 1 }}>
+            <p style={{ color: '#b91c1c', fontSize: '14px', fontWeight: 600, margin: 0 }}>
+              {error}
+            </p>
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
+      <div style={{ marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
         <SearchableSelect
           label={commonT('brand')}
           value={selectedCar}
-          onChange={setSelectedCar}
+          onChange={(val) => {
+            setSelectedCar(val);
+            if (error) setError('');
+          }}
           options={cars.map(c => ({ 
             value: c._id, 
             label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}`
           }))}
           placeholder={t('selectCar')}
         />
-        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: '8px' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
-            <input
-              type="checkbox"
-              checked={autoFill}
-              onChange={(e) => setAutoFill(e.target.checked)}
-            />
-            <span style={{ fontSize: '14px', color: '#525f80' }}>{t('autoFill')}</span>
-          </label>
-        </div>
       </div>
 
       {selectedCar && (
@@ -316,7 +287,9 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
             <div style={{ padding: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px', direction: isRtl ? 'rtl' : 'ltr' }}>
                 <div>
-                  <label style={labelStyle}>{t('issueDate')}</label>
+                  <label style={labelStyle}>
+                    {t('issueDate')} <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
                   <input
                     type="date"
                     value={docs[type].issueDate}
@@ -325,7 +298,9 @@ export default function DocumentForm({ mode }: DocumentFormProps) {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>{t('expiryDate')}</label>
+                  <label style={labelStyle}>
+                    {t('expiryDate')} <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
                   <input
                     type="date"
                     value={docs[type].expiryDate}
