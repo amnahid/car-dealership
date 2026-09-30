@@ -145,6 +145,30 @@ export default function PurchaseEditPage() {
     setUploading(false);
   };
 
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await uploadImage(file, 'cars/purchase');
+      if (result.url) {
+        setForm((prev) => ({ ...prev, documentUrl: result.url || '' }));
+      } else {
+        alert(`Failed to upload: ${result.error}`);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveDocument = async () => {
+    if (form.documentUrl.startsWith('/uploads/')) {
+      await deleteFile(form.documentUrl);
+    }
+    setForm((prev) => ({ ...prev, documentUrl: '' }));
+  };
+
   const handleRemoveConditionImage = async (index: number) => {
     const url = form.conditionImages[index];
     if (url.startsWith('/uploads/')) {
@@ -342,7 +366,31 @@ export default function PurchaseEditPage() {
       </div>
 
       <div style={{ background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-        <div style={sectionTitleStyle}>Vehicle Documents</div>
+        <div style={sectionTitleStyle}>Purchase Document & Vehicle Documents</div>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>Purchase Document / Supplier Invoice</label>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={handleDocumentUpload}
+            disabled={uploading}
+            style={{ ...inputStyle, border: '1px dashed #ddd', padding: '12px' }}
+          />
+          {form.documentUrl && (
+            <div style={{ marginTop: '8px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <a href={form.documentUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', fontSize: '14px', textDecoration: 'none' }}>
+                View Uploaded Document
+              </a>
+              <button
+                type="button"
+                onClick={handleRemoveDocument}
+                style={{ color: '#ec4561', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
           <div>
             <label style={labelStyle}>Insurance Expiry</label>

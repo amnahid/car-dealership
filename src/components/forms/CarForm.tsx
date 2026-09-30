@@ -421,6 +421,49 @@ export default function CarForm({ initialData, mode }: CarFormProps) {
         </div>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '20px', direction: isRtl ? 'rtl' : 'ltr' }}>
+        <div>
+          <label style={labelStyle}>{t('purchaseDoc')}</label>
+          <input
+            type="file"
+            accept="application/pdf,image/*"
+            onChange={(e) => handleFileUpload(e, 'documentUrl')}
+            disabled={uploading}
+            style={fileInputStyle}
+          />
+          {form.purchase.documentUrl && (
+            <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+              <a
+                href={form.purchase.documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#28aaa9', fontSize: '14px' }}
+              >
+                {t('viewDoc')}
+              </a>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, purchase: { ...prev.purchase, documentUrl: '' } }))}
+                style={{ color: '#ec4561', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                {t('remove')}
+              </button>
+            </div>
+          )}
+        </div>
+        <div>
+          <label style={labelStyle}>{t('purchaseNotes')}</label>
+          <textarea
+            name="purchase.notes"
+            value={form.purchase.notes}
+            onChange={handleChange}
+            rows={2}
+            style={{ ...inputStyle, height: 'auto', padding: '8px 1rem' }}
+            placeholder={t('purchaseNotes')}
+          />
+        </div>
+      </div>
+
       <div style={{ marginBottom: '20px', textAlign: isRtl ? 'right' : 'left' }}>
         <MultiImageUpload label={t('conditionImages')} value={form.purchase.conditionImages} onChange={(imgs) => setForm(prev => ({ ...prev, purchase: { ...prev.purchase, conditionImages: imgs } }))} folder="cars/condition" />
       </div>

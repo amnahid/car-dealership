@@ -262,7 +262,7 @@ export default function PurchaseDetailPage() {
         </div>
       </div>
 
-      {(purchase.conditionImages?.length > 0 || purchase.insuranceUrl || purchase.registrationUrl || purchase.roadPermitUrl) && (
+      {(purchase.conditionImages?.length > 0 || purchase.insuranceUrl || purchase.registrationUrl || purchase.roadPermitUrl || purchase.documentUrl) && (
         <div style={cardStyle}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid #eee' }}>
             Documents & Images
@@ -279,7 +279,15 @@ export default function PurchaseDetailPage() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            {purchase.documentUrl && (
+              <div>
+                <p style={labelStyle}>Purchase Document / Invoice</p>
+                <a href={purchase.documentUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#28aaa9', textDecoration: 'none', fontWeight: 500 }}>
+                  View Document
+                </a>
+              </div>
+            )}
             {purchase.insuranceUrl && (
               <div>
                 <p style={labelStyle}>Insurance</p>
