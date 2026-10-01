@@ -31,17 +31,15 @@ export async function GET(request: NextRequest) {
     const results: any[] = [];
 
     // 1. Fetch Installment Payments (excluding deleted and cancelled sales)
+    const matchCondition: Record<string, unknown> = {};
+    if (month) {
+      matchCondition['paymentSchedule.dueDate'] = { $gte: startDate, $lte: endDate };
+    }
+
     const installments = await InstallmentSale.aggregate([
       { $match: { isDeleted: { $ne: true }, status: { $ne: 'Cancelled' } } },
       { $unwind: '$paymentSchedule' },
-      { 
-        $match: {
-          $or: [
-            { 'paymentSchedule.dueDate': { $gte: startDate, $lte: endDate } },
-            { 'paymentSchedule.paidDate': { $gte: startDate, $lte: endDate } }
-          ]
-        }
-      },
+      ...(month ? [{ $match: matchCondition }] : []),
       { $lookup: { from: 'cars', localField: 'car', foreignField: '_id', as: 'carDetails' } },
       { $unwind: { path: '$carDetails', preserveNullAndEmptyArrays: true } }
     ]);
@@ -64,7 +62,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const paidAmt = p.paidAmount || (isPaid ? (p.amount + (p.lateFee || 0) + (p.otherFee || 0)) : 0);
+      const paidAmt = isPaid ? (p.paidAmount || (p.amount + (p.lateFee || 0) + (p.otherFee || 0))) : 0;
       const cashAmt = isCash && isPaid ? paidAmt : 0;
       const bankAmt = isBank && isPaid ? paidAmt : 0;
 
@@ -79,14 +77,19 @@ export async function GET(request: NextRequest) {
         cashAmount: cashAmt,
         bankAmount: bankAmt,
         voucherNumber: p.voucherNumber || '',
-        paidDate: p.paidDate || p.dueDate,
+        paidDate: isPaid ? (p.paidDate || p.dueDate) : null,
         dueDate: p.dueDate,
         status: p.status,
       });
     });
 
-    // Sort combined results by paidDate descending
-    results.sort((a, b) => new Date(b.paidDate).getTime() - new Date(a.paidDate).getTime());
+    // Sort results by dueDate ascending, then saleId
+    results.sort((a, b) => {
+      const dateA = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+      const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return (a.saleId || '').localeCompare(b.saleId || '');
+    });
 
     return NextResponse.json(results);
   } catch (error) {
