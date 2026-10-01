@@ -112,7 +112,7 @@ export default function InstallmentCollectionsPage() {
     { header: t('cash'), getter: (r) => r.cashAmount ? formatCurrency(r.cashAmount, locale) : '-' },
     { header: t('bank'), getter: (r) => r.bankAmount ? formatCurrency(r.bankAmount, locale) : '-' },
     { header: t('voucherNo'), key: 'voucherNumber' },
-    { header: t('date'), getter: (r) => r.paidDate ? new Date(r.paidDate).toLocaleDateString(locale) : (r.dueDate ? new Date(r.dueDate).toLocaleDateString(locale) : '-') },
+    { header: t('date'), getter: (r) => r.paidDate ? new Date(r.paidDate).toLocaleDateString(locale) : '-' },
   ];
 
   return (
@@ -222,7 +222,7 @@ export default function InstallmentCollectionsPage() {
                     <td style={{ padding: '12px 8px' }}>{row.bankAmount ? formatCurrency(row.bankAmount, locale) : '-'}</td>
                     <td style={{ padding: '12px 8px' }}>{row.voucherNumber || '-'}</td>
                     <td style={{ padding: '12px 8px' }}>
-                      {row.paidDate ? new Date(row.paidDate).toLocaleDateString(locale) : (row.dueDate ? new Date(row.dueDate).toLocaleDateString(locale) : '-')}
+                      {row.paidDate ? new Date(row.paidDate).toLocaleDateString(locale) : '-'}
                     </td>
                   </tr>
                 ))}
