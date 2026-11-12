@@ -100,5 +100,73 @@ describe('Repairs API', () => {
       expect(res.status).toBe(201);
       expect(mockLogActivity).toHaveBeenCalled();
     });
+
+    it('creates a repair for a car on installment', async () => {
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
+      const validCarId = new mongoose.Types.ObjectId().toString();
+      const repairData = { car: validCarId, carId: 'CAR-002', repairDescription: 'Brake repair', repairDate: '2024-01-01', totalCost: 200 };
+      
+      mockRunInTransaction.mockImplementation(async (callback) => {
+        return callback(null);
+      });
+
+      mockCar.findById.mockReturnValue({ session: jest.fn().mockResolvedValue({ status: 'On Installment' }) } as any);
+      mockRepair.create.mockResolvedValue([{ _id: 'repaid2', ...repairData }]);
+      mockRepair.aggregate.mockReturnValue({ session: jest.fn().mockResolvedValue([{ total: 200 }]) } as any);
+      mockRepair.countDocuments.mockReturnValue({ session: jest.fn().mockResolvedValue(0) } as any);
+
+      const req = new NextRequest('http://localhost/api/repairs', {
+        method: 'POST',
+        body: JSON.stringify(repairData),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(201);
+    });
+
+    it('creates a repair for a rented car', async () => {
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
+      const validCarId = new mongoose.Types.ObjectId().toString();
+      const repairData = { car: validCarId, carId: 'CAR-003', repairDescription: 'Tire change', repairDate: '2024-01-01', totalCost: 150 };
+      
+      mockRunInTransaction.mockImplementation(async (callback) => {
+        return callback(null);
+      });
+
+      mockCar.findById.mockReturnValue({ session: jest.fn().mockResolvedValue({ status: 'Rented' }) } as any);
+      mockRepair.create.mockResolvedValue([{ _id: 'repaid3', ...repairData }]);
+      mockRepair.aggregate.mockReturnValue({ session: jest.fn().mockResolvedValue([{ total: 150 }]) } as any);
+      mockRepair.countDocuments.mockReturnValue({ session: jest.fn().mockResolvedValue(0) } as any);
+
+      const req = new NextRequest('http://localhost/api/repairs', {
+        method: 'POST',
+        body: JSON.stringify(repairData),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(201);
+    });
+
+    it('rejects repair creation if car status is Sold', async () => {
+      mockGetAuthPayload.mockResolvedValue({ normalizedRole: 'Admin', normalizedRoles: ['Admin'], userId: 'adminid', name: 'Admin' } as any);
+      const validCarId = new mongoose.Types.ObjectId().toString();
+      const repairData = { car: validCarId, carId: 'CAR-004', repairDescription: 'Service', repairDate: '2024-01-01', totalCost: 100 };
+      
+      mockRunInTransaction.mockImplementation(async (callback) => {
+        return callback(null);
+      });
+
+      mockCar.findById.mockReturnValue({ session: jest.fn().mockResolvedValue({ status: 'Sold' }) } as any);
+
+      const req = new NextRequest('http://localhost/api/repairs', {
+        method: 'POST',
+        body: JSON.stringify(repairData),
+      });
+
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toContain('Car cannot be repaired in its current status');
+    });
   });
 });

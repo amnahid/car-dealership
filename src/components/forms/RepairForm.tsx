@@ -29,6 +29,7 @@ interface CarOption {
   year: number;
   color?: string;
   plateNumber?: string;
+  status?: string;
 }
 
 interface RepairFormProps {
@@ -75,10 +76,23 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
     fetch('/api/cars?limit=100')
       .then((r) => r.json())
       .then((data) => {
-        setCars(data.cars || []);
-        if (defaultCarId && data.cars) {
-          const car = data.cars.find((c: CarOption) => c._id === defaultCarId);
-          if (car) setForm((prev) => ({ ...prev, carId: car.carId }));
+        const fetchedCars: CarOption[] = data.cars || [];
+        setCars(fetchedCars);
+        if (defaultCarId) {
+          const car = fetchedCars.find((c: CarOption) => c._id === defaultCarId);
+          if (car) {
+            setForm((prev) => ({ ...prev, car: defaultCarId, carId: car.carId }));
+          } else {
+            fetch(`/api/cars/${defaultCarId}`)
+              .then((res) => res.json())
+              .then((carData) => {
+                if (carData.car) {
+                  setCars((prev) => [carData.car, ...prev]);
+                  setForm((prev) => ({ ...prev, car: defaultCarId, carId: carData.car.carId }));
+                }
+              })
+              .catch(console.error);
+          }
         }
       })
       .catch(console.error);
@@ -168,7 +182,7 @@ export default function RepairForm({ initialData, mode, defaultCarId }: RepairFo
             onChange={handleCarChange}
             options={cars.map(c => ({ 
               value: c._id, 
-              label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}`
+              label: `${c.brand} ${c.model} (${c.year})${c.plateNumber ? ` - ${c.plateNumber}` : ` - ${c.carId}`}${c.color ? ` - ${c.color}` : ''}${c.status ? ` [${c.status}]` : ''}`
             }))}
             placeholder={t('selectCar')}
             required

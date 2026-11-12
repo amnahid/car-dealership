@@ -27,6 +27,7 @@ interface Sale {
   carId: string;
   reportUrl?: string;
   car?: {
+    _id?: string;
     brand: string;
     model: string;
     year: number;
@@ -37,6 +38,7 @@ interface Sale {
     color?: string;
     images?: string[];
     status?: string;
+    totalRepairCost?: number;
   };
   customerName: string;
   customerPhone: string;
@@ -737,7 +739,27 @@ export default function InstallmentSaleDetailPage() {
         </div>
 
         <div className="card" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', marginBottom: '16px' }}>Vehicle Information</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#2a3142', margin: 0 }}>Vehicle Information</h3>
+            {sale.car && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Link
+                  href={`/dashboard/repairs/new?carId=${sale.car._id}`}
+                  style={{ fontSize: '12px', padding: '4px 10px', background: '#38a4f8', color: '#fff', borderRadius: '4px', textDecoration: 'none', fontWeight: 500 }}
+                >
+                  + Add Repair
+                </Link>
+                {sale.car._id && (
+                  <Link
+                    href={`/dashboard/cars/${sale.car._id}`}
+                    style={{ fontSize: '12px', padding: '4px 10px', background: '#f8f9fa', color: '#525f80', border: '1px solid #ced4da', borderRadius: '4px', textDecoration: 'none', fontWeight: 500 }}
+                  >
+                    View Car
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Vehicle</span>
@@ -762,6 +784,10 @@ export default function InstallmentSaleDetailPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#9ca8b3' }}>Color</span>
               <span style={{ color: '#2a3142' }}>{sale.car?.color || '-'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#9ca8b3' }}>Total Repair Cost</span>
+              <span style={{ color: '#e67e22', fontWeight: 600 }}>SAR {(sale.car?.totalRepairCost || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>

@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const repair = await runInTransaction(async (session) => {
       const carCheck = await Car.findById(body.car).session(session);
       if (!carCheck) throw new Error('Car not found');
-      if (!['In Stock', 'Under Repair'].includes(carCheck.status)) {
+      if (!['In Stock', 'Under Repair', 'On Installment', 'Rented'].includes(carCheck.status)) {
         throw new Error(`Car cannot be repaired in its current status: ${carCheck.status}`);
       }
 
